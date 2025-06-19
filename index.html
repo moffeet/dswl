@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物流配送管理系统 - 管理后台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 200px;
+            background: #fff;
+            border-right: 1px solid #f0f0f0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #1890ff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .sidebar-menu {
+            padding: 8px 0;
+        }
+
+        .menu-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .menu-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .menu-item.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            margin-left: 200px;
+        }
+
+        /* 顶部栏 */
+        .header {
+            background: #fff;
+            padding: 0 24px;
+            border-bottom: 1px solid #f0f0f0;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 内容区域 */
+        .content {
+            margin: 24px;
+            background: #fff;
+            border-radius: 6px;
+            padding: 24px;
+        }
+
+        .content-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+
+        /* 搜索表单 */
+        .search-form {
+            display: flex;
+            gap: 16px;
+            align-items: end;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .form-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .form-input, .form-select {
+            height: 32px;
+            padding: 4px 8px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .form-select {
+            width: 150px;
+        }
+
+        /* 按钮 */
+        .btn {
+            height: 32px;
+            padding: 0 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+
+        .btn-default {
+            background: #fff;
+            color: #666;
+            border: 1px solid #d9d9d9;
+        }
+
+        .btn-default:hover {
+            background: #f5f5f5;
+        }
+
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+
+        .btn-text {
+            background: transparent;
+            border: none;
+            color: #1890ff;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .btn-text:hover {
+            background: #f0f7ff;
+        }
+
+        .btn-text.danger {
+            color: #ff4d4f;
+        }
+
+        /* 操作栏 */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .action-left {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* 表格 */
+        .table-container {
+            border: 1px solid #f0f0f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .table th {
+            background: #fafafa;
+            font-weight: 500;
+        }
+
+        .table tr:hover {
+            background: #fafafa;
+        }
+
+        /* 标签 */
+        .tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-block;
+        }
+
+        .tag-orange {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+
+        .tag-blue {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .tag-red {
+            background: #fff2f0;
+            color: #f5222d;
+        }
+
+        /* 加载状态 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            width: 600px;
+            max-height: 80vh;
+            overflow: auto;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .modal-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .modal-form .form-item {
+            display: grid;
+            gap: 4px;
+        }
+
+        .modal-form .form-label {
+            font-weight: bold;
+        }
+
+        .modal-form .form-input,
+        .modal-form .form-select {
+            width: 100%;
+            height: 40px;
+            padding: 8px 12px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .pagination {
+            padding: 16px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pagination-info {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                🎯 Arco Pro
+            </div>
+            <div class="sidebar-menu">
+                <button class="menu-item active">
+                    👤 客户管理
+                </button>
+                <button class="menu-item">
+                    🚛 司机管理
+                </button>
+                <button class="menu-item">
+                    📅 打卡记录
+                </button>
+                <button class="menu-item">
+                    ⚙️ 权限管理
+                </button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 顶部栏 -->
+            <div class="header">
+                <div class="breadcrumb">
+                    <span>🏠</span>
+                    <span>/</span>
+                    <span>客户管理</span>
+                </div>
+                <div>
+                    <span style="margin-right: 16px;">欢迎回来，管理员</span>
+                    <span id="api-status" style="font-size: 12px; color: #52c41a;">🟢 API已连接</span>
+                </div>
+            </div>
+
+            <!-- 内容区域 -->
+            <div class="content">
+                <div class="content-title">查询表格</div>
+                
+                <!-- 搜索表单 -->
+                <div class="search-form">
+                    <div class="form-item">
+                        <label class="form-label">客户编号</label>
+                        <input type="text" class="form-input" placeholder="请输入客户编号" id="search-code">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">客户名称</label>
+                        <input type="text" class="form-input" placeholder="请输入客户名称" id="search-name">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">客户地址</label>
+                        <select class="form-select" id="search-region">
+                            <option value="">全部</option>
+                            <option value="临沂沂南">临沂沂南</option>
+                            <option value="临沂">临沂</option>
+                            <option value="横沂沂南">横沂沂南</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary" onclick="searchCustomers()">
+                            🔍 查询
+                        </button>
+                        <button class="btn btn-default" onclick="resetSearch()">
+                            🔄 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 操作栏 -->
+                <div class="action-bar">
+                    <div class="action-left">
+                        <button class="btn btn-primary" onclick="showAddModal()">
+                            ➕ 新建
+                        </button>
+                        <button class="btn btn-danger" onclick="batchDelete()">
+                            批量删除
+                        </button>
+                    </div>
+                    <button class="btn btn-default" onclick="exportData()">
+                        📥 下载
+                    </button>
+                </div>
+
+                <!-- 数据表格 -->
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">
+                                    <input type="checkbox" id="select-all" onchange="selectAll(this.checked)">
+                                </th>
+                                <th style="width: 100px;">客户编号</th>
+                                <th>客户名称</th>
+                                <th style="width: 120px;">联系人</th>
+                                <th style="width: 140px;">联系电话</th>
+                                <th style="width: 200px;">详细地址</th>
+                                <th style="width: 120px;">客户地址</th>
+                                <th style="width: 180px;">更新时间</th>
+                                <th style="width: 180px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customer-table">
+                            <tr>
+                                <td colspan="9" class="loading">
+                                    🔄 正在加载客户数据...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- 分页 -->
+                    <div class="pagination">
+                        <div class="pagination-info">
+                            共 <span id="total-count">0</span> 条记录
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建/编辑客户弹窗 -->
+    <div class="modal-overlay" id="customer-modal">
+        <div class="modal">
+            <div class="modal-header" id="modal-title">新建客户</div>
+            
+            <form class="modal-form" id="customer-form">
+                <div class="form-item">
+                    <label class="form-label">客户编号 *</label>
+                    <input type="text" class="form-input" placeholder="请输入客户编号" id="form-customer-code" required>
+                </div>
+                
+                <div class="form-item">
+                    <label class="form-label">客户名称 *</label>
+                    <input type="text" class="form-input" placeholder="请输入客户名称" id="form-name" required>
+                </div>
+                
+                <div class="form-item">
+                    <label class="form-label">联系人 *</label>
+                    <input type="text" class="form-input" placeholder="请输入联系人" id="form-contact-person" required>
+                </div>
+                
+                <div class="form-item">
+                    <label class="form-label">联系电话 *</label>
+                    <input type="text" class="form-input" placeholder="请输入联系电话" id="form-phone" required>
+                </div>
+                
+                <div class="form-item">
+                    <label class="form-label">详细地址 *</label>
+                    <input type="text" class="form-input" placeholder="请输入详细地址" id="form-address" required>
+                </div>
+                
+                <div class="form-item">
+                    <label class="form-label">客户地址 *</label>
+                    <select class="form-select" id="form-region" required>
+                        <option value="">请选择客户地址</option>
+                        <option value="临沂沂南">临沂沂南</option>
+                        <option value="临沂">临沂</option>
+                        <option value="横沂沂南">横沂沂南</option>
+                    </select>
+                </div>
+            </form>
+            
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="hideModal()">
+                    取消
+                </button>
+                <button class="btn btn-primary" onclick="saveCustomer()" id="save-btn">
+                    创建
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API配置
+        const API_BASE_URL = 'http://localhost:3001/api';
+        
+        // 全局变量
+        let customers = [];
+        let selectedCustomers = new Set();
+        let editingCustomer = null;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkApiStatus();
+            loadCustomers();
+        });
+
+        // 检查API状态
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(`http://localhost:3001/health`);
+                if (response.ok) {
+                    document.getElementById('api-status').innerHTML = '🟢 API已连接';
+                    document.getElementById('api-status').style.color = '#52c41a';
+                } else {
+                    throw new Error('API响应异常');
+                }
+            } catch (error) {
+                document.getElementById('api-status').innerHTML = '🔴 API未连接';
+                document.getElementById('api-status').style.color = '#ff4d4f';
+                console.error('API连接失败:', error);
+            }
+        }
+
+        // 加载客户列表
+        async function loadCustomers() {
+            try {
+                showLoading();
+                const response = await fetch(`${API_BASE_URL}/customers`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                customers = result.data || [];
+                renderCustomerTable();
+                updateTotalCount();
+                
+            } catch (error) {
+                console.error('加载客户数据失败:', error);
+                showError('加载客户数据失败: ' + error.message);
+            }
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            const tbody = document.getElementById('customer-table');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="loading">
+                        🔄 正在加载客户数据...
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const tbody = document.getElementById('customer-table');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="loading" style="color: #ff4d4f;">
+                        ❌ ${message}
+                        <br><br>
+                        <button class="btn btn-primary" onclick="loadCustomers()">🔄 重新加载</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 渲染客户表格
+        function renderCustomerTable() {
+            const tbody = document.getElementById('customer-table');
+            
+            if (customers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="loading">
+                            📋 暂无客户数据
+                            <br><br>
+                            <button class="btn btn-primary" onclick="showAddModal()">➕ 新建客户</button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = customers.map(customer => `
+                <tr>
+                    <td>
+                        <input type="checkbox" ${selectedCustomers.has(customer.id) ? 'checked' : ''} 
+                               onchange="selectCustomer(${customer.id}, this.checked)">
+                    </td>
+                    <td>${customer.customerCode || customer.id}</td>
+                    <td>${customer.name}</td>
+                    <td>${customer.contactPerson}</td>
+                    <td>${customer.phone}</td>
+                    <td>${customer.address}</td>
+                    <td>
+                        <span class="tag ${getRegionTagClass(customer.region)}">${customer.region || '未设置'}</span>
+                    </td>
+                    <td>${formatDate(customer.updatedAt || customer.createdAt)}</td>
+                    <td>
+                        <button class="btn-text" onclick="viewCustomer(${customer.id})">查看</button>
+                        <button class="btn-text" onclick="editCustomer(${customer.id})">编辑</button>
+                        <button class="btn-text danger" onclick="deleteCustomer(${customer.id})">🗑️ 删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 获取区域标签样式
+        function getRegionTagClass(region) {
+            if (!region) return 'tag-blue';
+            if (region.includes('临沂沂南')) return 'tag-orange';
+            if (region.includes('临沂')) return 'tag-blue';
+            if (region.includes('横沂沂南')) return 'tag-red';
+            return 'tag-blue';
+        }
+
+        // 格式化日期
+        function formatDate(dateStr) {
+            if (!dateStr) return '未知';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).replace(/\//g, '-');
+        }
+
+        // 更新总数量
+        function updateTotalCount() {
+            document.getElementById('total-count').textContent = customers.length;
+        }
+
+        // 搜索客户
+        async function searchCustomers() {
+            const customerCode = document.getElementById('search-code').value.trim();
+            const name = document.getElementById('search-name').value.trim();
+            const region = document.getElementById('search-region').value;
+
+            try {
+                showLoading();
+                
+                const params = new URLSearchParams();
+                if (customerCode) params.append('customerCode', customerCode);
+                if (name) params.append('name', name);
+                if (region) params.append('region', region);
+
+                const response = await fetch(`${API_BASE_URL}/customers/search?${params}`);
+                
+                if (!response.ok) {
+                    throw new Error(`搜索失败: HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                customers = result.data || [];
+                renderCustomerTable();
+                updateTotalCount();
+                
+                alert(`搜索完成，找到 ${customers.length} 条记录`);
+                
+            } catch (error) {
+                console.error('搜索客户失败:', error);
+                alert('搜索失败: ' + error.message);
+                loadCustomers(); // 失败时重新加载所有数据
+            }
+        }
+
+        // 重置搜索
+        function resetSearch() {
+            document.getElementById('search-code').value = '';
+            document.getElementById('search-name').value = '';
+            document.getElementById('search-region').value = '';
+            loadCustomers();
+        }
+
+        // 显示新建模态框
+        function showAddModal() {
+            editingCustomer = null;
+            document.getElementById('modal-title').textContent = '新建客户';
+            document.getElementById('save-btn').textContent = '创建';
+            
+            // 清空表单
+            document.getElementById('customer-form').reset();
+            document.getElementById('customer-modal').style.display = 'flex';
+        }
+
+        // 查看客户详情
+        async function viewCustomer(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/customers/${id}`);
+                if (!response.ok) {
+                    throw new Error(`获取客户详情失败: HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                const customer = result.data;
+                
+                alert(`客户详情：
+客户编号：${customer.customerCode || customer.id}
+客户名称：${customer.name}
+联系人：${customer.contactPerson}
+联系电话：${customer.phone}
+详细地址：${customer.address}
+客户地址：${customer.region || '未设置'}
+创建时间：${formatDate(customer.createdAt)}
+更新时间：${formatDate(customer.updatedAt)}`);
+                
+            } catch (error) {
+                console.error('获取客户详情失败:', error);
+                alert('获取客户详情失败: ' + error.message);
+            }
+        }
+
+        // 编辑客户
+        async function editCustomer(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/customers/${id}`);
+                if (!response.ok) {
+                    throw new Error(`获取客户信息失败: HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                const customer = result.data;
+                
+                editingCustomer = customer;
+                document.getElementById('modal-title').textContent = '编辑客户';
+                document.getElementById('save-btn').textContent = '更新';
+                
+                // 填充表单
+                document.getElementById('form-customer-code').value = customer.customerCode || '';
+                document.getElementById('form-name').value = customer.name || '';
+                document.getElementById('form-contact-person').value = customer.contactPerson || '';
+                document.getElementById('form-phone').value = customer.phone || '';
+                document.getElementById('form-address').value = customer.address || '';
+                document.getElementById('form-region').value = customer.region || '';
+                
+                document.getElementById('customer-modal').style.display = 'flex';
+                
+            } catch (error) {
+                console.error('编辑客户失败:', error);
+                alert('编辑客户失败: ' + error.message);
+            }
+        }
+
+        // 保存客户
+        async function saveCustomer() {
+            const form = document.getElementById('customer-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const customerData = {
+                customerCode: document.getElementById('form-customer-code').value.trim(),
+                name: document.getElementById('form-name').value.trim(),
+                contactPerson: document.getElementById('form-contact-person').value.trim(),
+                phone: document.getElementById('form-phone').value.trim(),
+                address: document.getElementById('form-address').value.trim(),
+                region: document.getElementById('form-region').value
+            };
+
+            try {
+                const url = editingCustomer 
+                    ? `${API_BASE_URL}/customers/${editingCustomer.id}`
+                    : `${API_BASE_URL}/customers`;
+                    
+                const method = editingCustomer ? 'PATCH' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(customerData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                hideModal();
+                loadCustomers(); // 重新加载数据
+                
+                alert(editingCustomer ? '客户信息更新成功！' : '客户创建成功！');
+                
+            } catch (error) {
+                console.error('保存客户失败:', error);
+                alert('保存客户失败: ' + error.message);
+            }
+        }
+
+        // 删除客户
+        async function deleteCustomer(id) {
+            if (!confirm('确定要删除这个客户吗？此操作不可恢复！')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/customers/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`删除失败: HTTP ${response.status}`);
+                }
+
+                loadCustomers(); // 重新加载数据
+                alert('客户删除成功！');
+                
+            } catch (error) {
+                console.error('删除客户失败:', error);
+                alert('删除客户失败: ' + error.message);
+            }
+        }
+
+        // 选择客户
+        function selectCustomer(id, checked) {
+            if (checked) {
+                selectedCustomers.add(id);
+            } else {
+                selectedCustomers.delete(id);
+            }
+            updateSelectAllCheckbox();
+        }
+
+        // 全选
+        function selectAll(checked) {
+            selectedCustomers.clear();
+            if (checked) {
+                customers.forEach(customer => selectedCustomers.add(customer.id));
+            }
+            renderCustomerTable();
+        }
+
+        // 更新全选复选框状态
+        function updateSelectAllCheckbox() {
+            const selectAllCheckbox = document.getElementById('select-all');
+            selectAllCheckbox.checked = customers.length > 0 && selectedCustomers.size === customers.length;
+            selectAllCheckbox.indeterminate = selectedCustomers.size > 0 && selectedCustomers.size < customers.length;
+        }
+
+        // 批量删除
+        async function batchDelete() {
+            if (selectedCustomers.size === 0) {
+                alert('请选择要删除的客户');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${selectedCustomers.size} 个客户吗？此操作不可恢复！`)) {
+                return;
+            }
+
+            try {
+                const deletePromises = Array.from(selectedCustomers).map(id => 
+                    fetch(`${API_BASE_URL}/customers/${id}`, { method: 'DELETE' })
+                );
+
+                await Promise.all(deletePromises);
+                
+                selectedCustomers.clear();
+                loadCustomers(); // 重新加载数据
+                alert('批量删除成功！');
+                
+            } catch (error) {
+                console.error('批量删除失败:', error);
+                alert('批量删除失败: ' + error.message);
+            }
+        }
+
+        // 导出数据
+        function exportData() {
+            if (customers.length === 0) {
+                alert('没有数据可以导出');
+                return;
+            }
+
+            // 创建CSV内容
+            const headers = ['客户编号', '客户名称', '联系人', '联系电话', '详细地址', '客户地址', '创建时间'];
+            const csvContent = [
+                headers.join(','),
+                ...customers.map(customer => [
+                    customer.customerCode || customer.id,
+                    customer.name,
+                    customer.contactPerson,
+                    customer.phone,
+                    customer.address,
+                    customer.region || '',
+                    formatDate(customer.createdAt)
+                ].join(','))
+            ].join('\n');
+
+            // 下载文件
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `客户数据_${new Date().toLocaleDateString()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 隐藏模态框
+        function hideModal() {
+            document.getElementById('customer-modal').style.display = 'none';
+            editingCustomer = null;
+        }
+
+        // 添加菜单点击事件
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除所有active类
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                // 添加active类到当前项
+                this.classList.add('active');
+                
+                const text = this.textContent.trim();
+                if (text !== '👤 客户管理') {
+                    alert(`${text}页面正在开发中...`);
+                }
+            });
+        });
+
+        // 点击模态框外部关闭
+        document.getElementById('customer-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideModal();
+            }
+        });
+    </script>
+</body>
+</html> 
