@@ -25,9 +25,9 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # 配置
-BACKEND_PORT=3000
-ADMIN_PORT=3001
-FRONTEND_PORT=3002
+export BACKEND_PORT=3000
+export ADMIN_PORT=3001  
+export FRONTEND_PORT=3002
 PID_DIR="pids"
 LOG_DIR="logs"
 
@@ -151,11 +151,25 @@ get_service_pid() {
     local pid_file="$PID_DIR/${service}.pid"
     
     if [ -f "$pid_file" ]; then
-        local pid=$(cat "$pid_file")
-        if kill -0 "$pid" 2>/dev/null; then
-            echo "$pid"
-            return 0
+        local pid=$(cat "$pid_file" 2>/dev/null)
+        if [ -n "$pid" ] && [ "$pid" != "" ]; then
+            # 检查进程是否真的存在
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "$pid"
+                return 0
+            else
+                # 再等待一下，可能进程还在启动中
+                sleep 1
+                if kill -0 "$pid" 2>/dev/null; then
+                    echo "$pid"
+                    return 0
+                else
+                    # 确认进程不存在，清理文件
+                    rm -f "$pid_file"
+                fi
+            fi
         else
+            # PID文件为空，清理文件
             rm -f "$pid_file"
         fi
     fi
@@ -168,9 +182,9 @@ check_service_status() {
     local port=""
     
     case $service in
-        "backend") port=$BACKEND_PORT ;;
-        "admin") port=$ADMIN_PORT ;;
-        "frontend") port=$FRONTEND_PORT ;;
+        "backend") port=3000 ;;
+        "admin") port=3001 ;;
+        "frontend") port=3002 ;;
         *) return 1 ;;
     esac
     
@@ -197,9 +211,77 @@ check_service_status() {
     fi
 }
 
+# 清理特定服务的相关进程
+cleanup_service_processes() {
+    local service=$1
+    log_info "清理 $service 相关进程..."
+    
+    case $service in
+        "backend")
+            # 清理backend相关的nodemon和ts-node进程
+            pkill -f "backend-node.*nodemon" 2>/dev/null || true
+            pkill -f "backend-node.*ts-node" 2>/dev/null || true
+            # 清理可能监听3000端口的进程
+            local backend_pids=$(lsof -ti :3000 2>/dev/null)
+            if [ -n "$backend_pids" ]; then
+                echo $backend_pids | xargs kill -TERM 2>/dev/null || true
+                sleep 2
+                echo $backend_pids | xargs kill -9 2>/dev/null || true
+            fi
+            ;;
+        "admin")
+            # 更精确地清理admin相关的next进程
+            pkill -f "admin-frontend.*next.*3001" 2>/dev/null || true
+            # 清理监听3001端口但不是当前PID的进程
+            local current_admin_pid=$(get_service_pid "admin" 2>/dev/null)
+            local admin_pids=$(lsof -ti :3001 2>/dev/null)
+            if [ -n "$admin_pids" ]; then
+                for pid in $admin_pids; do
+                    if [ "$pid" != "$current_admin_pid" ]; then
+                        kill -TERM "$pid" 2>/dev/null || true
+                    fi
+                done
+                sleep 1
+                for pid in $admin_pids; do
+                    if [ "$pid" != "$current_admin_pid" ] && kill -0 "$pid" 2>/dev/null; then
+                        kill -9 "$pid" 2>/dev/null || true
+                    fi
+                done
+            fi
+            ;;
+        "frontend")
+            # 更精确地清理frontend相关的next进程
+            pkill -f "frontend.*next.*3002" 2>/dev/null || true
+            # 清理监听3002端口但不是当前PID的进程
+            local current_frontend_pid=$(get_service_pid "frontend" 2>/dev/null)
+            local frontend_pids=$(lsof -ti :3002 2>/dev/null)
+            if [ -n "$frontend_pids" ]; then
+                for pid in $frontend_pids; do
+                    if [ "$pid" != "$current_frontend_pid" ]; then
+                        kill -TERM "$pid" 2>/dev/null || true
+                    fi
+                done
+                sleep 1
+                for pid in $frontend_pids; do
+                    if [ "$pid" != "$current_frontend_pid" ] && kill -0 "$pid" 2>/dev/null; then
+                        kill -9 "$pid" 2>/dev/null || true
+                    fi
+                done
+            fi
+            ;;
+    esac
+    sleep 1
+}
+
 # 启动后端服务
 start_backend() {
     log_service "启动后端服务..."
+    
+    # 确保端口变量正确设置
+    local BACKEND_PORT=3000
+    
+    # 清理残留进程
+    cleanup_service_processes "backend"
     
     if ! install_dependencies "backend"; then
         return 1
@@ -212,12 +294,19 @@ start_backend() {
     
     cd backend-node
     
+    # 清理所有可能的端口环境变量
+    unset PORT
+    unset ADMIN_PORT
+    unset FRONTEND_PORT
+    
+    log_info "后端启动配置: PORT=$BACKEND_PORT"
+    
     # 先尝试开发模式启动
     log_info "尝试开发模式启动..."
-    if nohup npm run start:dev > "../$LOG_DIR/backend.log" 2>&1 & then
+    if PORT=$BACKEND_PORT nohup npm run start:dev > "../$LOG_DIR/backend.log" 2>&1 & then
         local pid=$!
         echo $pid > "../$PID_DIR/backend.pid"
-        sleep 5
+        sleep 8  # 给更多时间启动
         
         if kill -0 $pid 2>/dev/null && check_port $BACKEND_PORT; then
             log_success "后端服务启动成功 (开发模式, PID: $pid, 端口: $BACKEND_PORT)"
@@ -226,37 +315,45 @@ start_backend() {
         else
             log_warning "开发模式启动失败，尝试生产模式..."
             kill $pid 2>/dev/null || true
+            rm -f "../$PID_DIR/backend.pid"
         fi
     fi
     
     # 尝试生产模式启动
     log_info "构建并启动生产模式..."
-    if npm run build && nohup npm start > "../$LOG_DIR/backend.log" 2>&1 & then
-        local pid=$!
-        echo $pid > "../$PID_DIR/backend.pid"
-        sleep 5
-        
-        if kill -0 $pid 2>/dev/null && check_port $BACKEND_PORT; then
-            log_success "后端服务启动成功 (生产模式, PID: $pid, 端口: $BACKEND_PORT)"
-            cd ..
-            return 0
-        else
-            log_error "后端服务启动失败"
-            kill $pid 2>/dev/null || true
-            rm -f "../$PID_DIR/backend.pid"
-            cd ..
-            return 1
+    if npm run build; then
+        if PORT=$BACKEND_PORT nohup npm start > "../$LOG_DIR/backend.log" 2>&1 & then
+            local pid=$!
+            echo $pid > "../$PID_DIR/backend.pid"
+            sleep 8  # 给更多时间启动
+            
+            if kill -0 $pid 2>/dev/null && check_port $BACKEND_PORT; then
+                log_success "后端服务启动成功 (生产模式, PID: $pid, 端口: $BACKEND_PORT)"
+                cd ..
+                return 0
+            else
+                log_error "后端服务启动失败"
+                kill $pid 2>/dev/null || true
+                rm -f "../$PID_DIR/backend.pid"
+            fi
         fi
     else
         log_error "构建失败，无法启动后端服务"
-        cd ..
-        return 1
     fi
+    
+    cd ..
+    return 1
 }
 
 # 启动管理后台
 start_admin() {
     log_service "启动管理后台..."
+    
+    # 确保端口变量正确设置
+    local ADMIN_PORT=3001
+    
+    # 清理残留进程
+    cleanup_service_processes "admin"
     
     if ! install_dependencies "admin"; then
         return 1
@@ -268,27 +365,60 @@ start_admin() {
     fi
     
     cd admin-frontend
-    nohup npm run dev -- --port $ADMIN_PORT > "../$LOG_DIR/admin.log" 2>&1 &
+    
+    # 清理可能的环境变量干扰
+    unset PORT
+    unset BACKEND_PORT
+    unset FRONTEND_PORT
+    
+    # Next.js 15 需要明确指定端口
+    log_info "启动命令: npm run dev -- --port $ADMIN_PORT"
+    PORT=$ADMIN_PORT nohup npm run dev -- --port $ADMIN_PORT > "../$LOG_DIR/admin.log" 2>&1 &
     local pid=$!
     echo $pid > "../$PID_DIR/admin.pid"
+    
+    log_info "等待管理后台启动... (PID: $pid)"
     cd ..
     
-    sleep 8  # Next.js 需要更多时间启动
+    # 等待启动并检查多次
+    local retry_count=0
+    local max_retries=20
     
-    if kill -0 $pid 2>/dev/null && check_port $ADMIN_PORT; then
-        log_success "管理后台启动成功 (PID: $pid, 端口: $ADMIN_PORT)"
-        return 0
-    else
-        log_error "管理后台启动失败"
-        kill $pid 2>/dev/null || true
-        rm -f "$PID_DIR/admin.pid"
-        return 1
-    fi
+    while [ $retry_count -lt $max_retries ]; do
+        sleep 1
+        
+        # 检查进程是否还活着
+        if ! kill -0 $pid 2>/dev/null; then
+            log_error "管理后台进程 $pid 已停止"
+            rm -f "$PID_DIR/admin.pid"
+            return 1
+        fi
+        
+        # 检查端口是否被占用
+        if check_port $ADMIN_PORT; then
+            log_success "管理后台启动成功 (PID: $pid, 端口: $ADMIN_PORT)"
+            return 0
+        fi
+        
+        retry_count=$((retry_count + 1))
+        log_info "等待端口 $ADMIN_PORT 启动... ($retry_count/$max_retries)"
+    done
+    
+    log_error "管理后台启动失败：超时"
+    kill $pid 2>/dev/null || true
+    rm -f "$PID_DIR/admin.pid"
+    return 1
 }
 
 # 启动小程序前端
 start_frontend() {
     log_service "启动小程序前端..."
+    
+    # 确保端口变量正确设置
+    local FRONTEND_PORT=3002
+    
+    # 清理残留进程
+    cleanup_service_processes "frontend"
     
     if ! install_dependencies "frontend"; then
         return 1
@@ -300,22 +430,48 @@ start_frontend() {
     fi
     
     cd frontend
-    nohup npm run dev -- --port $FRONTEND_PORT > "../$LOG_DIR/frontend.log" 2>&1 &
+    
+    # 清理可能的环境变量干扰
+    unset PORT
+    unset BACKEND_PORT
+    unset ADMIN_PORT
+    
+    log_info "启动命令: npm run dev -- --port $FRONTEND_PORT"
+    PORT=$FRONTEND_PORT nohup npm run dev -- --port $FRONTEND_PORT > "../$LOG_DIR/frontend.log" 2>&1 &
     local pid=$!
     echo $pid > "../$PID_DIR/frontend.pid"
+    
+    log_info "等待小程序前端启动... (PID: $pid)"
     cd ..
     
-    sleep 8  # Next.js 需要更多时间启动
+    # 等待启动并检查多次
+    local retry_count=0
+    local max_retries=20
     
-    if kill -0 $pid 2>/dev/null && check_port $FRONTEND_PORT; then
-        log_success "小程序前端启动成功 (PID: $pid, 端口: $FRONTEND_PORT)"
-        return 0
-    else
-        log_error "小程序前端启动失败"
-        kill $pid 2>/dev/null || true
-        rm -f "$PID_DIR/frontend.pid"
-        return 1
-    fi
+    while [ $retry_count -lt $max_retries ]; do
+        sleep 1
+        
+        # 检查进程是否还活着
+        if ! kill -0 $pid 2>/dev/null; then
+            log_error "小程序前端进程 $pid 已停止"
+            rm -f "$PID_DIR/frontend.pid"
+            return 1
+        fi
+        
+        # 检查端口是否被占用
+        if check_port $FRONTEND_PORT; then
+            log_success "小程序前端启动成功 (PID: $pid, 端口: $FRONTEND_PORT)"
+            return 0
+        fi
+        
+        retry_count=$((retry_count + 1))
+        log_info "等待端口 $FRONTEND_PORT 启动... ($retry_count/$max_retries)"
+    done
+    
+    log_error "小程序前端启动失败：超时"
+    kill $pid 2>/dev/null || true
+    rm -f "$PID_DIR/frontend.pid"
+    return 1
 }
 
 # 停止服务
@@ -324,9 +480,9 @@ stop_service() {
     local port=""
     
     case $service in
-        "backend") port=$BACKEND_PORT ;;
-        "admin") port=$ADMIN_PORT ;;
-        "frontend") port=$FRONTEND_PORT ;;
+        "backend") port=3000 ;;
+        "admin") port=3001 ;;
+        "frontend") port=3002 ;;
         *) 
             log_error "未知服务: $service"
             return 1
@@ -408,7 +564,7 @@ show_status() {
     echo -e "${CYAN}=== 端口占用 ===${NC}"
     echo
     
-    for port in $BACKEND_PORT $ADMIN_PORT $FRONTEND_PORT; do
+    for port in 3000 3001 3002; do
         if check_port "$port"; then
             local pids=$(lsof -Pi :$port -sTCP:LISTEN -t 2>/dev/null)
             echo -e "端口 ${YELLOW}$port${NC}: ${GREEN}已占用${NC} (PID: $pids)"
@@ -498,8 +654,25 @@ main() {
                     stop_service "frontend"
                     stop_service "admin"
                     stop_service "backend"
-                    sleep 2
-                    start_backend && start_admin && start_frontend
+                    sleep 3
+                    
+                    # 顺序启动服务，确保每个都完全启动成功后再启动下一个
+                    if start_backend; then
+                        sleep 2
+                        if start_admin; then
+                            sleep 2
+                            start_frontend
+                        else
+                            log_error "管理后台启动失败，跳过小程序前端启动"
+                        fi
+                    else
+                        log_error "后端服务启动失败，跳过其他服务启动"
+                    fi
+                    
+                    # 等待所有服务完全启动稳定
+                    log_info "等待所有服务完全启动..."
+                    sleep 5
+                    
                     echo
                     show_status
                     ;;
