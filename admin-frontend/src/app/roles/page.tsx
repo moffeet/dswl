@@ -1,16 +1,57 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button, Table, Space, Modal, Form, Input, Select, Message, Popconfirm, Badge, Card, Tag, Switch } from '@arco-design/web-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Table, 
+  Card, 
+  Button, 
+  Input, 
+  Select, 
+  Modal, 
+  Form, 
+  Message, 
+  Popconfirm, 
+  Tag, 
+  Switch, 
+  Badge,
+  Pagination,
+  Space,
+  Statistic
+} from '@arco-design/web-react';
 import { Grid } from '@arco-design/web-react';
-import { IconPlus, IconEdit, IconDelete, IconSearch, IconRefresh, IconSettings } from '@arco-design/web-react/icon';
+import { 
+  IconPlus, 
+  IconEdit, 
+  IconDelete, 
+  IconSearch, 
+  IconRefresh, 
+  IconSettings,
+  IconUser,
+  IconLock,
+  IconCheckCircle
+} from '@arco-design/web-react/icon';
 
-const { Row, Col } = Grid;
-const { Option } = Select;
 const { TextArea } = Input;
+const { Option } = Select;
+const { Row, Col } = Grid;
+
+// 角色数据接口
+interface Role {
+  id: number;
+  roleName: string;
+  roleId: string;
+  environment: string;
+  description: string;
+  permissions: string[];
+  userCount: number;
+  status: boolean;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
 
 // 模拟角色数据
-const mockRoles = [
+const mockRoles: Role[] = [
   {
     id: 1,
     roleName: '管理员',
@@ -22,6 +63,7 @@ const mockRoles = [
     status: true,
     createdAt: '2024/01/20 10:30:00',
     updatedAt: '2024/01/25 14:20:00',
+    updatedBy: '系统管理员'
   },
   {
     id: 2,
@@ -34,6 +76,7 @@ const mockRoles = [
     status: true,
     createdAt: '2023/06/19 08:09:04',
     updatedAt: '2023/06/20 09:15:30',
+    updatedBy: '管理员A'
   },
   {
     id: 3,
@@ -46,6 +89,7 @@ const mockRoles = [
     status: true,
     createdAt: '2023/04/26 08:23:39',
     updatedAt: '2023/05/10 16:40:25',
+    updatedBy: '管理员B'
   },
 ];
 
@@ -64,136 +108,324 @@ const allPermissions = [
   { value: 'profile_edit', label: '个人信息编辑', group: '基础权限' },
 ];
 
+// 环境选项
+const environmentOptions = [
+  { label: '全部环境', value: '' },
+  { label: '生产环境', value: '生产环境' },
+  { label: '测试环境', value: '测试环境' },
+  { label: '开发环境', value: '开发环境' }
+];
+
+// 状态选项
+const statusOptions = [
+  { label: '全部状态', value: '' },
+  { label: '启用', value: 'active' },
+  { label: '禁用', value: 'inactive' }
+];
+
 export default function RolesPage() {
-  const [roles, setRoles] = useState(mockRoles);
+  const [roles, setRoles] = useState<Role[]>(mockRoles);
+  const [filteredRoles, setFilteredRoles] = useState<Role[]>(mockRoles);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
-  const [editingRole, setEditingRole] = useState(null);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [form] = Form.useForm();
+  
+  // 搜索和筛选状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedEnvironment, setSelectedEnvironment] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
+  // 应用搜索和筛选
+  useEffect(() => {
+    let filtered = [...roles];
+
+    // 关键字搜索
+    if (searchKeyword) {
+      filtered = filtered.filter(role => 
+        role.roleName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        role.roleId.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        role.description.toLowerCase().includes(searchKeyword.toLowerCase())
+      );
+    }
+
+    // 环境筛选
+    if (selectedEnvironment) {
+      filtered = filtered.filter(role => role.environment === selectedEnvironment);
+    }
+
+    // 状态筛选
+    if (selectedStatus) {
+      filtered = filtered.filter(role => 
+        selectedStatus === 'active' ? role.status : !role.status
+      );
+    }
+
+    setFilteredRoles(filtered);
+    setCurrentPage(1);
+  }, [roles, searchKeyword, selectedEnvironment, selectedStatus]);
+
+  // 统计数据
+  const stats = {
+    total: roles.length,
+    active: roles.filter(r => r.status).length,
+    inactive: roles.filter(r => !r.status).length,
+    totalUsers: roles.reduce((sum, role) => sum + role.userCount, 0)
+  };
+
+  // 表格列定义
   const columns = [
     {
-      title: '角色名称',
-      dataIndex: 'roleName',
-      key: 'roleName',
-      width: 120,
-    },
-    {
-      title: '角色ID',
-      dataIndex: 'roleId',
-      key: 'roleId',
-      width: 100,
-      render: (roleId: any) => (
-        <Tag color="blue">{roleId}</Tag>
-      ),
-    },
-    {
-      title: '环境',
-      dataIndex: 'environment',
-      key: 'environment',
-      width: 100,
-      render: () => (
-        <Badge status="success" text="生产环境" />
-      ),
-    },
-    {
-      title: '权限',
-      dataIndex: 'permissions',
-      key: 'permissions',
-      width: 250,
-      render: (permissions: any) => (
-        <div>
-          {permissions.slice(0, 3).map((perm: any, index: any) => (
-            <Tag key={index} size="small" style={{ marginBottom: '2px' }}>
-              {perm}
-            </Tag>
-          ))}
-          {permissions.length > 3 && (
-            <Tag size="small" style={{ marginBottom: '2px' }}>
-              +{permissions.length - 3}
-            </Tag>
-          )}
+      title: '角色信息',
+      key: 'roleInfo',
+      width: 200,
+      render: (_: any, record: Role) => (
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ 
+            fontSize: '15px', 
+            fontWeight: '600', 
+            color: '#1d2129',
+            marginBottom: '4px'
+          }}>
+            {record.roleName}
+          </div>
+          <div style={{ 
+            fontSize: '13px', 
+            color: '#86909c',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <IconLock style={{ fontSize: '12px' }} />
+            {record.roleId}
+          </div>
         </div>
       ),
     },
     {
-      title: '用户数',
-      dataIndex: 'userCount',
-      key: 'userCount',
-      width: 80,
-      render: (count: any) => (
-        <span style={{ color: '#1890ff' }}>{count}</span>
+      title: '环境/权限',
+      key: 'envPermissions',
+      width: 280,
+      render: (_: any, record: Role) => (
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ marginBottom: '6px' }}>
+            <Badge 
+              status="success" 
+              text={record.environment}
+              style={{ fontSize: '13px', color: '#00b42a' }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {record.permissions.slice(0, 3).map((perm, index) => (
+              <Tag 
+                key={index} 
+                size="small" 
+                color="arcoblue"
+                style={{ 
+                  fontSize: '12px',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}
+              >
+                {perm}
+              </Tag>
+            ))}
+            {record.permissions.length > 3 && (
+              <Tag 
+                size="small" 
+                color="gray"
+                style={{ 
+                  fontSize: '12px',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}
+              >
+                +{record.permissions.length - 3}
+              </Tag>
+            )}
+          </div>
+        </div>
       ),
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 80,
-      render: (status: any) => (
-        <Switch checked={status} size="small" disabled />
+      title: '用户数/状态',
+      key: 'userStatus',
+      width: 120,
+      render: (_: any, record: Role) => (
+        <div style={{ 
+          padding: '8px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <div style={{ 
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#1890ff'
+          }}>
+            {record.userCount}
+          </div>
+          <div>
+            <Tag 
+              color={record.status ? 'green' : 'red'}
+              style={{ 
+                fontSize: '12px',
+                borderRadius: '12px',
+                padding: '2px 8px'
+              }}
+            >
+              {record.status ? '启用中' : '已禁用'}
+            </Tag>
+          </div>
+        </div>
       ),
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 150,
+      width: 140,
+      render: (createdAt: string) => (
+        <div style={{ 
+          fontSize: '13px',
+          color: '#86909c'
+        }}>
+          {createdAt}
+        </div>
+      ),
     },
     {
-      title: '修改时间',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
-      width: 150,
+      title: '更新时间',
+      key: 'updateInfo',
+      width: 140,
+      render: (_: any, record: Role) => (
+        <div>
+          <div style={{ 
+            fontSize: '13px',
+            color: '#86909c'
+          }}>
+            {record.updatedAt}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: '更新人',
+      key: 'updatedBy',
+      width: 100,
+      render: (_: any, record: Role) => (
+        <div style={{ 
+          fontSize: '13px',
+          color: '#86909c'
+        }}>
+          {record.updatedBy || '--'}
+        </div>
+      ),
     },
     {
       title: '操作',
       key: 'action',
-      width: 150,
-      render: (_: any, record: any) => (
-        <Space>
-          <Button
-            type="text"
-            size="small"
-            icon={<IconEdit />}
+      width: 120,
+      render: (_: any, record: Role) => (
+        <Space size="small">
+          <button
             onClick={() => handleEdit(record)}
+            style={{
+              width: '26px',
+              height: '26px',
+              border: 'none',
+              borderRadius: '6px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              boxShadow: '0 2px 4px rgba(102, 126, 234, 0.3)',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+              e.currentTarget.style.filter = 'brightness(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              e.currentTarget.style.filter = 'brightness(1)';
+            }}
+            title="编辑角色"
           >
-            修改
-          </Button>
+            <IconEdit />
+          </button>
           <Popconfirm
             title="确定要删除这个角色吗？"
             onOk={() => handleDelete(record.id)}
           >
-            <Button
-              type="text"
-              size="small"
-              status="danger"
-              icon={<IconDelete />}
+            <button
+              style={{
+                width: '26px',
+                height: '26px',
+                border: 'none',
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                boxShadow: '0 2px 4px rgba(240, 147, 251, 0.3)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
+                e.currentTarget.style.filter = 'brightness(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.filter = 'brightness(1)';
+              }}
+              title="删除角色"
             >
-              删除
-            </Button>
+              <IconDelete />
+            </button>
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
+  // 处理搜索重置
+  const handleReset = () => {
+    setSearchKeyword('');
+    setSelectedEnvironment('');
+    setSelectedStatus('');
+  };
+
+  // 处理新增角色
   const handleAdd = () => {
     setEditingRole(null);
     form.resetFields();
     setVisible(true);
   };
 
-  const handleEdit = (role: any) => {
+  // 处理编辑角色
+  const handleEdit = (role: Role) => {
     setEditingRole(role);
     form.setFieldsValue({
       ...role,
-      permissions: role.permissions, // 这里需要转换为权限值数组
+      permissions: role.permissions,
     });
     setVisible(true);
   };
 
-  const handleDelete = async (id: any) => {
+  // 处理删除角色
+  const handleDelete = async (id: number) => {
     setLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -206,6 +438,7 @@ export default function RolesPage() {
     }
   };
 
+  // 处理表单提交
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
@@ -218,13 +451,14 @@ export default function RolesPage() {
             ...r, 
             ...values,
             updatedAt: new Date().toLocaleString(),
+            updatedBy: '当前用户'
           } : r
         );
         setRoles(updatedRoles);
         Message.success('角色更新成功');
       } else {
         // 新增
-        const newRole = {
+        const newRole: Role = {
           id: Date.now(),
           ...values,
           environment: '生产环境',
@@ -232,6 +466,7 @@ export default function RolesPage() {
           status: true,
           createdAt: new Date().toLocaleString(),
           updatedAt: new Date().toLocaleString(),
+          updatedBy: '当前用户'
         };
         setRoles([newRole, ...roles]);
         Message.success('角色创建成功');
@@ -246,43 +481,359 @@ export default function RolesPage() {
     }
   };
 
+  const paginatedData = filteredRoles.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
-    <div style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <Card>
-        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={{ 
+      padding: '24px', 
+      backgroundColor: '#f5f6fa', 
+      minHeight: '100vh' 
+    }}>
+      {/* 统计卡片区域 */}
+      <Row gutter={16} style={{ marginBottom: '24px' }}>
+        <Col span={6}>
+          <Card style={{ 
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            border: 'none',
+            color: 'white'
+          }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>总角色数</span>}
+              value={stats.total}
+              prefix={<IconSettings style={{ color: 'white' }} />}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card style={{ 
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #48c9b0 0%, #158f89 100%)',
+            border: 'none',
+            color: 'white'
+          }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>启用角色</span>}
+              value={stats.active}
+              prefix={<IconCheckCircle style={{ color: 'white' }} />}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card style={{ 
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            border: 'none',
+            color: 'white'
+          }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>禁用角色</span>}
+              value={stats.inactive}
+              prefix={<IconLock style={{ color: 'white' }} />}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card style={{ 
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #fd9644 0%, #f7931e 100%)',
+            border: 'none',
+            color: 'white'
+          }}>
+            <Statistic
+              title={<span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>关联用户</span>}
+              value={stats.totalUsers}
+              prefix={<IconUser style={{ color: 'white' }} />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 主内容卡片 */}
+      <Card 
+        style={{ 
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e5e6eb'
+        }}
+      >
+        {/* 搜索区域 */}
+        <div style={{
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '16px'
+          }}>
+            <h3 style={{ 
+              margin: 0, 
+              fontSize: '16px', 
+              fontWeight: '600',
+              color: '#1e293b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <IconSearch style={{ color: '#3b82f6' }} />
+              角色搜索
+            </h3>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            gap: '16px', 
+            alignItems: 'flex-end',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '500',
+                color: '#64748b',
+                marginBottom: '6px'
+              }}>
+                角色名称/ID
+              </label>
+              <Input
+                placeholder="请输入角色名称或ID"
+                value={searchKeyword}
+                onChange={setSearchKeyword}
+                style={{
+                  height: '36px',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  transition: 'all 0.2s ease',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+            
+            <div style={{ minWidth: '140px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '500',
+                color: '#64748b',
+                marginBottom: '6px'
+              }}>
+                环境
+              </label>
+              <Select
+                placeholder="选择环境"
+                value={selectedEnvironment}
+                onChange={setSelectedEnvironment}
+                style={{ 
+                  width: '100%',
+                  height: '36px'
+                }}
+                triggerProps={{
+                  style: {
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0',
+                  }
+                }}
+              >
+                {environmentOptions.map(option => (
+                  <Option key={option.value} value={option.value}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: option.value === '生产环境' ? '#10b981' : 
+                                       option.value === '测试环境' ? '#f59e0b' : 
+                                       option.value === '开发环境' ? '#3b82f6' : '#6b7280'
+                      }}></div>
+                      {option.label}
+                    </div>
+                  </Option>
+                ))}
+              </Select>
+            </div>
+            
+            <div style={{ minWidth: '120px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '500',
+                color: '#64748b',
+                marginBottom: '6px'
+              }}>
+                状态
+              </label>
+              <Select
+                placeholder="选择状态"
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                style={{ 
+                  width: '100%',
+                  height: '36px'
+                }}
+                triggerProps={{
+                  style: {
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0',
+                  }
+                }}
+              >
+                {statusOptions.map(option => (
+                  <Option key={option.value} value={option.value}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: option.value === 'active' ? '#10b981' : 
+                                       option.value === 'inactive' ? '#ef4444' : '#6b7280'
+                      }}></div>
+                      {option.label}
+                    </div>
+                  </Option>
+                ))}
+              </Select>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button 
+                type="primary"
+                icon={<IconSearch />}
+                style={{
+                  height: '36px',
+                  borderRadius: '6px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  border: 'none',
+                  boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+                }}
+              >
+                搜索
+              </Button>
+              <Button 
+                onClick={handleReset}
+                icon={<IconRefresh />}
+                style={{
+                  height: '36px',
+                  borderRadius: '6px'
+                }}
+              >
+                重置
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* 标题和新增按钮 */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '16px'
+        }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-              <IconSettings style={{ marginRight: '8px' }} />
-              角色列表
+            <h2 style={{ 
+              margin: 0, 
+              fontSize: '18px', 
+              fontWeight: '600',
+              color: '#1e293b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <IconSettings style={{ color: '#3b82f6' }} />
+              角色权限管理
             </h2>
-            <p style={{ margin: '8px 0 0 0', color: '#666' }}>
+            <p style={{ 
+              margin: '4px 0 0 0', 
+              color: '#64748b',
+              fontSize: '14px'
+            }}>
               管理系统角色和权限配置
             </p>
           </div>
-          <Button type="primary" icon={<IconPlus />} onClick={handleAdd}>
+          <Button 
+            type="primary" 
+            icon={<IconPlus />} 
+            onClick={handleAdd}
+            style={{
+              height: '40px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              border: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+            }}
+          >
             新增角色
           </Button>
         </div>
 
+        {/* 表格 */}
         <Table
           columns={columns}
-          data={roles}
+          data={paginatedData}
           rowKey="id"
           loading={loading}
-          pagination={{
-            current: 1,
-            pageSize: 10,
-            total: roles.length,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-            showSizeChanger: true,
-            showQuickJumper: true,
+          pagination={false}
+          style={{
+            borderRadius: '8px',
+            overflow: 'hidden'
           }}
         />
+
+        {/* 分页 */}
+        <div style={{ 
+          marginTop: '24px', 
+          textAlign: 'right' 
+        }}>
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={filteredRoles.length}
+            showTotal={(total, range) => 
+              `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
+            }
+            showJumper
+            onChange={(page, size) => {
+              setCurrentPage(page);
+              if (size) setPageSize(size);
+            }}
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center'
+            }}
+          />
+        </div>
       </Card>
 
       {/* 新建/编辑角色弹窗 */}
       <Modal
-        title={editingRole ? '编辑角色' : '新增角色'}
+        title={
+          <div style={{ 
+            fontSize: '16px', 
+            fontWeight: '600',
+            color: '#1e293b'
+          }}>
+            {editingRole ? '编辑角色' : '新增角色'}
+          </div>
+        }
         visible={visible}
         onOk={form.submit}
         onCancel={() => {
@@ -290,44 +841,78 @@ export default function RolesPage() {
           form.resetFields();
         }}
         confirmLoading={loading}
-        width={700}
+        style={{
+          borderRadius: '12px',
+          width: '700px'
+        }}
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            border: 'none',
+            borderRadius: '6px'
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            borderRadius: '6px'
+          }
+        }}
       >
         <Form
           form={form}
           layout="vertical"
           onSubmit={handleSubmit}
+          style={{ marginTop: '16px' }}
         >
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="角色名称"
+                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色名称</span>}
                 field="roleName"
                 rules={[{ required: true, message: '请输入角色名称' }]}
               >
-                <Input placeholder="请输入角色名称" />
+                <Input 
+                  placeholder="请输入角色名称" 
+                  style={{ 
+                    borderRadius: '6px',
+                    height: '36px'
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="角色ID"
+                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色ID</span>}
                 field="roleId"
                 rules={[{ required: true, message: '请输入角色ID' }]}
               >
-                <Input placeholder="请输入角色ID" />
+                <Input 
+                  placeholder="请输入角色ID" 
+                  style={{ 
+                    borderRadius: '6px',
+                    height: '36px'
+                  }}
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item
-            label="角色描述"
+            label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色描述</span>}
             field="description"
             rules={[{ required: true, message: '请输入角色描述' }]}
           >
-            <TextArea placeholder="请输入角色描述" rows={3} />
+            <TextArea 
+              placeholder="请输入角色描述" 
+              rows={3} 
+              style={{ 
+                borderRadius: '6px'
+              }}
+            />
           </Form.Item>
 
           <Form.Item
-            label="权限配置"
+            label={<span style={{ fontSize: '14px', fontWeight: '500' }}>权限配置</span>}
             field="permissions"
             rules={[{ required: true, message: '请选择权限' }]}
           >
@@ -336,6 +921,11 @@ export default function RolesPage() {
               mode="multiple"
               maxTagCount={10}
               style={{ width: '100%' }}
+              triggerProps={{
+                style: {
+                  borderRadius: '6px'
+                }
+              }}
             >
               {Object.entries(
                 allPermissions.reduce((groups, perm) => {
@@ -358,7 +948,7 @@ export default function RolesPage() {
           </Form.Item>
 
           <Form.Item
-            label="状态"
+            label={<span style={{ fontSize: '14px', fontWeight: '500' }}>状态</span>}
             field="status"
             initialValue={true}
           >
