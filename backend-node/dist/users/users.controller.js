@@ -18,6 +18,7 @@ const swagger_1 = require("@nestjs/swagger");
 const users_service_1 = require("./users.service");
 const create_user_dto_1 = require("./dto/create-user.dto");
 const update_user_dto_1 = require("./dto/update-user.dto");
+const search_user_dto_1 = require("./dto/search-user.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const user_entity_1 = require("./entities/user.entity");
 let UsersController = class UsersController {
@@ -27,17 +28,27 @@ let UsersController = class UsersController {
     async create(createUserDto) {
         return this.usersService.create(createUserDto);
     }
+    async findAllWithPagination(query) {
+        return this.usersService.findAllWithPagination(query);
+    }
     async findAll() {
         return this.usersService.findAll();
     }
     async findDrivers() {
         return this.usersService.findDrivers();
     }
+    async getRoles() {
+        return this.usersService.getRoles();
+    }
     async findOne(id) {
         return this.usersService.findById(id);
     }
     async update(id, updateUserDto) {
         return this.usersService.update(id, updateUserDto);
+    }
+    async batchRemove(body) {
+        await this.usersService.batchRemove(body.ids);
+        return { message: '用户批量删除成功' };
     }
     async remove(id) {
         await this.usersService.remove(id);
@@ -55,9 +66,24 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "create", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: '获取用户列表' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功', type: [user_entity_1.User] }),
+    (0, swagger_1.ApiOperation)({ summary: '分页获取用户列表' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, description: '页码，默认为1' }),
+    (0, swagger_1.ApiQuery)({ name: 'pageSize', required: false, description: '每页数量，默认为10' }),
+    (0, swagger_1.ApiQuery)({ name: 'username', required: false, description: '用户名搜索' }),
+    (0, swagger_1.ApiQuery)({ name: 'realName', required: false, description: '真实姓名搜索' }),
+    (0, swagger_1.ApiQuery)({ name: 'phone', required: false, description: '手机号搜索' }),
+    (0, swagger_1.ApiQuery)({ name: 'userType', required: false, enum: user_entity_1.UserType, description: '用户类型筛选' }),
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [search_user_dto_1.SearchUserDto]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "findAllWithPagination", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({ summary: '获取所有用户列表' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功', type: [user_entity_1.User] }),
+    (0, common_1.Get)('all'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
@@ -70,6 +96,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "findDrivers", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({ summary: '获取角色列表' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    (0, common_1.Get)('roles'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getRoles", null);
 __decorate([
     (0, swagger_1.ApiOperation)({ summary: '获取用户详情' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功', type: user_entity_1.User }),
@@ -89,6 +123,15 @@ __decorate([
     __metadata("design:paramtypes", [Number, update_user_dto_1.UpdateUserDto]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "update", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({ summary: '批量删除用户' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, common_1.Delete)('batch'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "batchRemove", null);
 __decorate([
     (0, swagger_1.ApiOperation)({ summary: '删除用户' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),

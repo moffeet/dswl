@@ -8,12 +8,19 @@ export declare enum UserStatus {
     INACTIVE = "inactive",
     SUSPENDED = "suspended"
 }
+export declare enum Gender {
+    MALE = "male",
+    FEMALE = "female"
+}
 export declare class User {
     id: number;
     username: string;
     password: string;
     realName: string;
     phone: string;
+    email: string;
+    gender: Gender;
+    nickname: string;
     wechatOpenid: string;
     userType: UserType;
     status: UserStatus;

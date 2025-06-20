@@ -1,15 +1,20 @@
-import { IsString, IsEnum, IsOptional, IsPhoneNumber, MinLength, MaxLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { UserType } from '../entities/user.entity';
+import { IsString, IsEmail, IsEnum, IsOptional, IsPhoneNumber, MinLength, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { UserType, UserStatus } from '../entities/user.entity';
+
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
 
 export class CreateUserDto {
-  @ApiProperty({ description: '用户名', example: 'driver001' })
+  @ApiProperty({ description: '用户名', example: 'john_doe' })
   @IsString()
   @MinLength(3)
   @MaxLength(50)
   username: string;
 
-  @ApiProperty({ description: '密码', example: '123456' })
+  @ApiProperty({ description: '密码', example: 'password123' })
   @IsString()
   @MinLength(6)
   password: string;
@@ -24,18 +29,43 @@ export class CreateUserDto {
   @MaxLength(20)
   phone: string;
 
+  @ApiPropertyOptional({ description: '邮箱', example: 'john@example.com' })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional({ description: '性别', enum: Gender, example: Gender.MALE })
+  @IsEnum(Gender)
+  @IsOptional()
+  gender?: Gender;
+
+  @ApiPropertyOptional({ description: '昵称', example: '小张' })
+  @IsString()
+  @IsOptional()
+  nickname?: string;
+
   @ApiProperty({ description: '用户类型', enum: UserType, example: UserType.DRIVER })
   @IsEnum(UserType)
   userType: UserType;
 
-  @ApiProperty({ description: '微信OpenID', required: false })
+  @ApiPropertyOptional({ description: '用户状态', enum: UserStatus, example: UserStatus.ACTIVE })
+  @IsEnum(UserStatus)
   @IsOptional()
+  status?: UserStatus;
+
+  @ApiPropertyOptional({ description: '微信OpenID' })
   @IsString()
+  @IsOptional()
   wechatOpenid?: string;
 
-  @ApiProperty({ description: '司机编号', required: false, example: 'D001' })
-  @IsOptional()
+  @ApiPropertyOptional({ description: '司机编号' })
   @IsString()
+  @IsOptional()
   @MaxLength(20)
   driverCode?: string;
+
+  @ApiPropertyOptional({ description: '头像URL' })
+  @IsString()
+  @IsOptional()
+  avatar?: string;
 } 

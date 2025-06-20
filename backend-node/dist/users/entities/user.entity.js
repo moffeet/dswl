@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.User = exports.UserStatus = exports.UserType = void 0;
+exports.User = exports.Gender = exports.UserStatus = exports.UserType = void 0;
 const typeorm_1 = require("typeorm");
 const swagger_1 = require("@nestjs/swagger");
 var UserType;
@@ -24,6 +24,11 @@ var UserStatus;
     UserStatus["INACTIVE"] = "inactive";
     UserStatus["SUSPENDED"] = "suspended";
 })(UserStatus || (exports.UserStatus = UserStatus = {}));
+var Gender;
+(function (Gender) {
+    Gender["MALE"] = "male";
+    Gender["FEMALE"] = "female";
+})(Gender || (exports.Gender = Gender = {}));
 let User = class User {
 };
 exports.User = User;
@@ -52,6 +57,25 @@ __decorate([
     (0, typeorm_1.Column)({ length: 20, unique: true }),
     __metadata("design:type", String)
 ], User.prototype, "phone", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '邮箱', required: false }),
+    (0, typeorm_1.Column)({ length: 100, nullable: true, unique: true }),
+    __metadata("design:type", String)
+], User.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '性别', enum: Gender, required: false }),
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: Gender,
+        nullable: true,
+    }),
+    __metadata("design:type", String)
+], User.prototype, "gender", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '昵称', required: false }),
+    (0, typeorm_1.Column)({ length: 50, nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "nickname", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: '微信OpenID', required: false }),
     (0, typeorm_1.Column)({ length: 100, nullable: true }),

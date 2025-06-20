@@ -13,6 +13,11 @@ export enum UserStatus {
   SUSPENDED = 'suspended',
 }
 
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
+
 @Entity('users')
 export class User {
   @ApiProperty({ description: '用户ID' })
@@ -34,6 +39,22 @@ export class User {
   @ApiProperty({ description: '手机号' })
   @Column({ length: 20, unique: true })
   phone: string;
+
+  @ApiProperty({ description: '邮箱', required: false })
+  @Column({ length: 100, nullable: true, unique: true })
+  email: string;
+
+  @ApiProperty({ description: '性别', enum: Gender, required: false })
+  @Column({
+    type: 'enum',
+    enum: Gender,
+    nullable: true,
+  })
+  gender: Gender;
+
+  @ApiProperty({ description: '昵称', required: false })
+  @Column({ length: 50, nullable: true })
+  nickname: string;
 
   @ApiProperty({ description: '微信OpenID', required: false })
   @Column({ length: 100, nullable: true })

@@ -189,43 +189,8 @@ export default function CustomersPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', backgroundColor: '#f5f5f5' }}>
-      {/* 侧边栏 */}
-      <div style={{ width: 200, backgroundColor: '#fff', borderRight: '1px solid #f0f0f0' }}>
-        <div style={{ padding: '16px', borderBottom: '1px solid #f0f0f0', color: '#1890ff', fontSize: '18px', fontWeight: 'bold' }}>
-          🎯 Arco Pro
-        </div>
-        <div style={{ padding: '8px 0' }}>
-          <div style={{ padding: '12px 16px', backgroundColor: '#e6f7ff', color: '#1890ff', cursor: 'pointer' }}>
-            👤 客户管理
-          </div>
-          <div style={{ padding: '12px 16px', color: '#666', cursor: 'pointer' }}>
-            🚛 司机管理
-          </div>
-          <div style={{ padding: '12px 16px', color: '#666', cursor: 'pointer' }}>
-            📅 打卡记录
-          </div>
-          <div style={{ padding: '12px 16px', color: '#666', cursor: 'pointer' }}>
-            ⚙️ 权限管理
-          </div>
-        </div>
-      </div>
-
-      <div style={{ flex: 1 }}>
-        {/* 顶部栏 */}
-        <div style={{ backgroundColor: '#fff', padding: '0 24px', borderBottom: '1px solid #f0f0f0', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🏠</span>
-            <span>/</span>
-            <span>客户管理</span>
-          </div>
-          <div>
-            <span style={{ marginRight: 16 }}>欢迎回来，管理员</span>
-          </div>
-        </div>
-
-        {/* 主内容 */}
-        <div style={{ margin: '24px', backgroundColor: '#fff', borderRadius: '6px', padding: '24px' }}>
+    <div style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 64px)' }}>
+      <div style={{ backgroundColor: '#fff', borderRadius: '6px', padding: '24px' }}>
           {/* 搜索表单 */}
           <div style={{ marginBottom: 24 }}>
             <h3 style={{ marginBottom: 16, fontSize: '16px', fontWeight: 'bold' }}>查询表格</h3>
