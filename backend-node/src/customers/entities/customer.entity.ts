@@ -59,6 +59,10 @@ export class Customer {
   @Column({ name: 'enabled', type: 'tinyint', default: 1 })
   status: string;
 
+  @ApiProperty({ description: '更新人' })
+  @Column({ name: 'update_by', length: 50, nullable: true })
+  updateBy: string;
+
   @ApiProperty({ description: '备注' })
   @Column({ name: 'remark', type: 'text', nullable: true })
   remark: string;

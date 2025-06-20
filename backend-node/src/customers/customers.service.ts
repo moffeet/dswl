@@ -14,17 +14,20 @@ export class CustomersService {
   ) {}
 
   async create(createCustomerDto: CreateCustomerDto): Promise<Customer> {
-    // 生成客户编号
-    const lastCustomer = await this.customerRepository.findOne({
-      order: { id: 'DESC' },
-    });
+    // 生成客户编号 - 获取最后一个客户的ID
+    const lastCustomer = await this.customerRepository
+      .createQueryBuilder('customer')
+      .orderBy('customer.id', 'DESC')
+      .getOne();
+    
     const nextNumber = lastCustomer ? lastCustomer.id + 1 : 1;
     const customerNumber = `C${String(nextNumber).padStart(3, '0')}`;
 
     const customer = this.customerRepository.create({
       ...createCustomerDto,
       customerNumber,
-      status: 'active',
+      status: '1', // 字段名是status，但类型是string
+      updateBy: '管理员', // 设置更新人
     });
 
     return await this.customerRepository.save(customer);

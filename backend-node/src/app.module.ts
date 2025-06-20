@@ -6,7 +6,7 @@ import { join } from 'path';
 
 // import { UsersModule } from './users/users.module';
 // import { AuthModule } from './auth/auth.module';
-import { CustomersModule } from './customers/customers.module.simple';
+import { CustomersModule } from './customers/customers.module';
 // import { DriversModule } from './drivers/drivers.module';
 // import { CheckinModule } from './checkin/checkin.module';
 // import { UploadModule } from './common/upload.module';
@@ -21,8 +21,8 @@ import { databaseConfig } from './config/database.config';
       envFilePath: '.env',
     }),
 
-    // 数据库配置 - 暂时禁用
-    // TypeOrmModule.forRoot(databaseConfig),
+    // 数据库配置
+    TypeOrmModule.forRoot(databaseConfig),
 
     // 静态文件服务
     ServeStaticModule.forRoot(

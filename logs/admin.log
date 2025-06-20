@@ -7,4 +7,24 @@
    - Network:      http://10.10.64.33:3001
 
  ✓ Starting...
- ✓ Ready in 883ms
+ ✓ Ready in 761ms
+ ○ Compiling /customers ...
+ ✓ Compiled /customers in 2.3s
+ GET /customers 200 in 2711ms
+ ○ Compiling /_not-found/page ...
+ GET /_next/static/runtime.ts 404 in 662ms
+ GET /_next/internal/helpers.ts 404 in 669ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1418ms
+ ✓ Compiled /_not-found/page in 1421ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 1346ms
+ ✓ Compiled in 243ms
+ ✓ Compiled in 145ms
+ ✓ Compiled in 181ms
+ ✓ Compiled in 104ms
+ ✓ Compiled in 30ms
+ ✓ Compiled in 61ms
+ ✓ Compiled in 103ms
+ ✓ Compiled in 90ms
+ ✓ Compiled in 80ms
+ ✓ Compiled in 165ms
+ ✓ Compiled in 117ms
