@@ -6,296 +6,228 @@
 
 ### 环境要求
 
-- **Node.js**: >= 20.0.0 (推荐使用 v20.19.2)
-- **MySQL**: >= 5.7
+- **Node.js**: >= 18.18.0 (推荐使用 v20.x)
+- **MySQL**: >= 5.7 或 8.0+
 - **npm**: >= 8.0.0
 
-### 一键启动
+### 服务管理
+
+使用 `ser.sh` 脚本管理所有服务：
 
 ```bash
-# 方式1: 使用服务管理脚本（推荐）
-./ser.sh start all     # 启动所有服务
-./ser.sh stop all      # 停止所有服务
-./ser.sh restart all   # 重启所有服务
-./ser.sh status        # 查看服务状态
+# 基本用法
+./ser.sh                    # 显示帮助信息
+./ser.sh status            # 查看服务状态
 
-# 方式2: 使用传统脚本（兼容性）
-./start-dev.sh    # 启动开发环境
-./stop-dev.sh     # 停止开发环境
-```
-
-### 单独服务管理
-
-```bash
-# 启动指定服务
+# 启动服务
+./ser.sh start all         # 启动所有服务
 ./ser.sh start backend     # 只启动后端
-./ser.sh start admin       # 只启动管理后台  
+./ser.sh start admin       # 只启动管理后台
 ./ser.sh start frontend    # 只启动小程序前端
 
-# 停止指定服务
+# 停止服务
+./ser.sh stop all          # 停止所有服务
 ./ser.sh stop backend      # 只停止后端
 ./ser.sh stop admin        # 只停止管理后台
+./ser.sh stop frontend     # 只停止小程序前端
 
-# 重启指定服务 
+# 重启服务
+./ser.sh restart all       # 重启所有服务
 ./ser.sh restart backend   # 只重启后端
 ./ser.sh restart admin     # 只重启管理后台
+./ser.sh restart frontend  # 只重启小程序前端
 ```
 
-### 手动启动
-
-如果一键启动失败，可以按以下步骤手动启动：
-
-#### 1. 检查 Node.js 版本
+### 兼容性脚本
 
 ```bash
-node --version  # 应显示 v20.x.x
-```
-
-如果版本过低，使用 nvm 升级：
-
-```bash
-nvm install 20
-nvm use 20
-nvm alias default 20
-```
-
-#### 2. 清理端口和进程
-
-```bash
-# 清理所有相关进程
-pkill -f "npm run dev" 2>/dev/null || true
-pkill -f "npm run start:dev" 2>/dev/null || true
-pkill -f "next dev" 2>/dev/null || true
-pkill -f "ts-node" 2>/dev/null || true
-pkill -f "nodemon" 2>/dev/null || true
-
-# 清理端口占用
-lsof -ti :3000 | xargs kill -9 2>/dev/null || true
-lsof -ti :3001 | xargs kill -9 2>/dev/null || true
-lsof -ti :3002 | xargs kill -9 2>/dev/null || true
-```
-
-#### 3. 数据库初始化
-
-```bash
-# 启动 MySQL 服务
-brew services start mysql
-
-# 初始化数据库
-mysql -u root -p123456 < init.sql
-```
-
-#### 4. 安装依赖
-
-```bash
-# 后端依赖
-cd backend-node
-rm -rf node_modules package-lock.json
-npm install
-cd ..
-
-# 管理后台依赖
-cd admin-frontend  
-rm -rf node_modules package-lock.json
-npm install
-cd ..
-
-# 小程序前端依赖
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-cd ..
-```
-
-#### 5. 启动服务
-
-在不同终端窗口中启动各个服务：
-
-```bash
-# 终端1: 启动后端服务
-cd backend-node
-npm run build
-npm start
-# 或开发模式: npm run start:dev
-
-# 终端2: 启动管理后台
-cd admin-frontend
-npm run dev -- --port 3001
-
-# 终端3: 启动小程序前端  
-cd frontend
-npm run dev -- --port 3002
+./start-dev.sh      # 启动开发环境 (等同于 ./ser.sh start all)
+./stop-dev.sh       # 停止开发环境 (等同于 ./ser.sh stop all)
+./start-prod.sh     # 启动生产环境
+./stop-prod.sh      # 停止生产环境
 ```
 
 ## 📱 访问地址
 
 启动成功后可以访问：
 
-- **后端API**: http://localhost:3000
-- **API文档**: http://localhost:3000/api
-- **管理后台**: http://localhost:3001
-- **小程序前端**: http://localhost:3002
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| **后端API** | http://localhost:3000 | 后端服务主地址 |
+| **API文档** | http://localhost:3000/api | Swagger API文档 |
+| **管理后台** | http://localhost:3001 | 管理员操作界面 |
+| **小程序前端** | http://localhost:3002 | 小程序开发预览 |
 
-## 🔧 常见问题
+## 🏗️ 技术架构
 
-### Node.js 版本错误
-
-```bash
-# 错误：You are using Node.js 16.x.x. For Next.js, Node.js version "^18.18.0 || ^19.8.0 || >= 20.0.0" is required.
-
-# 解决方案：
-nvm install 20
-nvm use 20
-nvm alias default 20
-node --version  # 验证版本
+### 整体架构
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   小程序前端     │    │   管理后台       │    │   后端API       │
+│  (Next.js 15)   │    │  (Next.js 15)   │    │   (NestJS 10)   │
+│   端口: 3002     │    │   端口: 3001     │    │   端口: 3000     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                │
+                    ┌─────────────────┐
+                    │   MySQL 8.0     │
+                    │   (数据存储)     │
+                    └─────────────────┘
 ```
 
-### 端口被占用
+### 技术栈
 
-```bash
-# 查看端口占用
-lsof -i :3000 -i :3001 -i :3002
+#### 后端服务 (backend-node)
+- **框架**: NestJS 10.x + TypeScript 5.x
+- **数据库**: MySQL 8.0 + TypeORM 0.3.x
+- **认证**: JWT + bcrypt + CASL权限控制
+- **API文档**: Swagger/OpenAPI 3.0
+- **文件上传**: Multer + 本地存储
 
-# 强制清理端口
-./stop-dev.sh
-```
+#### 管理后台 (admin-frontend)
+- **框架**: Next.js 15.3.4 + Turbopack
+- **UI库**: Arco Design + TailwindCSS 3.x
+- **状态管理**: React Hooks + Axios
+- **表单**: React Hook Form
 
-### 依赖安装失败
-
-```bash
-# 方案1: 清理重新安装
-cd 目标目录
-rm -rf node_modules package-lock.json
-npm cache clean --force
-npm install
-
-# 方案2: 使用国内镜像
-npm config set registry https://registry.npmmirror.com
-npm install
-
-# 方案3: 取消代理
-unset http_proxy https_proxy all_proxy
-npm install
-```
-
-### 后端服务启动失败
-
-```bash
-# 如果 nodemon 报错，使用编译后启动
-cd backend-node
-npm run build
-PORT=3000 node dist/main.js
-```
-
-### 前端服务启动失败
-
-```bash
-# 如果出现 "sh: next: command not found"
-cd admin-frontend  # 或 frontend
-rm -rf node_modules package-lock.json
-npm install
-npm run dev -- --port 对应端口
-```
-
-### 数据库连接失败
-
-```bash
-# 检查 MySQL 服务
-brew services list | grep mysql
-brew services start mysql
-
-# 测试连接
-mysql -u root -p123456 -e "SELECT 1;"
-
-# 重新初始化数据库
-mysql -u root -p123456 delivery_system < init.sql
-```
+#### 小程序前端 (frontend)
+- **框架**: Next.js 15.3.4 + 响应式设计
+- **地图**: 高德地图 Web API
+- **多媒体**: Web API (相机 + 地理位置)
 
 ## 📂 项目结构
 
 ```
 wlxt/
-├── backend-node/           # NestJS 后端服务
-├── admin-frontend/         # Next.js 管理后台
-├── frontend/              # Next.js 小程序前端
+├── backend-node/           # NestJS 后端服务 (端口 3000)
+├── admin-frontend/         # Next.js 管理后台 (端口 3001)
+├── frontend/              # Next.js 小程序前端 (端口 3002)
+├── ser.sh                # 服务管理脚本 (主脚本)
+├── start-dev.sh          # 开发环境启动 (兼容性)
+├── stop-dev.sh           # 开发环境停止 (兼容性)
+├── start-prod.sh         # 生产环境启动
+├── stop-prod.sh          # 生产环境停止
 ├── init.sql              # 数据库初始化脚本
-├── start-dev.sh          # 开发环境启动脚本
-├── stop-dev.sh           # 开发环境停止脚本
-├── start-prod.sh         # 生产环境启动脚本
-├── stop-prod.sh          # 生产环境停止脚本
-└── logs/                 # 运行日志目录
+├── logs/                 # 运行日志目录
+└── pids/                 # 进程ID管理目录
 ```
-
-## ⚙️ 技术栈
-
-- **后端**: NestJS + TypeScript + MySQL + TypeORM
-- **管理后台**: Next.js + React + Arco Design + TailwindCSS
-- **小程序前端**: Next.js + React + TailwindCSS
-- **数据库**: MySQL 5.7+
 
 ## 🔐 默认账号
 
-- **管理员**: admin / admin123
-- **测试司机**: 13800000001, 13800000002, 13800000003
+### 管理后台登录
+- **用户名**: `admin`
+- **密码**: `admin123`
+
+### 测试司机账号
+- 张三：13800000001
+- 李四：13800000002
+- 王五：13800000003
 
 ## 📋 数据库配置
 
 ```javascript
-// 默认配置
-host: 'localhost'
-port: 3306
-username: 'root'
-password: '123456'
-database: 'delivery_system'
+// 默认配置 (backend-node/src/config/database.config.ts)
+{
+  host: 'localhost',
+  port: 3306,
+  username: 'root',
+  password: '123456',
+  database: 'delivery_system'
+}
 ```
 
-## 🚨 重要提示
+### 快速初始化数据库
+```bash
+# 创建数据库
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS delivery_system"
 
-1. **启动顺序**: 必须先启动后端服务，再启动前端服务
-2. **端口冲突**: 如遇端口冲突，请先运行 `./stop-dev.sh` 清理
-3. **代理问题**: 如有网络代理，建议启动前取消代理设置
-4. **依赖问题**: 首次运行建议清理重新安装所有依赖
-5. **版本要求**: Node.js 必须 >= 18.18.0，推荐使用 v20.x.x
+# 导入初始化脚本
+mysql -u root -p delivery_system < init.sql
+```
 
-## 📞 支持
+## 🚨 快速部署
 
-如遇问题，请查看日志文件：
+### 1. 克隆代码
+```bash
+git clone <项目仓库地址>
+cd wlxt
+```
+
+### 2. 安装依赖
+```bash
+# 安装所有依赖
+cd backend-node && npm install && cd ..
+cd admin-frontend && npm install && cd ..
+cd frontend && npm install && cd ..
+```
+
+### 3. 启动服务
+```bash
+# 一键启动所有服务
+./ser.sh start all
+
+# 查看服务状态
+./ser.sh status
+```
+
+## 🔧 常见问题
+
+### Node.js 版本要求
+```bash
+# 检查版本
+node --version  # 需要 >= 18.18.0
+
+# 使用 nvm 升级
+nvm install 20 && nvm use 20 && nvm alias default 20
+```
+
+### 端口冲突
+```bash
+# 停止所有服务
+./ser.sh stop all
+
+# 查看服务状态
+./ser.sh status
+```
+
+### 依赖问题
+```bash
+# 清理重新安装
+cd 目标目录
+rm -rf node_modules package-lock.json
+npm install
+```
+
+## 📞 支持与文档
+
+### 运行日志
 - 后端日志: `logs/backend.log`
 - 管理后台日志: `logs/admin.log`
 - 小程序前端日志: `logs/frontend.log`
 
-或参考详细的 [部署启动指南.md](./部署启动指南.md)
+### 详细文档
+- [模块功能说明](./模块功能说明.md) - 完整的技术架构和功能介绍
+- [部署启动指南](./部署启动指南.md) - 详细的部署和配置说明
+- [项目报价方案](./项目报价方案.md) - 项目模块和开发计划
 
-## 📚 更多文档
+## 🎯 核心功能
 
-- [模块功能说明](./模块功能说明.md) - 详细的功能模块介绍和使用指南
-- [详细部署启动指南](./部署启动指南.md) - 完整的环境配置和部署说明
-- [项目报价方案](./项目报价方案.md) - 项目功能模块和开发计划
+### 管理后台功能
+- ✅ **客户管理**: 客户信息CRUD、搜索筛选、批量操作
+- ✅ **用户管理**: 用户账号管理、权限分配
+- ✅ **角色权限**: 基于RBAC的细粒度权限控制
+- ✅ **司机管理**: 司机信息管理和车辆配置
+- ✅ **打卡记录**: 配送记录查看、图片预览
+- ✅ **数据统计**: 业务数据分析和报表
 
-## 🎯 服务管理
-
-新增了强大的服务管理脚本 `manage-services.sh`，支持：
-
-### 基本操作
-```bash
-./manage-services.sh start all      # 启动所有服务
-./manage-services.sh stop all       # 停止所有服务  
-./manage-services.sh restart all    # 重启所有服务
-./manage-services.sh status         # 查看服务状态
-```
-
-### 高级功能
-- ✅ **单服务管理**: 可以单独启动/停止/重启任意服务
-- ✅ **智能依赖检查**: 自动检查Node.js版本和依赖安装
-- ✅ **端口冲突处理**: 自动清理端口占用
-- ✅ **PID管理**: 完善的进程管理和状态追踪
-- ✅ **日志记录**: 统一的日志管理（logs/目录）
-- ✅ **错误恢复**: 开发模式失败自动降级到生产模式
-- ✅ **状态监控**: 实时服务状态和端口占用情况
-
-### 兼容性
-原有的 `start-dev.sh` 和 `stop-dev.sh` 脚本仍然可用，会自动调用新的管理脚本。
+### 小程序端功能
+- ✅ **身份认证**: 微信登录、手机号获取、司机验证
+- ✅ **客户搜索**: 支持编号/姓名/地址模糊搜索
+- ✅ **导航功能**: 高德地图多目的地路线规划
+- ✅ **拍照打卡**: 地理位置获取、图片上传
+- ✅ **新增客户**: 销售人员添加新客户功能
 
 ---
 
-**快速开始**: 运行 `./manage-services.sh start all` 或 `./start-dev.sh` 即可启动整个系统！ 
+**🚀 快速开始**: 运行 `./ser.sh start all` 即可启动整个系统！ 
