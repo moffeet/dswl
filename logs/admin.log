@@ -2,45 +2,4 @@
 > admin-frontend@0.1.0 dev
 > next dev --turbopack --port 3001
 
-   ▲ Next.js 15.3.4 (Turbopack)
-   - Local:        http://localhost:3001
-   - Network:      http://10.10.64.33:3001
-
- ✓ Starting...
- ✓ Ready in 780ms
- ○ Compiling /users ...
- ✓ Compiled /users in 2.7s
- GET /users 200 in 1653ms
- GET /users 200 in 357ms
- ✓ Compiled /favicon.ico in 373ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 643ms
- GET /users 200 in 128ms
- GET /users 200 in 145ms
- GET /users 200 in 146ms
- ○ Compiling /roles ...
- ✓ Compiled /roles in 823ms
- GET /roles 200 in 480ms
- GET /users 200 in 165ms
- ○ Compiling /customers ...
- ✓ Compiled /customers in 770ms
- GET /customers 200 in 855ms
- GET /roles 200 in 114ms
- ✓ Compiled in 1480ms
- ✓ Compiled in 203ms
- ✓ Compiled /roles in 44ms
- GET /roles 200 in 416ms
- ⚠ Fast Refresh had to perform a full reload due to a runtime error.
- ✓ Compiled in 136ms
-React does not recognize the `valueStyle` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `valuestyle` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
- GET /roles 200 in 557ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 244ms
- ✓ Compiled in 111ms
- ✓ Compiled in 60ms
- ✓ Compiled in 157ms
- ✓ Compiled in 83ms
- ✓ Compiled in 202ms
- ✓ Compiled in 58ms
- GET /roles 200 in 394ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 225ms
- GET /roles 200 in 139ms
- GET /customers 200 in 109ms
+[?25h

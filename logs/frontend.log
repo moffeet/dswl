@@ -2,9 +2,4 @@
 > frontend@0.1.0 dev
 > next dev --turbopack --port 3002
 
-   ▲ Next.js 15.3.3 (Turbopack)
-   - Local:        http://localhost:3002
-   - Network:      http://10.10.64.33:3002
-
- ✓ Starting...
- ✓ Ready in 829ms
+[?25h
