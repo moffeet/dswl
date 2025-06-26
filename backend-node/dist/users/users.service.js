@@ -60,218 +60,126 @@ exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
-const bcrypt = __importStar(require("bcryptjs"));
 const user_entity_1 = require("./entities/user.entity");
+const bcrypt = __importStar(require("bcryptjs"));
 let UsersService = class UsersService {
     constructor(userRepository) {
         this.userRepository = userRepository;
     }
     async create(createUserDto) {
-        const { username, phone, email, password } = createUserDto, userData = __rest(createUserDto, ["username", "phone", "email", "password"]);
-        const existingUserByUsername = await this.userRepository.findOne({
-            where: { username },
+        const existingUser = await this.userRepository.findOne({
+            where: { username: createUserDto.username }
         });
-        if (existingUserByUsername) {
+        if (existingUser) {
             throw new common_1.ConflictException('用户名已存在');
         }
-        const existingUserByPhone = await this.userRepository.findOne({
-            where: { phone },
-        });
-        if (existingUserByPhone) {
-            throw new common_1.ConflictException('手机号已存在');
-        }
-        if (email) {
-            const existingUserByEmail = await this.userRepository.findOne({
-                where: { email },
+        if (createUserDto.phone) {
+            const existingPhone = await this.userRepository.findOne({
+                where: { phone: createUserDto.phone }
             });
-            if (existingUserByEmail) {
+            if (existingPhone) {
+                throw new common_1.ConflictException('手机号已存在');
+            }
+        }
+        if (createUserDto.email) {
+            const existingEmail = await this.userRepository.findOne({
+                where: { email: createUserDto.email }
+            });
+            if (existingEmail) {
                 throw new common_1.ConflictException('邮箱已存在');
             }
         }
-        let driverCode = userData.driverCode;
-        if (createUserDto.userType === user_entity_1.UserType.DRIVER && !driverCode) {
-            driverCode = await this.generateDriverCode();
-        }
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const user = this.userRepository.create(Object.assign(Object.assign({}, userData), { username,
-            phone,
-            email, password: hashedPassword, driverCode, status: createUserDto.status || user_entity_1.UserStatus.ACTIVE }));
-        const savedUser = await this.userRepository.save(user);
-        delete savedUser.password;
-        return savedUser;
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+        const user = this.userRepository.create(Object.assign(Object.assign({}, createUserDto), { password: hashedPassword, status: createUserDto.status || '启用' }));
+        return await this.userRepository.save(user);
     }
-    async findAllWithPagination(searchDto) {
-        const { page = 1, pageSize = 10, username, realName, phone, email, userType } = searchDto;
-        const queryBuilder = this.userRepository.createQueryBuilder('user');
-        if (username) {
-            queryBuilder.andWhere('user.username LIKE :username', { username: `%${username}%` });
+    async findAll(searchDto) {
+        const { page = 1, size = 10 } = searchDto, filters = __rest(searchDto, ["page", "size"]);
+        const where = {};
+        if (filters.username) {
+            where.username = (0, typeorm_2.Like)(`%${filters.username}%`);
         }
-        if (realName) {
-            queryBuilder.andWhere('user.realName LIKE :realName', { realName: `%${realName}%` });
+        if (filters.nickname) {
+            where.nickname = (0, typeorm_2.Like)(`%${filters.nickname}%`);
         }
-        if (phone) {
-            queryBuilder.andWhere('user.phone LIKE :phone', { phone: `%${phone}%` });
+        if (filters.phone) {
+            where.phone = (0, typeorm_2.Like)(`%${filters.phone}%`);
         }
-        if (email) {
-            queryBuilder.andWhere('user.email LIKE :email', { email: `%${email}%` });
+        if (filters.email) {
+            where.email = (0, typeorm_2.Like)(`%${filters.email}%`);
         }
-        if (userType) {
-            queryBuilder.andWhere('user.userType = :userType', { userType });
+        if (filters.gender) {
+            where.gender = filters.gender;
         }
-        queryBuilder.orderBy('user.createdAt', 'DESC');
-        const skip = (page - 1) * pageSize;
-        queryBuilder.skip(skip).take(pageSize);
-        const [users, total] = await queryBuilder.getManyAndCount();
-        users.forEach(user => delete user.password);
-        return {
-            users,
-            pagination: {
-                page,
-                pageSize,
-                total,
-                totalPages: Math.ceil(total / pageSize),
-            },
-        };
-    }
-    async findAll() {
-        const users = await this.userRepository.find({
-            order: { createdAt: 'DESC' },
+        if (filters.status) {
+            where.status = filters.status;
+        }
+        const [users, total] = await this.userRepository.findAndCount({
+            where,
+            skip: (page - 1) * size,
+            take: size,
+            order: { createTime: 'DESC' }
         });
-        users.forEach(user => delete user.password);
-        return users;
+        return { users, total };
     }
-    async findDrivers() {
-        const drivers = await this.userRepository.find({
-            where: { userType: user_entity_1.UserType.DRIVER },
-            order: { createdAt: 'DESC' },
-        });
-        drivers.forEach(driver => delete driver.password);
-        return drivers;
-    }
-    async getRoles() {
-        return [
-            {
-                value: user_entity_1.UserType.ADMIN,
-                label: '管理员',
-                description: '系统管理员，拥有所有权限',
-                permissions: ['manage:all'],
-            },
-            {
-                value: user_entity_1.UserType.DRIVER,
-                label: '司机',
-                description: '配送司机，可以查看客户信息和提交打卡记录',
-                permissions: ['read:customer', 'create:checkin', 'read:profile', 'update:profile'],
-            },
-            {
-                value: user_entity_1.UserType.SALES,
-                label: '销售人员',
-                description: '销售人员，可以管理客户信息',
-                permissions: ['manage:customer', 'read:driver', 'read:checkin', 'read:profile', 'update:profile'],
-            },
-        ];
-    }
-    async findById(id) {
+    async findOne(id) {
         const user = await this.userRepository.findOne({
-            where: { id },
+            where: { id }
         });
         if (!user) {
             throw new common_1.NotFoundException('用户不存在');
         }
-        delete user.password;
         return user;
     }
     async findByUsername(username) {
-        return this.userRepository.findOne({
-            where: { username },
+        return await this.userRepository.findOne({
+            where: { username }
         });
-    }
-    async findByPhone(phone) {
-        const user = await this.userRepository.findOne({
-            where: { phone },
-        });
-        if (user) {
-            delete user.password;
-        }
-        return user;
     }
     async update(id, updateUserDto) {
-        const user = await this.findById(id);
-        const { password, username, phone, email } = updateUserDto, updateData = __rest(updateUserDto, ["password", "username", "phone", "email"]);
-        if (username && username !== user.username) {
+        const user = await this.findOne(id);
+        if (updateUserDto.username && updateUserDto.username !== user.username) {
             const existingUser = await this.userRepository.findOne({
-                where: { username },
+                where: { username: updateUserDto.username }
             });
-            if (existingUser && existingUser.id !== id) {
+            if (existingUser) {
                 throw new common_1.ConflictException('用户名已存在');
             }
         }
-        if (phone && phone !== user.phone) {
-            const existingUser = await this.userRepository.findOne({
-                where: { phone },
+        if (updateUserDto.phone && updateUserDto.phone !== user.phone) {
+            const existingPhone = await this.userRepository.findOne({
+                where: { phone: updateUserDto.phone }
             });
-            if (existingUser && existingUser.id !== id) {
+            if (existingPhone) {
                 throw new common_1.ConflictException('手机号已存在');
             }
         }
-        if (email && email !== user.email) {
-            const existingUser = await this.userRepository.findOne({
-                where: { email },
+        if (updateUserDto.email && updateUserDto.email !== user.email) {
+            const existingEmail = await this.userRepository.findOne({
+                where: { email: updateUserDto.email }
             });
-            if (existingUser && existingUser.id !== id) {
+            if (existingEmail) {
                 throw new common_1.ConflictException('邮箱已存在');
             }
         }
-        Object.assign(user, Object.assign(Object.assign({}, updateData), { username, phone, email }));
-        if (password) {
-            user.password = await bcrypt.hash(password, 12);
+        if (updateUserDto.password) {
+            const salt = await bcrypt.genSalt(10);
+            updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
         }
-        const updatedUser = await this.userRepository.save(user);
-        delete updatedUser.password;
-        return updatedUser;
-    }
-    async batchRemove(ids) {
-        if (!ids || ids.length === 0) {
-            throw new common_1.NotFoundException('请提供要删除的用户ID');
-        }
-        const result = await this.userRepository.delete(ids);
-        if (result.affected === 0) {
-            throw new common_1.NotFoundException('没有找到要删除的用户');
-        }
+        await this.userRepository.update(id, updateUserDto);
+        return await this.findOne(id);
     }
     async remove(id) {
-        const result = await this.userRepository.delete(id);
-        if (result.affected === 0) {
-            throw new common_1.NotFoundException('用户不存在');
+        const user = await this.findOne(id);
+        await this.userRepository.remove(user);
+    }
+    async validateUser(username, password) {
+        const user = await this.findByUsername(username);
+        if (user && await bcrypt.compare(password, user.password)) {
+            return user;
         }
-    }
-    async updateLastLoginAt(id) {
-        await this.userRepository.update(id, {
-            lastLoginAt: new Date(),
-        });
-    }
-    async findByWechatOpenid(openid) {
-        const user = await this.userRepository.findOne({
-            where: { wechatOpenid: openid },
-        });
-        return user;
-    }
-    async validatePassword(plainPassword, hashedPassword) {
-        return bcrypt.compare(plainPassword, hashedPassword);
-    }
-    async generateDriverCode() {
-        const prefix = 'D';
-        let code;
-        let exists = true;
-        let counter = 1;
-        while (exists) {
-            code = `${prefix}${counter.toString().padStart(3, '0')}`;
-            const existingDriver = await this.userRepository.findOne({
-                where: { driverCode: code },
-            });
-            exists = !!existingDriver;
-            counter++;
-        }
-        return code;
+        return null;
     }
 };
 exports.UsersService = UsersService;

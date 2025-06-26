@@ -159,8 +159,35 @@ let CustomersController = class CustomersController {
 };
 exports.CustomersController = CustomersController;
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: '获取客户列表' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取客户列表',
+        description: '分页获取客户列表，支持页码和每页数量控制'
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, description: '页码，默认为1', example: 1 }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, description: '每页数量，默认为10', example: 10 }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            example: {
+                code: 0,
+                message: '获取成功',
+                data: [
+                    {
+                        id: 1,
+                        customerNumber: 'C001',
+                        customerName: '北京华领科技有限公司',
+                        customerAddress: '北京市朝阳区建国门外大街123号',
+                        updateTime: '2024-01-15T10:30:00.000Z',
+                        updateBy: '系统'
+                    }
+                ],
+                total: 1,
+                page: 1,
+                limit: 10
+            }
+        }
+    }),
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)('page')),
     __param(1, (0, common_1.Query)('limit')),
@@ -187,8 +214,43 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "findOne", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: '创建客户' }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: '创建成功' }),
+    (0, swagger_1.ApiOperation)({
+        summary: '创建客户',
+        description: '创建新客户，客户编号将自动生成（格式：C001、C002...）'
+    }),
+    (0, swagger_1.ApiBody)({
+        type: create_customer_dto_1.CreateCustomerDto,
+        description: '客户创建信息',
+        examples: {
+            example1: {
+                summary: '创建客户示例',
+                value: {
+                    customerName: '李果果公司',
+                    customerAddress: '广州市天河北28号'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '创建成功',
+        schema: {
+            example: {
+                code: 0,
+                message: '创建成功',
+                data: {
+                    id: 8,
+                    customerNumber: 'C008',
+                    customerName: '李果果公司',
+                    customerAddress: '广州市天河北28号',
+                    updateTime: '2024-01-15T10:30:00.000Z',
+                    updateBy: '管理员'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '请求参数错误' }),
+    (0, swagger_1.ApiResponse)({ status: 500, description: '服务器内部错误' }),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -206,8 +268,28 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "update", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: '删除客户' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, swagger_1.ApiOperation)({
+        summary: '删除客户',
+        description: '根据客户ID删除客户信息，删除后无法恢复'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '客户ID', example: 1 }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '删除成功',
+        schema: {
+            example: {
+                code: 0,
+                message: '删除成功',
+                data: {
+                    id: 1,
+                    customerNumber: 'C001',
+                    customerName: '已删除的客户'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '客户不存在' }),
+    (0, swagger_1.ApiResponse)({ status: 500, description: '删除失败' }),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),

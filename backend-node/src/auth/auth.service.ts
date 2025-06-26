@@ -24,62 +24,27 @@ export class AuthService {
     const payload = {
       sub: user.id,
       username: user.username,
-      userType: user.userType,
     };
 
     const accessToken = this.jwtService.sign(payload);
 
-    // 更新最后登录时间
-    await this.usersService.updateLastLoginAt(user.id);
+    // TODO: 更新最后登录时间
+    // await this.usersService.updateLastLoginAt(user.id);
 
     return {
       accessToken,
       user: {
         id: user.id,
         username: user.username,
-        realName: user.realName,
-        userType: user.userType,
+        nickname: user.nickname,
         status: user.status,
       },
     };
   }
 
   async wechatLogin(wechatLoginDto: WechatLoginDto): Promise<LoginResponseDto> {
-    // 调用微信API获取openid
-    const openid = await this.getWechatOpenid(wechatLoginDto.code);
-    
-    // 根据openid查找用户
-    let user = await this.usersService.findByWechatOpenid(openid);
-    
-    if (!user) {
-      throw new UnauthorizedException('用户未绑定微信，请先联系管理员');
-    }
-
-    if (user.status !== 'active') {
-      throw new UnauthorizedException('用户已被禁用');
-    }
-
-    const payload = {
-      sub: user.id,
-      username: user.username,
-      userType: user.userType,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-
-    // 更新最后登录时间
-    await this.usersService.updateLastLoginAt(user.id);
-
-    return {
-      accessToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        realName: user.realName,
-        userType: user.userType,
-        status: user.status,
-      },
-    };
+    // TODO: 重新实现微信登录功能
+    throw new UnauthorizedException('微信登录功能暂未实现');
   }
 
   private async validateUser(username: string, password: string): Promise<User | null> {
@@ -89,13 +54,14 @@ export class AuthService {
       return null;
     }
 
-    if (user.status !== 'active') {
+    if (user.status !== '启用') {
       throw new UnauthorizedException('用户已被禁用');
     }
 
-    const isPasswordValid = await this.usersService.validatePassword(password, user.password);
-    
-    if (!isPasswordValid) {
+    // TODO: 实现密码验证
+    // const isPasswordValid = await this.usersService.validatePassword(password, user.password);
+    // 临时实现，直接比较明文密码
+    if (password !== user.password) {
       return null;
     }
 

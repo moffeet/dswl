@@ -42,6 +42,9 @@ export default function RootLayout({
               <a href="/roles" style={{ display: 'block', padding: '12px 16px', color: '#666', textDecoration: 'none' }}>
                 🔐 角色权限
               </a>
+              <a href="/menus" style={{ display: 'block', padding: '12px 16px', color: '#666', textDecoration: 'none' }}>
+                📋 菜单管理
+              </a>
               <a href="/drivers" style={{ display: 'block', padding: '12px 16px', color: '#666', textDecoration: 'none' }}>
                 🚛 司机管理
               </a>

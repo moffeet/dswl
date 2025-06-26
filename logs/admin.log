@@ -7,35 +7,13 @@
    - Network:      http://10.10.64.33:3001
 
  ✓ Starting...
- ✓ Ready in 883ms
- ○ Compiling / ...
- ✓ Compiled / in 1665ms
- GET / 200 in 1848ms
- ○ Compiling /customers ...
- ✓ Compiled /customers in 1052ms
- GET /customers 200 in 1074ms
- GET /customers 200 in 179ms
+ ✓ Ready in 718ms
+ ○ Compiling /users ...
+ ✓ Compiled /users in 2.8s
+ GET /users 200 in 3093ms
  ○ Compiling /_not-found/page ...
- ✓ Compiled /_not-found/page in 571ms
- GET /.well-known/appspecific/com.chrome.devtools.json 404 in 609ms
- GET /_next/internal/helpers.ts 404 in 53ms
- GET /_next/static/runtime.ts 404 in 63ms
- ✓ Compiled in 68ms
- ✓ Compiled in 34ms
- ✓ Compiled in 24ms
- GET /customers 200 in 310ms
- GET /.well-known/appspecific/com.chrome.devtools.json 404 in 326ms
- ○ Compiling /favicon.ico ...
- GET /_next/internal/helpers.ts 404 in 86ms
- GET /_next/static/runtime.ts 404 in 139ms
- ✓ Compiled /favicon.ico in 588ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 841ms
- ✓ Compiled in 33ms
- ✓ Compiled in 125ms
- ✓ Compiled in 27ms
- ✓ Compiled in 26ms
- GET /customers 200 in 254ms
- GET /.well-known/appspecific/com.chrome.devtools.json 404 in 380ms
- GET /favicon.ico?favicon.45db1c09.ico 200 in 414ms
- GET /_next/internal/helpers.ts 404 in 76ms
- GET /_next/static/runtime.ts 404 in 86ms
+ ✓ Compiled /_not-found/page in 1366ms
+ GET /_next/internal/helpers.ts 404 in 583ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1482ms
+ GET /_next/static/runtime.ts 404 in 603ms
+ GET /favicon.ico?favicon.45db1c09.ico 200 in 1178ms

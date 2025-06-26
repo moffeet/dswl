@@ -22,12 +22,13 @@ let CustomersService = class CustomersService {
         this.customerRepository = customerRepository;
     }
     async create(createCustomerDto) {
-        const lastCustomer = await this.customerRepository.findOne({
-            order: { id: 'DESC' },
-        });
+        const lastCustomer = await this.customerRepository
+            .createQueryBuilder('customer')
+            .orderBy('customer.id', 'DESC')
+            .getOne();
         const nextNumber = lastCustomer ? lastCustomer.id + 1 : 1;
         const customerNumber = `C${String(nextNumber).padStart(3, '0')}`;
-        const customer = this.customerRepository.create(Object.assign(Object.assign({}, createCustomerDto), { customerNumber, status: 'active' }));
+        const customer = this.customerRepository.create(Object.assign(Object.assign({}, createCustomerDto), { customerNumber, status: '1', updateBy: '管理员' }));
         return await this.customerRepository.save(customer);
     }
     async findAll(page = 1, limit = 10) {

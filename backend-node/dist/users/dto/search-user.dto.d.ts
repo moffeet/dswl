@@ -1,10 +1,10 @@
-import { UserType } from '../entities/user.entity';
 export declare class SearchUserDto {
-    page?: number;
-    pageSize?: number;
     username?: string;
-    realName?: string;
+    nickname?: string;
     phone?: string;
     email?: string;
-    userType?: UserType;
+    gender?: '男' | '女';
+    status?: '启用' | '禁用';
+    page?: number;
+    size?: number;
 }

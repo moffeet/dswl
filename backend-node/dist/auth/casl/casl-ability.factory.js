@@ -9,10 +9,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CaslAbilityFactory = exports.Action = void 0;
 const ability_1 = require("@casl/ability");
 const common_1 = require("@nestjs/common");
-const user_entity_1 = require("../../users/entities/user.entity");
-const customer_entity_1 = require("../../customers/entities/customer.entity");
-const driver_entity_1 = require("../../drivers/entities/driver.entity");
-const checkin_record_entity_1 = require("../../checkin/entities/checkin-record.entity");
 var Action;
 (function (Action) {
     Action["Manage"] = "manage";
@@ -24,30 +20,7 @@ var Action;
 let CaslAbilityFactory = class CaslAbilityFactory {
     createForUser(user) {
         const { can, cannot, build } = new ability_1.AbilityBuilder(ability_1.Ability);
-        switch (user.userType) {
-            case user_entity_1.UserType.ADMIN:
-                can(Action.Manage, 'all');
-                break;
-            case user_entity_1.UserType.DRIVER:
-                can(Action.Read, user_entity_1.User, { id: user.id });
-                can(Action.Update, user_entity_1.User, { id: user.id });
-                can(Action.Read, customer_entity_1.Customer);
-                can(Action.Read, driver_entity_1.Driver, { userId: user.id });
-                can(Action.Update, driver_entity_1.Driver, { userId: user.id });
-                can(Action.Create, checkin_record_entity_1.CheckinRecord, { driverId: user.id });
-                can(Action.Read, checkin_record_entity_1.CheckinRecord, { driverId: user.id });
-                break;
-            case user_entity_1.UserType.SALES:
-                can(Action.Read, user_entity_1.User, { id: user.id });
-                can(Action.Update, user_entity_1.User, { id: user.id });
-                can(Action.Manage, customer_entity_1.Customer);
-                can(Action.Read, driver_entity_1.Driver);
-                can(Action.Read, checkin_record_entity_1.CheckinRecord);
-                break;
-            default:
-                cannot(Action.Manage, 'all');
-                break;
-        }
+        can(Action.Manage, 'all');
         return build({
             detectSubjectType: (item) => item.constructor,
         });

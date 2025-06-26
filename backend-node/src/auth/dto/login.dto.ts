@@ -26,8 +26,7 @@ export class LoginResponseDto {
   user: {
     id: number;
     username: string;
-    realName: string;
-    userType: string;
+    nickname?: string;
     status: string;
   };
 } 

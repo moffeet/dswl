@@ -2,36 +2,92 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SearchUserDto } from './dto/search-user.dto';
-import { User, UserType } from './entities/user.entity';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
-    create(createUserDto: CreateUserDto): Promise<User>;
-    findAllWithPagination(query: SearchUserDto): Promise<{
-        users: User[];
-        pagination: {
-            page: number;
-            pageSize: number;
-            total: number;
-            totalPages: number;
+    create(createUserDto: CreateUserDto): Promise<{
+        code: number;
+        message: string;
+        data: {
+            id: number;
+            username: string;
+            nickname?: string;
+            phone?: string;
+            email?: string;
+            gender?: "\u7537" | "\u5973";
+            status: "\u542F\u7528" | "\u7981\u7528";
+            avatar?: string;
+            lastLoginTime?: Date;
+            lastLoginIp?: string;
+            createBy?: number;
+            createTime: Date;
+            updateTime: Date;
         };
     }>;
-    findAll(): Promise<User[]>;
-    findDrivers(): Promise<User[]>;
-    getRoles(): Promise<{
-        value: UserType;
-        label: string;
-        description: string;
-        permissions: string[];
-    }[]>;
-    findOne(id: number): Promise<User>;
-    update(id: number, updateUserDto: UpdateUserDto): Promise<User>;
-    batchRemove(body: {
-        ids: number[];
-    }): Promise<{
+    findAll(searchDto: SearchUserDto): Promise<{
+        code: number;
         message: string;
+        data: {
+            list: {
+                id: number;
+                username: string;
+                nickname?: string;
+                phone?: string;
+                email?: string;
+                gender?: "\u7537" | "\u5973";
+                status: "\u542F\u7528" | "\u7981\u7528";
+                avatar?: string;
+                lastLoginTime?: Date;
+                lastLoginIp?: string;
+                createBy?: number;
+                createTime: Date;
+                updateTime: Date;
+            }[];
+            total: number;
+            page: number;
+            size: number;
+        };
+    }>;
+    findOne(id: number): Promise<{
+        code: number;
+        message: string;
+        data: {
+            id: number;
+            username: string;
+            nickname?: string;
+            phone?: string;
+            email?: string;
+            gender?: "\u7537" | "\u5973";
+            status: "\u542F\u7528" | "\u7981\u7528";
+            avatar?: string;
+            lastLoginTime?: Date;
+            lastLoginIp?: string;
+            createBy?: number;
+            createTime: Date;
+            updateTime: Date;
+        };
+    }>;
+    update(id: number, updateUserDto: UpdateUserDto): Promise<{
+        code: number;
+        message: string;
+        data: {
+            id: number;
+            username: string;
+            nickname?: string;
+            phone?: string;
+            email?: string;
+            gender?: "\u7537" | "\u5973";
+            status: "\u542F\u7528" | "\u7981\u7528";
+            avatar?: string;
+            lastLoginTime?: Date;
+            lastLoginIp?: string;
+            createBy?: number;
+            createTime: Date;
+            updateTime: Date;
+        };
     }>;
     remove(id: number): Promise<{
+        code: number;
         message: string;
     }>;
 }

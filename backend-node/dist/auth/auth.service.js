@@ -32,58 +32,30 @@ let AuthService = class AuthService {
         const payload = {
             sub: user.id,
             username: user.username,
-            userType: user.userType,
         };
         const accessToken = this.jwtService.sign(payload);
-        await this.usersService.updateLastLoginAt(user.id);
         return {
             accessToken,
             user: {
                 id: user.id,
                 username: user.username,
-                realName: user.realName,
-                userType: user.userType,
+                nickname: user.nickname,
                 status: user.status,
             },
         };
     }
     async wechatLogin(wechatLoginDto) {
-        const openid = await this.getWechatOpenid(wechatLoginDto.code);
-        let user = await this.usersService.findByWechatOpenid(openid);
-        if (!user) {
-            throw new common_1.UnauthorizedException('用户未绑定微信，请先联系管理员');
-        }
-        if (user.status !== 'active') {
-            throw new common_1.UnauthorizedException('用户已被禁用');
-        }
-        const payload = {
-            sub: user.id,
-            username: user.username,
-            userType: user.userType,
-        };
-        const accessToken = this.jwtService.sign(payload);
-        await this.usersService.updateLastLoginAt(user.id);
-        return {
-            accessToken,
-            user: {
-                id: user.id,
-                username: user.username,
-                realName: user.realName,
-                userType: user.userType,
-                status: user.status,
-            },
-        };
+        throw new common_1.UnauthorizedException('微信登录功能暂未实现');
     }
     async validateUser(username, password) {
         const user = await this.usersService.findByUsername(username);
         if (!user) {
             return null;
         }
-        if (user.status !== 'active') {
+        if (user.status !== '启用') {
             throw new common_1.UnauthorizedException('用户已被禁用');
         }
-        const isPasswordValid = await this.usersService.validatePassword(password, user.password);
-        if (!isPasswordValid) {
+        if (password !== user.password) {
             return null;
         }
         return user;

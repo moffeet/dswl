@@ -26,11 +26,11 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         this.usersService = usersService;
     }
     async validate(payload) {
-        const user = await this.usersService.findById(payload.sub);
+        const user = await this.usersService.findOne(payload.sub);
         if (!user) {
             throw new common_1.UnauthorizedException('用户不存在');
         }
-        if (user.status !== 'active') {
+        if (user.status !== '启用') {
             throw new common_1.UnauthorizedException('用户已被禁用');
         }
         return user;

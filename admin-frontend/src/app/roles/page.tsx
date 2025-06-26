@@ -16,8 +16,11 @@ import {
   Badge,
   Pagination,
   Space,
-  Statistic
+  Statistic,
+  Tree,
+  Tabs
 } from '@arco-design/web-react';
+import type { ColumnProps } from '@arco-design/web-react/lib/Table';
 import { Grid } from '@arco-design/web-react';
 import { 
   IconPlus, 
@@ -28,19 +31,20 @@ import {
   IconSettings,
   IconUser,
   IconLock,
-  IconCheckCircle
+  IconCheckCircle,
+  IconUserGroup
 } from '@arco-design/web-react/icon';
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Row, Col } = Grid;
+const { TabPane } = Tabs;
 
 // 角色数据接口
 interface Role {
   id: number;
   roleName: string;
   roleId: string;
-  environment: string;
   description: string;
   permissions: string[];
   userCount: number;
@@ -50,14 +54,22 @@ interface Role {
   updatedBy?: string;
 }
 
+interface Permission {
+  id: number;
+  permissionName: string;
+  permissionCode: string;
+  permissionType: 'menu' | 'button';
+  parentId: number;
+  children?: Permission[];
+}
+
 // 模拟角色数据
 const mockRoles: Role[] = [
   {
     id: 1,
-    roleName: '管理员',
+    roleName: '超级管理员',
     roleId: 'admin',
-    environment: '生产环境',
-    description: '系统管理员，拥有所有权限',
+    description: '系统超级管理员，拥有所有权限',
     permissions: ['用户管理', '客户管理', '司机管理', '打卡记录', '数据统计'],
     userCount: 5,
     status: true,
@@ -67,10 +79,9 @@ const mockRoles: Role[] = [
   },
   {
     id: 2,
-    roleName: '司机',
-    roleId: 'driver',
-    environment: '生产环境',
-    description: '配送司机，可以查看客户信息和提交打卡记录',
+    roleName: '管理员',
+    roleId: 'manager',
+    description: '管理员，拥有系统管理和部分业务权限',
     permissions: ['客户查看', '打卡提交', '个人信息'],
     userCount: 15,
     status: true,
@@ -80,10 +91,21 @@ const mockRoles: Role[] = [
   },
   {
     id: 3,
+    roleName: '司机',
+    roleId: 'driver',
+    description: '司机角色，主要负责配送业务',
+    permissions: ['客户查看', '打卡提交', '个人信息'],
+    userCount: 8,
+    status: true,
+    createdAt: '2023/04/26 08:23:39',
+    updatedAt: '2023/05/10 16:40:25',
+    updatedBy: '管理员B'
+  },
+  {
+    id: 4,
     roleName: '销售',
     roleId: 'sales',
-    environment: '生产环境',
-    description: '销售人员，可以管理客户信息',
+    description: '销售角色，主要负责客户和订单管理',
     permissions: ['客户管理', '司机查看', '打卡查看'],
     userCount: 8,
     status: true,
@@ -92,6 +114,154 @@ const mockRoles: Role[] = [
     updatedBy: '管理员B'
   },
 ];
+
+// 备用权限数据
+const fallbackMenuPermissions: Permission[] = [
+  {
+    id: 1,
+    permissionName: '首页',
+    permissionCode: 'menu.dashboard',
+    permissionType: 'menu',
+    parentId: 0
+  },
+  {
+    id: 2,
+    permissionName: '系统管理',
+    permissionCode: 'menu.system',
+    permissionType: 'menu',
+    parentId: 0,
+    children: [
+      {
+        id: 4,
+        permissionName: '用户管理',
+        permissionCode: 'menu.system.users',
+        permissionType: 'menu',
+        parentId: 2
+      },
+      {
+        id: 5,
+        permissionName: '角色管理',
+        permissionCode: 'menu.system.roles',
+        permissionType: 'menu',
+        parentId: 2
+      },
+      {
+        id: 6,
+        permissionName: '权限管理',
+        permissionCode: 'menu.system.permissions',
+        permissionType: 'menu',
+        parentId: 2
+      }
+    ]
+  },
+  {
+    id: 3,
+    permissionName: '业务管理',
+    permissionCode: 'menu.business',
+    permissionType: 'menu',
+    parentId: 0,
+    children: [
+      {
+        id: 7,
+        permissionName: '客户管理',
+        permissionCode: 'menu.business.customers',
+        permissionType: 'menu',
+        parentId: 3
+      }
+    ]
+  }
+];
+
+const fallbackButtonPermissions: Permission[] = [
+  {
+    id: 101,
+    permissionName: '用户新增',
+    permissionCode: 'btn.user.add',
+    permissionType: 'button',
+    parentId: 0
+  },
+  {
+    id: 102,
+    permissionName: '用户编辑',
+    permissionCode: 'btn.user.edit',
+    permissionType: 'button',
+    parentId: 0
+  },
+  {
+    id: 103,
+    permissionName: '用户删除',
+    permissionCode: 'btn.user.delete',
+    permissionType: 'button',
+    parentId: 0
+  },
+  {
+    id: 201,
+    permissionName: '角色新增',
+    permissionCode: 'btn.role.add',
+    permissionType: 'button',
+    parentId: 0
+  },
+  {
+    id: 202,
+    permissionName: '角色编辑',
+    permissionCode: 'btn.role.edit',
+    permissionType: 'button',
+    parentId: 0
+  },
+  {
+    id: 301,
+    permissionName: '客户新增',
+    permissionCode: 'btn.customer.add',
+    permissionType: 'button',
+    parentId: 0
+  },
+  {
+    id: 302,
+    permissionName: '客户编辑',
+    permissionCode: 'btn.customer.edit',
+    permissionType: 'button',
+    parentId: 0
+  }
+];
+
+// API调用函数
+const fetchMenuPermissions = async (): Promise<Permission[]> => {
+  try {
+    const response = await fetch('http://localhost:3000/permissions/menu-tree', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    const result = await response.json();
+    if (result.code === 200) {
+      return result.data || fallbackMenuPermissions;
+    }
+    return fallbackMenuPermissions;
+  } catch (error) {
+    console.error('获取菜单权限失败:', error);
+    return fallbackMenuPermissions;
+  }
+};
+
+const fetchButtonPermissions = async (): Promise<Permission[]> => {
+  try {
+    const response = await fetch('http://localhost:3000/permissions/buttons', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    const result = await response.json();
+    if (result.code === 200) {
+      return result.data || fallbackButtonPermissions;
+    }
+    return fallbackButtonPermissions;
+  } catch (error) {
+    console.error('获取按钮权限失败:', error);
+    return fallbackButtonPermissions;
+  }
+};
 
 // 所有可用权限
 const allPermissions = [
@@ -108,13 +278,7 @@ const allPermissions = [
   { value: 'profile_edit', label: '个人信息编辑', group: '基础权限' },
 ];
 
-// 环境选项
-const environmentOptions = [
-  { label: '全部环境', value: '' },
-  { label: '生产环境', value: '生产环境' },
-  { label: '测试环境', value: '测试环境' },
-  { label: '开发环境', value: '开发环境' }
-];
+
 
 // 状态选项
 const statusOptions = [
@@ -133,12 +297,38 @@ export default function RolesPage() {
   
   // 搜索和筛选状态
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedEnvironment, setSelectedEnvironment] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // 权限相关状态
+  const [menuPermissions, setMenuPermissions] = useState<Permission[]>([]);
+  const [buttonPermissions, setButtonPermissions] = useState<Permission[]>([]);
+  const [selectedMenuKeys, setSelectedMenuKeys] = useState<string[]>([]); // 默认不选中任何权限
+  const [selectedButtonKeys, setSelectedButtonKeys] = useState<string[]>([]); // 默认不选中任何权限
+
+  // 初始化权限数据
+  useEffect(() => {
+    const loadPermissions = async () => {
+      try {
+        const [menuData, buttonData] = await Promise.all([
+          fetchMenuPermissions(),
+          fetchButtonPermissions()
+        ]);
+        console.log('加载的菜单权限数据:', menuData);
+        console.log('加载的按钮权限数据:', buttonData);
+        setMenuPermissions(menuData);
+        setButtonPermissions(buttonData);
+      } catch (error) {
+        console.error('加载权限数据失败:', error);
+        Message.error('权限数据加载失败');
+      }
+    };
+    
+    loadPermissions();
+  }, []);
 
   // 应用搜索和筛选
   useEffect(() => {
@@ -153,11 +343,6 @@ export default function RolesPage() {
       );
     }
 
-    // 环境筛选
-    if (selectedEnvironment) {
-      filtered = filtered.filter(role => role.environment === selectedEnvironment);
-    }
-
     // 状态筛选
     if (selectedStatus) {
       filtered = filtered.filter(role => 
@@ -167,7 +352,7 @@ export default function RolesPage() {
 
     setFilteredRoles(filtered);
     setCurrentPage(1);
-  }, [roles, searchKeyword, selectedEnvironment, selectedStatus]);
+  }, [roles, searchKeyword, selectedStatus]);
 
   // 统计数据
   const stats = {
@@ -178,110 +363,78 @@ export default function RolesPage() {
   };
 
   // 表格列定义
-  const columns = [
+  const columns: ColumnProps<Role>[] = [
     {
       title: '角色信息',
-      key: 'roleInfo',
+      dataIndex: 'roleName',
+      key: 'roleName',
       width: 200,
-      render: (_: any, record: Role) => (
-        <div style={{ padding: '8px 0' }}>
-          <div style={{ 
-            fontSize: '15px', 
-            fontWeight: '600', 
-            color: '#1d2129',
-            marginBottom: '4px'
-          }}>
-            {record.roleName}
-          </div>
-          <div style={{ 
-            fontSize: '13px', 
-            color: '#86909c',
+      render: (text: string, record: Role) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '16px',
+            fontWeight: 'bold'
           }}>
-            <IconLock style={{ fontSize: '12px' }} />
-            {record.roleId}
+            {text.charAt(0)}
+          </div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: '500', color: '#1e293b' }}>
+              {text}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              {record.roleId}
+            </div>
           </div>
         </div>
       ),
     },
     {
-      title: '环境/权限',
-      key: 'envPermissions',
-      width: 280,
-      render: (_: any, record: Role) => (
-        <div style={{ padding: '8px 0' }}>
-          <div style={{ marginBottom: '6px' }}>
-            <Badge 
-              status="success" 
-              text={record.environment}
-              style={{ fontSize: '13px', color: '#00b42a' }}
-            />
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-            {record.permissions.slice(0, 3).map((perm, index) => (
-              <Tag 
-                key={index} 
-                size="small" 
-                color="arcoblue"
-                style={{ 
-                  fontSize: '12px',
-                  padding: '2px 6px',
-                  borderRadius: '4px'
-                }}
-              >
-                {perm}
-              </Tag>
-            ))}
-            {record.permissions.length > 3 && (
-              <Tag 
-                size="small" 
-                color="gray"
-                style={{ 
-                  fontSize: '12px',
-                  padding: '2px 6px',
-                  borderRadius: '4px'
-                }}
-              >
-                +{record.permissions.length - 3}
-              </Tag>
-            )}
-          </div>
+      title: '角色描述',
+      dataIndex: 'description',
+      key: 'description',
+      width: 300,
+      render: (text: string) => (
+        <div style={{ 
+          fontSize: '14px', 
+          color: '#475569',
+          lineHeight: '1.4'
+        }}>
+          {text || '-'}
         </div>
       ),
     },
     {
       title: '用户数/状态',
-      key: 'userStatus',
+      dataIndex: 'userCount',
+      key: 'userCount',
       width: 120,
-      render: (_: any, record: Role) => (
-        <div style={{ 
-          padding: '8px 0',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
+      align: 'center',
+      render: (count: number, record: Role) => (
+        <div style={{ textAlign: 'center' }}>
           <div style={{ 
-            fontSize: '16px',
+            fontSize: '20px', 
             fontWeight: '600',
-            color: '#1890ff'
+            color: record.status ? '#10b981' : '#ef4444',
+            marginBottom: '4px'
           }}>
-            {record.userCount}
+            {count}
           </div>
-          <div>
-            <Tag 
-              color={record.status ? 'green' : 'red'}
-              style={{ 
-                fontSize: '12px',
-                borderRadius: '12px',
-                padding: '2px 8px'
-              }}
-            >
-              {record.status ? '启用中' : '已禁用'}
-            </Tag>
-          </div>
+          <Tag color={record.status ? 'green' : 'red'} style={{ 
+            fontSize: '12px',
+            borderRadius: '12px',
+            padding: '2px 8px',
+            border: 'none'
+          }}>
+            {record.status ? '启用中' : '已禁用'}
+          </Tag>
         </div>
       ),
     },
@@ -289,113 +442,71 @@ export default function RolesPage() {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 140,
-      render: (createdAt: string) => (
-        <div style={{ 
-          fontSize: '13px',
-          color: '#86909c'
-        }}>
-          {createdAt}
+      width: 160,
+      render: (text: string) => (
+        <div style={{ fontSize: '14px', color: '#64748b' }}>
+          {text}
         </div>
       ),
     },
     {
       title: '更新时间',
-      key: 'updateInfo',
-      width: 140,
-      render: (_: any, record: Role) => (
-        <div>
-          <div style={{ 
-            fontSize: '13px',
-            color: '#86909c'
-          }}>
-            {record.updatedAt}
-          </div>
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 160,
+      render: (text: string) => (
+        <div style={{ fontSize: '14px', color: '#64748b' }}>
+          {text}
         </div>
       ),
     },
     {
       title: '更新人',
+      dataIndex: 'updatedBy',
       key: 'updatedBy',
-      width: 100,
-      render: (_: any, record: Role) => (
-        <div style={{ 
-          fontSize: '13px',
-          color: '#86909c'
+      width: 120,
+      render: (text: string) => (
+        <Tag style={{ 
+          borderRadius: '12px',
+          fontSize: '12px',
+          color: '#1e293b',
+          backgroundColor: '#f1f5f9',
+          border: '1px solid #e2e8f0'
         }}>
-          {record.updatedBy || '--'}
-        </div>
+          {text || '当前用户'}
+        </Tag>
       ),
     },
     {
       title: '操作',
       key: 'action',
       width: 120,
-      render: (_: any, record: Role) => (
-        <Space size="small">
-          <button
+      fixed: 'right',
+      render: (text: any, record: Role) => (
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <Button
+            type="text"
+            size="small"
+            icon={<IconEdit />}
             onClick={() => handleEdit(record)}
             style={{
-              width: '26px',
-              height: '26px',
-              border: 'none',
+              color: '#3b82f6',
               borderRadius: '6px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              boxShadow: '0 2px 4px rgba(102, 126, 234, 0.3)',
-              transition: 'all 0.2s ease',
+              padding: '4px 8px'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-              e.currentTarget.style.filter = 'brightness(1.1)';
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<IconDelete />}
+            onClick={() => handleDelete(record.id)}
+            style={{
+              color: '#ef4444',
+              borderRadius: '6px',
+              padding: '4px 8px'
             }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              e.currentTarget.style.filter = 'brightness(1)';
-            }}
-            title="编辑角色"
-          >
-            <IconEdit />
-          </button>
-          <Popconfirm
-            title="确定要删除这个角色吗？"
-            onOk={() => handleDelete(record.id)}
-          >
-            <button
-              style={{
-                width: '26px',
-                height: '26px',
-                border: 'none',
-                borderRadius: '6px',
-                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                color: 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-                boxShadow: '0 2px 4px rgba(240, 147, 251, 0.3)',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-                e.currentTarget.style.filter = 'brightness(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.filter = 'brightness(1)';
-              }}
-              title="删除角色"
-            >
-              <IconDelete />
-            </button>
-          </Popconfirm>
-        </Space>
+          />
+        </div>
       ),
     },
   ];
@@ -403,14 +514,16 @@ export default function RolesPage() {
   // 处理搜索重置
   const handleReset = () => {
     setSearchKeyword('');
-    setSelectedEnvironment('');
     setSelectedStatus('');
+    setCurrentPage(1);
   };
 
   // 处理新增角色
   const handleAdd = () => {
     setEditingRole(null);
     form.resetFields();
+    setSelectedMenuKeys([]);
+    setSelectedButtonKeys([]);
     setVisible(true);
   };
 
@@ -421,6 +534,40 @@ export default function RolesPage() {
       ...role,
       permissions: role.permissions,
     });
+    
+    // 根据角色已有权限设置选中状态
+    // 这里使用权限名称来映射，实际项目中应该从后端获取角色的权限ID列表
+    const menuKeys: string[] = [];
+    const buttonKeys: string[] = [];
+    
+    // 遍历菜单权限，根据权限名称匹配
+    const findPermissionByName = (perms: Permission[], name: string): Permission | null => {
+      for (const perm of perms) {
+        if (perm.permissionName === name) return perm;
+        if (perm.children) {
+          const found = findPermissionByName(perm.children, name);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    // 匹配菜单权限
+    role.permissions.forEach(permName => {
+      const menuPerm = findPermissionByName(menuPermissions, permName);
+      if (menuPerm) {
+        menuKeys.push(menuPerm.id.toString());
+      }
+      
+      // 匹配按钮权限
+      const buttonPerm = buttonPermissions.find(bp => bp.permissionName === permName);
+      if (buttonPerm) {
+        buttonKeys.push(buttonPerm.id.toString());
+      }
+    });
+    
+    setSelectedMenuKeys(menuKeys);
+    setSelectedButtonKeys(buttonKeys);
     setVisible(true);
   };
 
@@ -440,44 +587,89 @@ export default function RolesPage() {
 
   // 处理表单提交
   const handleSubmit = async (values: any) => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // 检查是否选择了权限
+    if (selectedMenuKeys.length === 0 && selectedButtonKeys.length === 0) {
+      Message.warning('请至少选择一项权限！');
+      return;
+    }
+    
+    // 获取选中权限的名称
+    const menuNames = selectedMenuKeys.map(key => {
+      const findPermission = (perms: Permission[]): string | null => {
+        for (const perm of perms) {
+          if (perm.id.toString() === key) return perm.permissionName;
+          if (perm.children) {
+            const found = findPermission(perm.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return findPermission(menuPermissions);
+    }).filter(Boolean);
+    
+    const buttonNames = selectedButtonKeys.map(key => {
+      const perm = buttonPermissions.find(p => p.id.toString() === key);
+      return perm ? perm.permissionName : null;
+    }).filter(Boolean);
+    
+    // 创建确认内容
+    const confirmContent = `
+      角色名称：${values.roleName}
+      角色编码：${values.roleId}
+      角色描述：${values.description || '无'}
       
-      if (editingRole) {
-        // 编辑
-        const updatedRoles = roles.map(r => 
-          r.id === editingRole.id ? { 
-            ...r, 
+      菜单权限 (${menuNames.length}项)：${menuNames.join('、')}
+      
+      按钮权限 (${buttonNames.length}项)：${buttonNames.join('、')}
+      
+      确认要${editingRole ? '更新' : '创建'}此角色及其权限配置吗？此操作将影响该角色下的所有用户权限。
+    `;
+
+    // 使用原生confirm进行确认
+    if (window.confirm(confirmContent)) {
+      setLoading(true);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        if (editingRole) {
+          // 编辑
+          const updatedRoles = roles.map(r => 
+            r.id === editingRole.id ? { 
+              ...r, 
+              ...values,
+              permissions: [...menuNames, ...buttonNames],
+              updatedAt: new Date().toLocaleString(),
+              updatedBy: '当前用户'
+            } : r
+          );
+          setRoles(updatedRoles);
+          Message.success('角色更新成功');
+        } else {
+          // 新增
+          const newRole: Role = {
+            id: Date.now(),
             ...values,
+            permissions: [...menuNames, ...buttonNames],
+            userCount: 0,
+            status: true,
+            createdAt: new Date().toLocaleString(),
             updatedAt: new Date().toLocaleString(),
             updatedBy: '当前用户'
-          } : r
-        );
-        setRoles(updatedRoles);
-        Message.success('角色更新成功');
-      } else {
-        // 新增
-        const newRole: Role = {
-          id: Date.now(),
-          ...values,
-          environment: '生产环境',
-          userCount: 0,
-          status: true,
-          createdAt: new Date().toLocaleString(),
-          updatedAt: new Date().toLocaleString(),
-          updatedBy: '当前用户'
-        };
-        setRoles([newRole, ...roles]);
-        Message.success('角色创建成功');
+          };
+          setRoles([newRole, ...roles]);
+          Message.success('角色创建成功');
+        }
+        
+        setVisible(false);
+        form.resetFields();
+        setSelectedMenuKeys([]);
+        setSelectedButtonKeys([]);
+      } catch (error) {
+        Message.error('保存失败');
+      } finally {
+        setLoading(false);
       }
-      
-      setVisible(false);
-      form.resetFields();
-    } catch (error) {
-      Message.error('保存失败');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -485,6 +677,37 @@ export default function RolesPage() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
+
+  // 权限树数据转换
+  const convertToTreeData = (permissions: Permission[]): any[] => {
+    return permissions.map(permission => ({
+      key: permission.id.toString(),
+      title: permission.permissionName,
+      children: permission.children ? convertToTreeData(permission.children) : undefined,
+    }));
+  };
+
+  // 按钮权限数据转换
+  const convertToButtonTreeData = (permissions: Permission[]): any[] => {
+    // 按权限类型分组
+    const grouped: { [key: string]: Permission[] } = {};
+    permissions.forEach(permission => {
+      const prefix = permission.permissionCode.split('.')[1]; // 如 'user', 'role', 'customer'
+      if (!grouped[prefix]) {
+        grouped[prefix] = [];
+      }
+      grouped[prefix].push(permission);
+    });
+
+    return Object.keys(grouped).map(key => ({
+      key: `group_${key}`,
+      title: `${key === 'user' ? '用户管理' : key === 'role' ? '角色管理' : key === 'customer' ? '客户管理' : key}`,
+      children: grouped[key].map(permission => ({
+        key: permission.id.toString(),
+        title: permission.permissionName,
+      })),
+    }));
+  };
 
   return (
     <div style={{ 
@@ -590,126 +813,38 @@ export default function RolesPage() {
           
           <div style={{ 
             display: 'flex', 
-            gap: '16px', 
-            alignItems: 'flex-end',
+            gap: '12px', 
+            alignItems: 'center',
             flexWrap: 'wrap'
           }}>
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#64748b',
-                marginBottom: '6px'
-              }}>
-                角色名称/ID
-              </label>
-              <Input
-                placeholder="请输入角色名称或ID"
-                value={searchKeyword}
-                onChange={setSearchKeyword}
-                style={{
-                  height: '36px',
-                  borderRadius: '6px',
-                  border: '1px solid #e2e8f0',
-                  transition: 'all 0.2s ease',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
+            <Input
+              placeholder="请输入角色名称/ID"
+              value={searchKeyword}
+              onChange={setSearchKeyword}
+              style={{ 
+                width: '200px',
+                borderRadius: '8px'
+              }}
+              prefix={<IconSearch />}
+            />
             
-            <div style={{ minWidth: '140px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#64748b',
-                marginBottom: '6px'
-              }}>
-                环境
-              </label>
-              <Select
-                placeholder="选择环境"
-                value={selectedEnvironment}
-                onChange={setSelectedEnvironment}
-                style={{ 
-                  width: '100%',
-                  height: '36px'
-                }}
-                triggerProps={{
-                  style: {
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0',
-                  }
-                }}
-              >
-                {environmentOptions.map(option => (
-                  <Option key={option.value} value={option.value}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: option.value === '生产环境' ? '#10b981' : 
-                                       option.value === '测试环境' ? '#f59e0b' : 
-                                       option.value === '开发环境' ? '#3b82f6' : '#6b7280'
-                      }}></div>
-                      {option.label}
-                    </div>
-                  </Option>
-                ))}
-              </Select>
-            </div>
-            
-            <div style={{ minWidth: '120px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#64748b',
-                marginBottom: '6px'
-              }}>
-                状态
-              </label>
-              <Select
-                placeholder="选择状态"
-                value={selectedStatus}
-                onChange={setSelectedStatus}
-                style={{ 
-                  width: '100%',
-                  height: '36px'
-                }}
-                triggerProps={{
-                  style: {
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0',
-                  }
-                }}
-              >
-                {statusOptions.map(option => (
-                  <Option key={option.value} value={option.value}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: option.value === 'active' ? '#10b981' : 
-                                       option.value === 'inactive' ? '#ef4444' : '#6b7280'
-                      }}></div>
-                      {option.label}
-                    </div>
-                  </Option>
-                ))}
-              </Select>
-            </div>
-            
+            <Select
+              placeholder="全部状态"
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              style={{ 
+                width: '120px',
+                borderRadius: '8px'
+              }}
+              allowClear
+            >
+              {statusOptions.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button 
                 type="primary"
@@ -916,35 +1051,120 @@ export default function RolesPage() {
             field="permissions"
             rules={[{ required: true, message: '请选择权限' }]}
           >
-            <Select
-              placeholder="请选择权限"
-              mode="multiple"
-              maxTagCount={10}
-              style={{ width: '100%' }}
-              triggerProps={{
-                style: {
-                  borderRadius: '6px'
-                }
-              }}
-            >
-              {Object.entries(
-                allPermissions.reduce((groups, perm) => {
-                  if (!groups[perm.group]) {
-                    groups[perm.group] = [];
-                  }
-                  groups[perm.group].push(perm);
-                  return groups;
-                }, {} as Record<string, typeof allPermissions>)
-              ).map(([groupName, permissions]) => (
-                <Select.OptGroup key={groupName} label={groupName}>
-                  {permissions.map(perm => (
-                    <Option key={perm.value} value={perm.value}>
-                      {perm.label}
-                    </Option>
-                  ))}
-                </Select.OptGroup>
-              ))}
-            </Select>
+            <Tabs defaultActiveTab="menu">
+              <TabPane key="menu" title="菜单权限">
+                <div style={{ marginBottom: 8, fontSize: 14, color: '#86909C' }}>
+                  选择角色可访问的菜单 (已加载 {menuPermissions.length} 个菜单权限)
+                </div>
+                {menuPermissions.length > 0 ? (
+                  <Tree
+                    checkable
+                    checkedKeys={selectedMenuKeys}
+                    onCheck={(checkedKeys) => {
+                      const newMenuKeys = checkedKeys as string[];
+                      setSelectedMenuKeys(newMenuKeys);
+                      
+                      // 自动选择相关的按钮权限
+                      const autoSelectedButtonKeys = new Set<string>();
+                      
+                      newMenuKeys.forEach(menuKey => {
+                        // 找到选中的菜单权限
+                        const findMenuPermission = (perms: Permission[], key: string): Permission | null => {
+                          for (const perm of perms) {
+                            if (perm.id.toString() === key) return perm;
+                            if (perm.children) {
+                              const found = findMenuPermission(perm.children, key);
+                              if (found) return found;
+                            }
+                          }
+                          return null;
+                        };
+                        
+                        const menuPerm = findMenuPermission(menuPermissions, menuKey);
+                        if (menuPerm) {
+                          // 根据菜单权限编码自动选择对应的按钮权限
+                          let buttonPrefix = '';
+                          if (menuPerm.permissionCode === 'menu.system.users') {
+                            buttonPrefix = 'btn.user';
+                          } else if (menuPerm.permissionCode === 'menu.system.roles') {
+                            buttonPrefix = 'btn.role';
+                          } else if (menuPerm.permissionCode === 'menu.business.customers') {
+                            buttonPrefix = 'btn.customer';
+                          }
+                          
+                          if (buttonPrefix) {
+                            // 自动选择相关的按钮权限
+                            buttonPermissions.forEach(btnPerm => {
+                              if (btnPerm.permissionCode.startsWith(buttonPrefix)) {
+                                autoSelectedButtonKeys.add(btnPerm.id.toString());
+                              }
+                            });
+                          }
+                        }
+                      });
+                      
+                      // 合并手动选择的按钮权限和自动选择的按钮权限
+                      const autoSelectedIds = Array.from(autoSelectedButtonKeys);
+                      const manualButtonKeys = selectedButtonKeys.filter(key => {
+                        // 保留不是自动分配的按钮权限
+                        return !autoSelectedIds.includes(key);
+                      });
+                      
+                      const finalButtonKeys = [...manualButtonKeys, ...Array.from(autoSelectedButtonKeys)];
+                      setSelectedButtonKeys(finalButtonKeys);
+                    }}
+                    treeData={convertToTreeData(menuPermissions)}
+                    style={{ 
+                      border: '1px solid #E5E6EB', 
+                      borderRadius: 6, 
+                      padding: 12,
+                      maxHeight: 200,
+                      overflow: 'auto'
+                    }}
+                  />
+                ) : (
+                  <div style={{ 
+                    border: '1px solid #E5E6EB', 
+                    borderRadius: 6, 
+                    padding: 20,
+                    textAlign: 'center',
+                    color: '#86909C'
+                  }}>
+                    正在加载菜单权限数据...
+                  </div>
+                )}
+              </TabPane>
+              <TabPane key="button" title="按钮权限">
+                <div style={{ marginBottom: 8, fontSize: 14, color: '#86909C' }}>
+                  选择角色可操作的按钮功能 (已加载 {buttonPermissions.length} 个按钮权限)
+                </div>
+                {buttonPermissions.length > 0 ? (
+                  <Tree
+                    checkable
+                    checkedKeys={selectedButtonKeys}
+                    onCheck={(checkedKeys) => setSelectedButtonKeys(checkedKeys as string[])}
+                    treeData={convertToButtonTreeData(buttonPermissions)}
+                    style={{ 
+                      border: '1px solid #E5E6EB', 
+                      borderRadius: 6, 
+                      padding: 12,
+                      maxHeight: 200,
+                      overflow: 'auto'
+                    }}
+                  />
+                ) : (
+                  <div style={{ 
+                    border: '1px solid #E5E6EB', 
+                    borderRadius: 6, 
+                    padding: 20,
+                    textAlign: 'center',
+                    color: '#86909C'
+                  }}>
+                    正在加载按钮权限数据...
+                  </div>
+                )}
+              </TabPane>
+            </Tabs>
           </Form.Item>
 
           <Form.Item

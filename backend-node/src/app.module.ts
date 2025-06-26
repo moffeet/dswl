@@ -4,7 +4,9 @@ import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
-// import { UsersModule } from './users/users.module';
+import { UsersModule } from './users/users.module';
+import { RolesModule } from './roles/roles.module';
+import { PermissionsModule } from './permissions/permissions.module';
 // import { AuthModule } from './auth/auth.module';
 import { CustomersModule } from './customers/customers.module';
 // import { DriversModule } from './drivers/drivers.module';
@@ -36,8 +38,10 @@ import { databaseConfig } from './config/database.config';
       }
     ),
 
-    // 业务模块 - 暂时禁用
-    // UsersModule,
+    // 业务模块
+    UsersModule,
+    RolesModule,
+    PermissionsModule,
     // AuthModule,
     CustomersModule,
     // DriversModule,

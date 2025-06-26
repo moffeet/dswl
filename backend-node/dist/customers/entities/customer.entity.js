@@ -86,6 +86,11 @@ __decorate([
     __metadata("design:type", String)
 ], Customer.prototype, "status", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: '更新人' }),
+    (0, typeorm_1.Column)({ name: 'update_by', length: 50, nullable: true }),
+    __metadata("design:type", String)
+], Customer.prototype, "updateBy", void 0);
+__decorate([
     (0, swagger_1.ApiProperty)({ description: '备注' }),
     (0, typeorm_1.Column)({ name: 'remark', type: 'text', nullable: true }),
     __metadata("design:type", String)

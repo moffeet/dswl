@@ -13,6 +13,7 @@ export declare class Customer {
     area: string;
     customerType: string;
     status: string;
+    updateBy: string;
     remark: string;
     createTime: Date;
     updateTime: Date;
