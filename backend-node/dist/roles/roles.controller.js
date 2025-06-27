@@ -16,7 +16,6 @@ exports.RolesController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const roles_service_1 = require("./roles.service");
-const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let RolesController = class RolesController {
     constructor(rolesService) {
         this.rolesService = rolesService;
@@ -70,6 +69,19 @@ let RolesController = class RolesController {
         return {
             code: 200,
             message: '权限分配成功'
+        };
+    }
+    async updateMiniAppLogin(id, body) {
+        const role = await this.rolesService.update(id, {
+            miniAppLoginEnabled: body.miniAppLoginEnabled
+        });
+        return {
+            code: 200,
+            message: '小程序登录权限更新成功',
+            data: {
+                id: role.id,
+                miniAppLoginEnabled: role.miniAppLoginEnabled
+            }
         };
     }
 };
@@ -228,11 +240,59 @@ __decorate([
     __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", Promise)
 ], RolesController.prototype, "assignPermissions", null);
+__decorate([
+    (0, common_1.Patch)(':id/mini-app-login'),
+    (0, swagger_1.ApiOperation)({
+        summary: '更新角色小程序登录权限',
+        description: '控制指定角色的用户是否可以通过小程序登录系统。管理员角色通常建议关闭，业务角色如司机、销售等建议开启。'
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'id',
+        description: '角色ID',
+        example: 1
+    }),
+    (0, swagger_1.ApiBody)({
+        description: '小程序登录权限设置',
+        schema: {
+            type: 'object',
+            required: ['miniAppLoginEnabled'],
+            properties: {
+                miniAppLoginEnabled: {
+                    type: 'boolean',
+                    description: '是否允许小程序登录',
+                    example: true
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '更新成功',
+        schema: {
+            type: 'object',
+            properties: {
+                code: { type: 'number', example: 200 },
+                message: { type: 'string', example: '小程序登录权限更新成功' },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'number', example: 1 },
+                        miniAppLoginEnabled: { type: 'boolean', example: true }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '角色不存在' }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], RolesController.prototype, "updateMiniAppLogin", null);
 exports.RolesController = RolesController = __decorate([
     (0, swagger_1.ApiTags)('👥 角色管理'),
     (0, common_1.Controller)('roles'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, swagger_1.ApiBearerAuth)(),
     __metadata("design:paramtypes", [roles_service_1.RolesService])
 ], RolesController);
 //# sourceMappingURL=roles.controller.js.map

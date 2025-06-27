@@ -31,15 +31,15 @@ export class CreateUserDto {
   @IsEmail({}, { message: '邮箱格式不正确' })
   email?: string;
 
-  @ApiPropertyOptional({ description: '性别', enum: ['男', '女'], example: '男' })
+  @ApiPropertyOptional({ description: '性别', enum: ['male', 'female'], example: 'male' })
   @IsOptional()
-  @IsEnum(['男', '女'], { message: '性别只能是男或女' })
-  gender?: '男' | '女';
+  @IsEnum(['male', 'female'], { message: '性别只能是male或female' })
+  gender?: 'male' | 'female';
 
-  @ApiPropertyOptional({ description: '用户状态', enum: ['启用', '禁用'], example: '启用' })
+  @ApiPropertyOptional({ description: '用户状态', enum: ['normal', 'disabled'], example: 'normal' })
   @IsOptional()
-  @IsEnum(['启用', '禁用'], { message: '用户状态只能是启用或禁用' })
-  status?: '启用' | '禁用';
+  @IsEnum(['normal', 'disabled'], { message: '用户状态只能是normal或disabled' })
+  status?: 'normal' | 'disabled';
 
   @ApiPropertyOptional({ description: '头像URL' })
   @IsOptional()

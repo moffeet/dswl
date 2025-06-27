@@ -50,14 +50,23 @@ export default function CustomersPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([]);
 
   // 获取客户列表
-  const fetchCustomers = async (params = {}) => {
+  const fetchCustomers = async (params: any = {}) => {
     setLoading(true);
     try {
+      // 构建查询参数，params优先级更高（用于搜索）
+      const searchParams = {
+        customerNumber: '', // 默认值
+        customerName: '',
+        customerAddress: '',
+        ...params, // 覆盖默认值
+      };
+
       const queryParams = new URLSearchParams({
-        page: pagination.current.toString(),
+        page: (params.page || pagination.current).toString(),
         pageSize: pagination.pageSize.toString(),
-        ...searchValues,
-        ...params,
+        ...(searchParams.customerNumber && { customerNumber: searchParams.customerNumber }),
+        ...(searchParams.customerName && { customerName: searchParams.customerName }),
+        ...(searchParams.customerAddress && { customerAddress: searchParams.customerAddress }),
       });
 
       const response = await fetch(`http://localhost:3000/api/customers?${queryParams}`);
@@ -104,13 +113,18 @@ export default function CustomersPage() {
   // 搜索
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
+    const searchParams = {
+      customerNumber: values.customerCode || '', // 前端字段customerCode映射为后端字段customerNumber
+      customerName: values.customerName || '',
+      customerAddress: values.customerAddress || '',
+    };
     setSearchValues({
       customerCode: values.customerCode || '',
       customerName: values.customerName || '',
       customerAddress: values.customerAddress || '',
     });
     setPagination(prev => ({ ...prev, current: 1 }));
-    fetchCustomers({ ...values, page: 1 });
+    fetchCustomers({ ...searchParams, page: 1 });
   };
 
   // 重置搜索
@@ -119,7 +133,8 @@ export default function CustomersPage() {
     const resetValues = { customerCode: '', customerName: '', customerAddress: '' };
     setSearchValues(resetValues);
     setPagination(prev => ({ ...prev, current: 1 }));
-    fetchCustomers({ ...resetValues, page: 1 });
+    const resetSearchParams = { customerNumber: '', customerName: '', customerAddress: '' };
+    fetchCustomers({ ...resetSearchParams, page: 1 });
   };
 
   // 新增
@@ -248,76 +263,76 @@ export default function CustomersPage() {
     });
   };
 
-  // 表格列定义 - 根据图片简化
+  // 表格列定义 - 移除序号列，优化布局
   const columns = [
-    {
-      title: '序号',
-      dataIndex: 'index',
-      width: 80,
-      align: 'center' as const,
-      render: (_: any, __: any, index: number) => (
-        <span style={{ color: '#86909C', fontWeight: 500 }}>
-          {(pagination.current - 1) * pagination.pageSize + index + 1}
-        </span>
-      ),
-    },
     {
       title: '客户编号',
       dataIndex: 'customerCode',
-      width: 150,
+      width: 140,
       render: (text: string) => (
-        <span style={{ fontWeight: 600, color: '#1D2129' }}>{text}</span>
+        <span style={{ fontWeight: 600, color: '#1D2129', fontSize: '14px' }}>{text}</span>
       ),
     },
     {
       title: '客户名',
       dataIndex: 'customerName',
-      width: 200,
+      width: 220,
       render: (text: string) => (
-        <span style={{ color: '#1D2129' }}>{text}</span>
+        <span style={{ color: '#1D2129', fontSize: '14px' }}>{text}</span>
       ),
     },
     {
       title: '客户地址',
       dataIndex: 'customerAddress',
       flex: 1,
+      minWidth: 250,
       render: (text: string) => (
         <Tooltip content={text}>
-          <span style={{ color: '#1D2129' }}>{text}</span>
+          <div style={{ 
+            color: '#1D2129', 
+            fontSize: '14px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '100%'
+          }}>
+            {text}
+          </div>
         </Tooltip>
       ),
     },
     {
       title: '更新时间',
       dataIndex: 'updateTime',
-      width: 180,
+      width: 160,
       align: 'center' as const,
       render: (text: string) => (
-        <span style={{ color: '#86909C' }}>{formatDateTime(text)}</span>
+        <span style={{ color: '#86909C', fontSize: '13px' }}>{formatDateTime(text)}</span>
       ),
     },
     {
       title: '更新人',
       dataIndex: 'updateBy',
-      width: 120,
+      width: 100,
       align: 'center' as const,
       render: (text: string) => (
-        <span style={{ color: '#86909C' }}>{text}</span>
+        <span style={{ color: '#86909C', fontSize: '13px' }}>{text}</span>
       ),
     },
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 140,
       align: 'center' as const,
       fixed: 'right' as const,
       render: (_: any, record: Customer) => (
-        <Space>
+        <Space size={4}>
           <Button
             type="primary"
             size="small"
             icon={<IconEdit />}
             onClick={() => handleEdit(record)}
+            style={{ fontSize: '12px' }}
           >
             编辑
           </Button>
@@ -327,6 +342,7 @@ export default function CustomersPage() {
             size="small"
             icon={<IconDelete />}
             onClick={() => handleDelete(record)}
+            style={{ fontSize: '12px' }}
           >
             删除
           </Button>
@@ -343,35 +359,58 @@ export default function CustomersPage() {
   };
 
   return (
-    <div style={{ padding: '16px', background: '#F5F6FA', minHeight: '100vh' }}>
+    <div style={{ padding: '20px', background: '#F5F6FA', minHeight: '100vh' }}>
       {/* 搜索区域 */}
-      <Card style={{ marginBottom: 16, borderRadius: 8 }}>
-        <div style={{ marginBottom: 16 }}>
-          <Title heading={6} style={{ margin: 0, color: '#1D2129' }}>搜索</Title>
+      <Card style={{ 
+        marginBottom: 20, 
+        borderRadius: 8, 
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        border: 'none'
+      }}>
+        <div style={{ marginBottom: 20 }}>
+          <Title heading={6} style={{ margin: 0, color: '#1D2129', fontSize: '16px' }}>搜索</Title>
         </div>
         <Form form={searchForm} layout="horizontal">
           <Row gutter={24}>
             <Col span={6}>
               <Form.Item label="客户编号" field="customerCode" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
-                <Input placeholder="请输入客户编号" />
+                <Input 
+                  placeholder="请输入客户编号" 
+                  style={{ borderRadius: 6 }}
+                />
               </Form.Item>
             </Col>
             <Col span={6}>
               <Form.Item label="客户名" field="customerName" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-                <Input placeholder="请输入客户名" />
+                <Input 
+                  placeholder="请输入客户名" 
+                  style={{ borderRadius: 6 }}
+                />
               </Form.Item>
             </Col>
             <Col span={6}>
               <Form.Item label="客户地址" field="customerAddress" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
-                <Input placeholder="请输入客户地址" />
+                <Input 
+                  placeholder="请输入客户地址" 
+                  style={{ borderRadius: 6 }}
+                />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Space>
-                <Button type="primary" icon={<IconSearch />} onClick={handleSearch}>
+              <Space size={12}>
+                <Button 
+                  type="primary" 
+                  icon={<IconSearch />} 
+                  onClick={handleSearch}
+                  style={{ borderRadius: 6 }}
+                >
                   搜索
                 </Button>
-                <Button icon={<IconRefresh />} onClick={handleReset}>
+                <Button 
+                  icon={<IconRefresh />} 
+                  onClick={handleReset}
+                  style={{ borderRadius: 6 }}
+                >
                   重置
                 </Button>
               </Space>
@@ -381,11 +420,25 @@ export default function CustomersPage() {
       </Card>
 
       {/* 客户管理 */}
-      <Card style={{ borderRadius: 8 }}>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title heading={6} style={{ margin: 0, color: '#1D2129' }}>客户管理</Title>
-          <Space>
-            <Button type="primary" icon={<IconPlus />} onClick={handleAdd}>
+      <Card style={{ 
+        borderRadius: 8, 
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        border: 'none'
+      }}>
+        <div style={{ 
+          marginBottom: 20, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
+          <Title heading={6} style={{ margin: 0, color: '#1D2129', fontSize: '16px' }}>客户管理</Title>
+          <Space size={12}>
+            <Button 
+              type="primary" 
+              icon={<IconPlus />} 
+              onClick={handleAdd}
+              style={{ borderRadius: 6 }}
+            >
               新增
             </Button>
             <Button 
@@ -394,13 +447,21 @@ export default function CustomersPage() {
               icon={<IconDelete />} 
               onClick={handleBatchDelete}
               disabled={selectedRowKeys.length === 0}
+              style={{ borderRadius: 6 }}
             >
               批量删除
             </Button>
-            <Button icon={<IconRefresh />} onClick={() => fetchCustomers()}>
+            <Button 
+              icon={<IconRefresh />} 
+              onClick={() => fetchCustomers()}
+              style={{ borderRadius: 6 }}
+            >
               刷新
             </Button>
-            <Button icon={<IconSettings />}>
+            <Button 
+              icon={<IconSettings />}
+              style={{ borderRadius: 6 }}
+            >
               列设置
             </Button>
           </Space>
@@ -420,33 +481,55 @@ export default function CustomersPage() {
           rowSelection={rowSelection}
           rowKey="id"
           stripe
-          border
-          scroll={{ x: 1000 }}
+          border={{ 
+            wrapper: true, 
+            cell: true 
+          }}
+          scroll={{ x: 900 }}
+          style={{ 
+            borderRadius: 6,
+            overflow: 'hidden'
+          }}
           noDataElement={
-            <div style={{ padding: '50px 0', textAlign: 'center', color: '#86909C' }}>
-              暂无数据
+            <div style={{ 
+              padding: '60px 0', 
+              textAlign: 'center', 
+              color: '#86909C',
+              fontSize: '14px'
+            }}>
+              <div style={{ marginBottom: 8 }}>暂无数据</div>
+              <div style={{ fontSize: '12px', color: '#C2C7CC' }}>请尝试调整搜索条件</div>
             </div>
           }
         />
       </Card>
 
-      {/* 新增/编辑模态框 */}
+            {/* 新增/编辑模态框 */}
       <Modal
-        title={editingRecord ? '编辑客户' : '新增客户'}
+        title={
+          <div style={{ fontSize: '16px', fontWeight: 600, color: '#1D2129' }}>
+            {editingRecord ? '编辑客户' : '新增客户'}
+          </div>
+        }
         visible={modalVisible}
         onOk={handleSave}
         onCancel={() => setModalVisible(false)}
         confirmLoading={loading}
         okText="确定"
         cancelText="取消"
+        style={{ borderRadius: 8 }}
       >
         <Form form={form} layout="vertical">
           {editingRecord && (
-            <Form.Item label="客户编号">
+            <Form.Item label="客户编号" style={{ marginBottom: 20 }}>
               <Input 
                 value={editingRecord.customerCode} 
                 disabled 
-                style={{ backgroundColor: '#f5f5f5' }}
+                style={{ 
+                  backgroundColor: '#f7f8fa', 
+                  borderRadius: 6,
+                  color: '#86909C'
+                }}
               />
             </Form.Item>
           )}
@@ -454,26 +537,36 @@ export default function CustomersPage() {
             label="客户名"
             field="customerName"
             rules={[{ required: true, message: '请输入客户名' }]}
+            style={{ marginBottom: 20 }}
           >
-            <Input placeholder="请输入客户名" />
+            <Input 
+              placeholder="请输入客户名" 
+              style={{ borderRadius: 6 }}
+            />
           </Form.Item>
           <Form.Item
             label="客户地址"
             field="customerAddress"
             rules={[{ required: true, message: '请输入客户地址' }]}
+            style={{ marginBottom: 0 }}
           >
             <Input.TextArea 
               placeholder="请输入客户地址" 
               rows={3}
               autoSize={{ minRows: 3, maxRows: 6 }}
+              style={{ borderRadius: 6 }}
             />
           </Form.Item>
-                  </Form>
-        </Modal>
+        </Form>
+      </Modal>
 
-        {/* 删除确认模态框 */}
+              {/* 删除确认模态框 */}
         <Modal
-          title="确认删除"
+          title={
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1D2129' }}>
+              确认删除
+            </div>
+          }
           visible={deleteModalVisible}
           onOk={confirmDelete}
           onCancel={() => {
@@ -483,24 +576,42 @@ export default function CustomersPage() {
           okText="确定"
           cancelText="取消"
           okButtonProps={{ status: 'danger' }}
+          style={{ borderRadius: 8 }}
         >
-          <p>确定要删除客户 "{deletingRecord?.customerName}" 吗？</p>
-          <p style={{ color: '#999', fontSize: '12px' }}>此操作不可撤销，请谨慎操作。</p>
+          <div style={{ padding: '8px 0' }}>
+            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#1D2129' }}>
+              确定要删除客户 <strong>"{deletingRecord?.customerName}"</strong> 吗？
+            </p>
+            <p style={{ color: '#86909C', fontSize: '12px', margin: 0 }}>
+              此操作不可撤销，请谨慎操作。
+            </p>
+          </div>
         </Modal>
 
         {/* 批量删除确认模态框 */}
         <Modal
-          title="确认批量删除"
+          title={
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1D2129' }}>
+              确认批量删除
+            </div>
+          }
           visible={batchDeleteModalVisible}
           onOk={confirmBatchDelete}
           onCancel={() => setBatchDeleteModalVisible(false)}
           okText="确定"
           cancelText="取消"
           okButtonProps={{ status: 'danger' }}
+          style={{ borderRadius: 8 }}
         >
-          <p>确定要删除选中的 {selectedRowKeys.length} 个客户吗？</p>
-          <p style={{ color: '#999', fontSize: '12px' }}>此操作不可撤销，请谨慎操作。</p>
+          <div style={{ padding: '8px 0' }}>
+            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#1D2129' }}>
+              确定要删除选中的 <strong>{selectedRowKeys.length}</strong> 个客户吗？
+            </p>
+            <p style={{ color: '#86909C', fontSize: '12px', margin: 0 }}>
+              此操作不可撤销，请谨慎操作。
+            </p>
+          </div>
         </Modal>
-      </div>
-    );
-  } 
+    </div>
+  );
+} 

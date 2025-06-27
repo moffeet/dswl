@@ -7,7 +7,7 @@ import { join } from 'path';
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
-// import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './auth/auth.module';
 import { CustomersModule } from './customers/customers.module';
 // import { DriversModule } from './drivers/drivers.module';
 // import { CheckinModule } from './checkin/checkin.module';
@@ -42,7 +42,7 @@ import { databaseConfig } from './config/database.config';
     UsersModule,
     RolesModule,
     PermissionsModule,
-    // AuthModule,
+    AuthModule,
     CustomersModule,
     // DriversModule,
     // CheckinModule,

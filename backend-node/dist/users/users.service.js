@@ -91,8 +91,9 @@ let UsersService = class UsersService {
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
-        const user = this.userRepository.create(Object.assign(Object.assign({}, createUserDto), { password: hashedPassword, status: createUserDto.status || '启用' }));
-        return await this.userRepository.save(user);
+        const user = this.userRepository.create(Object.assign(Object.assign({}, createUserDto), { password: hashedPassword, status: createUserDto.status || 'normal' }));
+        const savedUser = await this.userRepository.save(user);
+        return savedUser;
     }
     async findAll(searchDto) {
         const { page = 1, size = 10 } = searchDto, filters = __rest(searchDto, ["page", "size"]);

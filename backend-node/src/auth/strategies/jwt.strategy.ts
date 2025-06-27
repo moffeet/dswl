@@ -28,8 +28,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('用户不存在');
     }
-    if (user.status !== '启用') {
-      throw new UnauthorizedException('用户已被禁用');
+    if (user.status !== 'normal') {
+      throw new UnauthorizedException('用户账号已被禁用');
     }
     return user;
   }

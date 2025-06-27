@@ -50,15 +50,15 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "email", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: '性别', enum: ['男', '女'], example: '男' }),
+    (0, swagger_1.ApiPropertyOptional)({ description: '性别', enum: ['male', 'female'], example: 'male' }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEnum)(['男', '女'], { message: '性别只能是男或女' }),
+    (0, class_validator_1.IsEnum)(['male', 'female'], { message: '性别只能是male或female' }),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "gender", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: '用户状态', enum: ['启用', '禁用'], example: '启用' }),
+    (0, swagger_1.ApiPropertyOptional)({ description: '用户状态', enum: ['normal', 'disabled'], example: 'normal' }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEnum)(['启用', '禁用'], { message: '用户状态只能是启用或禁用' }),
+    (0, class_validator_1.IsEnum)(['normal', 'disabled'], { message: '用户状态只能是normal或disabled' }),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "status", void 0);
 __decorate([

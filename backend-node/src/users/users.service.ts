@@ -1,7 +1,8 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, In } from 'typeorm';
 import { User } from './entities/user.entity';
+import { Role } from '../roles/entities/role.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SearchUserDto } from './dto/search-user.dto';
@@ -12,6 +13,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -50,10 +53,21 @@ export class UsersService {
     const user = this.userRepository.create({
       ...createUserDto,
       password: hashedPassword,
-      status: createUserDto.status || '启用'
+      status: createUserDto.status || 'normal'
     });
 
-    return await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // 分配角色
+    if (createUserDto.roleIds && createUserDto.roleIds.length > 0) {
+      const roles = await this.roleRepository.find({
+        where: { id: In(createUserDto.roleIds) }
+      });
+      savedUser.roles = roles;
+      await this.userRepository.save(savedUser);
+    }
+
+    return await this.findOne(savedUser.id);
   }
 
   async findAll(searchDto: SearchUserDto): Promise<{ users: User[], total: number }> {
@@ -81,6 +95,7 @@ export class UsersService {
 
     const [users, total] = await this.userRepository.findAndCount({
       where,
+      relations: ['roles'],
       skip: (page - 1) * size,
       take: size,
       order: { createTime: 'DESC' }
@@ -91,7 +106,8 @@ export class UsersService {
 
   async findOne(id: number): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: { id }
+      where: { id },
+      relations: ['roles']
     });
     if (!user) {
       throw new NotFoundException('用户不存在');
@@ -144,7 +160,39 @@ export class UsersService {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
     }
 
-    await this.userRepository.update(id, updateUserDto);
+    // 移除roleIds字段，避免尝试更新不存在的数据库字段
+    const { roleIds, ...updateData } = updateUserDto;
+
+    await this.userRepository.update(id, updateData);
+
+    // 更新角色
+    if (roleIds !== undefined) {
+      try {
+        const updatedUser = await this.userRepository.findOne({
+          where: { id },
+          relations: ['roles']
+        });
+        
+        if (!updatedUser) {
+          throw new NotFoundException('更新后的用户不存在');
+        }
+        
+        if (roleIds.length > 0) {
+          const roles = await this.roleRepository.find({
+            where: { id: In(roleIds) }
+          });
+          updatedUser.roles = roles;
+        } else {
+          updatedUser.roles = [];
+        }
+        
+        await this.userRepository.save(updatedUser);
+      } catch (error) {
+        console.error('角色更新失败:', error);
+        // 如果角色更新失败，不影响基本信息更新
+      }
+    }
+
     return await this.findOne(id);
   }
 

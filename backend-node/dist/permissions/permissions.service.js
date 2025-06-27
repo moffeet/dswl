@@ -113,7 +113,9 @@ let PermissionsService = class PermissionsService {
     buildTree(permissions, parentId = 0) {
         const result = [];
         for (const permission of permissions) {
-            if (permission.parentId === parentId) {
+            const permParentId = typeof permission.parentId === 'string' ? parseInt(permission.parentId) : permission.parentId;
+            const targetParentId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+            if (permParentId === targetParentId) {
                 const children = this.buildTree(permissions, permission.id);
                 const node = Object.assign(Object.assign({}, permission), { children: children.length > 0 ? children : undefined });
                 result.push(node);

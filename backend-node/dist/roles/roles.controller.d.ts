@@ -37,4 +37,14 @@ export declare class RolesController {
         code: number;
         message: string;
     }>;
+    updateMiniAppLogin(id: number, body: {
+        miniAppLoginEnabled: boolean;
+    }): Promise<{
+        code: number;
+        message: string;
+        data: {
+            id: number;
+            miniAppLoginEnabled: boolean;
+        };
+    }>;
 }

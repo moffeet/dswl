@@ -45,7 +45,8 @@ let RolesService = class RolesService {
             roleName: createRoleDto.roleName,
             roleCode: createRoleDto.roleCode,
             description: createRoleDto.description,
-            status: createRoleDto.status || '启用'
+            status: createRoleDto.status || '启用',
+            miniAppLoginEnabled: createRoleDto.miniAppLoginEnabled
         });
         const savedRole = await this.roleRepository.save(role);
         if (createRoleDto.permissionIds && createRoleDto.permissionIds.length > 0) {
@@ -65,17 +66,28 @@ let RolesService = class RolesService {
         if (filters.status) {
             where.status = filters.status;
         }
+        if (filters.miniAppLoginEnabled !== undefined) {
+            where.miniAppLoginEnabled = filters.miniAppLoginEnabled;
+        }
         const [roles, total] = await this.roleRepository.findAndCount({
             where,
+            relations: ['permissions'],
             skip: (page - 1) * size,
             take: size,
             order: { createTime: 'DESC' }
         });
-        return { roles, total };
+        const rolesWithUserCount = await Promise.all(roles.map(async (role) => {
+            var _a;
+            const userCountQuery = await this.roleRepository.manager.query('SELECT COUNT(*) as count FROM t_user_roles WHERE role_id = ?', [role.id]);
+            const userCount = ((_a = userCountQuery[0]) === null || _a === void 0 ? void 0 : _a.count) || 0;
+            return Object.assign(Object.assign({}, role), { userCount: parseInt(userCount) });
+        }));
+        return { roles: rolesWithUserCount, total };
     }
     async findOne(id) {
         const role = await this.roleRepository.findOne({
-            where: { id }
+            where: { id },
+            relations: ['permissions']
         });
         if (!role) {
             throw new common_1.NotFoundException('角色不存在');
@@ -96,7 +108,8 @@ let RolesService = class RolesService {
             roleName: updateRoleDto.roleName,
             roleCode: updateRoleDto.roleCode,
             description: updateRoleDto.description,
-            status: updateRoleDto.status
+            status: updateRoleDto.status,
+            miniAppLoginEnabled: updateRoleDto.miniAppLoginEnabled
         });
         if (updateRoleDto.permissionIds !== undefined) {
             await this.assignPermissions(id, updateRoleDto.permissionIds);
@@ -109,11 +122,20 @@ let RolesService = class RolesService {
     }
     async assignPermissions(roleId, permissionIds) {
         const role = await this.roleRepository.findOne({
-            where: { id: roleId }
+            where: { id: roleId },
+            relations: ['permissions']
         });
         if (!role) {
             throw new common_1.NotFoundException('角色不存在');
         }
+        if (permissionIds.length > 0) {
+            const permissions = await this.permissionRepository.findByIds(permissionIds);
+            role.permissions = permissions;
+        }
+        else {
+            role.permissions = [];
+        }
+        await this.roleRepository.save(role);
     }
 };
 exports.RolesService = RolesService;

@@ -26,7 +26,6 @@ export class CustomersService {
     const customer = this.customerRepository.create({
       ...createCustomerDto,
       customerNumber,
-      status: '1', // 字段名是status，但类型是string
       updateBy: '管理员', // 设置更新人
     });
 
@@ -66,18 +65,6 @@ export class CustomersService {
     if (searchDto.customerAddress) {
       queryBuilder.andWhere('customer.customerAddress LIKE :customerAddress', {
         customerAddress: `%${searchDto.customerAddress}%`,
-      });
-    }
-
-    if (searchDto.area) {
-      queryBuilder.andWhere('customer.area = :area', {
-        area: searchDto.area,
-      });
-    }
-
-    if (searchDto.contactPerson) {
-      queryBuilder.andWhere('customer.contactPerson LIKE :contactPerson', {
-        contactPerson: `%${searchDto.contactPerson}%`,
       });
     }
 
@@ -121,18 +108,14 @@ export class CustomersService {
       throw new NotFoundException('未找到有效的客户地址');
     }
 
-    // 生成高德地图导航链接
-    let url = 'https://uri.amap.com/navigation?';
+    // 由于当前客户表没有经纬度信息，返回地址信息用于导航
+    const addresses = customers.map(customer => customer.customerAddress).filter(Boolean);
     
-    customers.forEach((customer, index) => {
-      if (index === 0) {
-        url += `to=${customer.longitude},${customer.latitude}`;
-      } else {
-        url += `&mid=${customer.longitude},${customer.latitude}`;
-      }
-    });
-    
-    url += '&dev=0&t=0';
-    return url;
+    if (addresses.length === 0) {
+      throw new NotFoundException('未找到有效的客户地址信息');
+    }
+
+    // 返回地址列表，前端可以用于地图导航
+    return addresses.join(' -> ');
   }
 } 

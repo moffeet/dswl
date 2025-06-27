@@ -1,25 +1,19 @@
 -- 物流配送管理系统数据库初始化脚本
+-- 开发环境：直接删除重建数据库
 
--- 创建数据库
-CREATE DATABASE IF NOT EXISTS logistics_db CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+DROP DATABASE IF EXISTS logistics_db;
+CREATE DATABASE logistics_db CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE logistics_db;
 
--- 删除旧的相关表（如果存在）
-DROP TABLE IF EXISTS t_user_roles;
-DROP TABLE IF EXISTS t_role_permissions;  
-DROP TABLE IF EXISTS t_permissions;
-DROP TABLE IF EXISTS t_roles;
-DROP TABLE IF EXISTS t_users;
-
--- 1. 用户表 - 简化设计
+-- 1. 用户表
 CREATE TABLE t_users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
     username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
-    password VARCHAR(255) NOT NULL COMMENT '密码（加密后）',
-    nickname VARCHAR(50) COMMENT '昵称',
+    password VARCHAR(255) NOT NULL COMMENT '密码',
+    nickname VARCHAR(100) COMMENT '昵称',
     phone VARCHAR(20) COMMENT '手机号',
     email VARCHAR(100) COMMENT '邮箱',
-    gender ENUM('male', 'female') COMMENT '性别',
+    gender ENUM('male', 'female') DEFAULT 'male' COMMENT '性别',
     status ENUM('normal', 'disabled') DEFAULT 'normal' COMMENT '用户状态',
     avatar VARCHAR(255) COMMENT '头像URL',
     last_login_time DATETIME COMMENT '最后登录时间',
@@ -35,7 +29,8 @@ CREATE TABLE t_roles (
     role_name VARCHAR(50) NOT NULL COMMENT '角色名称',
     role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码',
     description TEXT COMMENT '角色描述',
-    status ENUM('normal', 'disabled') DEFAULT 'normal' COMMENT '角色状态',
+    status ENUM('启用', '禁用') DEFAULT '启用' COMMENT '角色状态',
+    mini_app_login_enabled BOOLEAN DEFAULT FALSE COMMENT '是否允许小程序登录',
     create_by BIGINT COMMENT '创建人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
@@ -79,6 +74,17 @@ CREATE TABLE t_role_permissions (
     UNIQUE KEY uk_role_permission (role_id, permission_id)
 ) COMMENT = '角色权限关联表';
 
+-- 6. 客户表
+CREATE TABLE t_customers (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    customerNumber VARCHAR(50) NOT NULL UNIQUE,
+    customerName VARCHAR(100) NOT NULL,
+    customerAddress VARCHAR(255) DEFAULT NULL,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updateBy VARCHAR(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 创建索引
 CREATE INDEX idx_users_username ON t_users(username);
 CREATE INDEX idx_users_phone ON t_users(phone);
@@ -90,7 +96,7 @@ CREATE INDEX idx_permissions_code ON t_permissions(permission_code);
 CREATE INDEX idx_permissions_type ON t_permissions(permission_type);
 CREATE INDEX idx_permissions_parent ON t_permissions(parent_id);
 
--- 插入菜单权限数据（按照截图中的菜单结构）
+-- 插入菜单权限数据
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, path, component, icon, sort_order) VALUES
 -- 一级菜单
 ('首页', 'menu.dashboard', 'menu', 0, '/dashboard', 'Dashboard', 'IconHome', 1),
@@ -130,13 +136,13 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 ('客户查看', 'btn.customer.view', 'button', 0, 304),
 ('客户导出', 'btn.customer.export', 'button', 0, 305);
 
--- 插入角色数据
-INSERT INTO t_roles (role_name, role_code, description, create_by) VALUES
-('超级管理员', 'admin', '系统超级管理员，拥有所有权限', 1),
-('管理员', 'manager', '管理员，拥有系统管理和部分业务权限', 1),
-('司机', 'driver', '司机角色，主要负责配送业务', 1),
-('销售', 'sales', '销售角色，主要负责客户和订单管理', 1),
-('客服', 'service', '客服角色，主要负责客户服务', 1);
+-- 插入角色数据（包含小程序登录权限）
+INSERT INTO t_roles (role_name, role_code, description, mini_app_login_enabled, create_by) VALUES
+('超级管理员', 'admin', '系统超级管理员，拥有所有权限', FALSE, 1),
+('管理员', 'manager', '管理员，拥有系统管理和部分业务权限', FALSE, 1),
+('司机', 'driver', '司机角色，主要负责配送业务', TRUE, 1),
+('销售', 'sales', '销售角色，主要负责客户和订单管理', TRUE, 1),
+('客服', 'service', '客服角色，主要负责客户服务', TRUE, 1);
 
 -- 插入用户数据
 INSERT INTO t_users (username, password, nickname, phone, email, gender, create_by) VALUES
@@ -191,21 +197,8 @@ WHERE permission_code IN (
     'btn.customer.add', 'btn.customer.edit', 'btn.customer.view', 'btn.customer.export'
 );
 
--- 原有的客户表
-CREATE TABLE `customers` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `customerNumber` varchar(50) NOT NULL,
-  `customerName` varchar(100) NOT NULL,
-  `customerAddress` varchar(255) DEFAULT NULL,
-  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `updateBy` varchar(50) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `customerNumber` (`customerNumber`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- 插入客户测试数据
-INSERT INTO `customers` (`customerNumber`, `customerName`, `customerAddress`, `updateBy`) VALUES
+INSERT INTO t_customers (customerNumber, customerName, customerAddress, updateBy) VALUES
 ('C001', '深圳科技有限公司', '深圳市南山区科技园南区', '系统'),
 ('C002', '广州贸易公司', '广州市天河区珠江新城', '管理员'),
 ('C003', '东莞制造企业', '东莞市长安镇工业区', '管理员'),

@@ -14,8 +14,8 @@ export declare class UsersController {
             nickname?: string;
             phone?: string;
             email?: string;
-            gender?: "\u7537" | "\u5973";
-            status: "\u542F\u7528" | "\u7981\u7528";
+            gender?: "male" | "female";
+            status: "normal" | "disabled";
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
@@ -34,8 +34,8 @@ export declare class UsersController {
                 nickname?: string;
                 phone?: string;
                 email?: string;
-                gender?: "\u7537" | "\u5973";
-                status: "\u542F\u7528" | "\u7981\u7528";
+                gender?: "male" | "female";
+                status: "normal" | "disabled";
                 avatar?: string;
                 lastLoginTime?: Date;
                 lastLoginIp?: string;
@@ -57,8 +57,8 @@ export declare class UsersController {
             nickname?: string;
             phone?: string;
             email?: string;
-            gender?: "\u7537" | "\u5973";
-            status: "\u542F\u7528" | "\u7981\u7528";
+            gender?: "male" | "female";
+            status: "normal" | "disabled";
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
@@ -76,8 +76,8 @@ export declare class UsersController {
             nickname?: string;
             phone?: string;
             email?: string;
-            gender?: "\u7537" | "\u5973";
-            status: "\u542F\u7528" | "\u7981\u7528";
+            gender?: "male" | "female";
+            status: "normal" | "disabled";
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;

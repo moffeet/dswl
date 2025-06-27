@@ -46,13 +46,13 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '性别', enum: ['男', '女'], required: false }),
-    (0, typeorm_1.Column)({ type: 'enum', enum: ['男', '女'], nullable: true, comment: '性别' }),
+    (0, swagger_1.ApiProperty)({ description: '性别', enum: ['male', 'female'], required: false }),
+    (0, typeorm_1.Column)({ type: 'enum', enum: ['male', 'female'], nullable: true, comment: '性别' }),
     __metadata("design:type", String)
 ], User.prototype, "gender", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '用户状态', enum: ['启用', '禁用'] }),
-    (0, typeorm_1.Column)({ type: 'enum', enum: ['启用', '禁用'], default: '启用', comment: '用户状态' }),
+    (0, swagger_1.ApiProperty)({ description: '用户状态', enum: ['normal', 'disabled'] }),
+    (0, typeorm_1.Column)({ type: 'enum', enum: ['normal', 'disabled'], default: 'normal', comment: '用户状态' }),
     __metadata("design:type", String)
 ], User.prototype, "status", void 0);
 __decorate([

@@ -6,6 +6,7 @@ export interface CreateRoleDto {
     roleCode: string;
     description?: string;
     status?: '启用' | '禁用';
+    miniAppLoginEnabled?: boolean;
     permissionIds?: number[];
 }
 export interface UpdateRoleDto {
@@ -13,12 +14,14 @@ export interface UpdateRoleDto {
     roleCode?: string;
     description?: string;
     status?: '启用' | '禁用';
+    miniAppLoginEnabled?: boolean;
     permissionIds?: number[];
 }
 export interface SearchRoleDto {
     roleName?: string;
     roleCode?: string;
     status?: '启用' | '禁用';
+    miniAppLoginEnabled?: boolean;
     page?: number;
     size?: number;
 }

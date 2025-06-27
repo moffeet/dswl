@@ -148,11 +148,15 @@ export class PermissionsService {
     await this.permissionRepository.remove(permission);
   }
 
-  private buildTree(permissions: Permission[], parentId: number = 0): Permission[] {
+  private buildTree(permissions: Permission[], parentId: number | string = 0): Permission[] {
     const result: Permission[] = [];
     
     for (const permission of permissions) {
-      if (permission.parentId === parentId) {
+      // 处理 parentId 可能是字符串或数字的情况
+      const permParentId = typeof permission.parentId === 'string' ? parseInt(permission.parentId) : permission.parentId;
+      const targetParentId = typeof parentId === 'string' ? parseInt(parentId) : parentId;
+      
+      if (permParentId === targetParentId) {
         const children = this.buildTree(permissions, permission.id);
         const node = { ...permission, children: children.length > 0 ? children : undefined };
         result.push(node);

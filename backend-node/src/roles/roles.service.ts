@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, In } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { Permission } from '../permissions/entities/permission.entity';
 
@@ -9,6 +9,7 @@ export interface CreateRoleDto {
   roleCode: string;
   description?: string;
   status?: '启用' | '禁用';
+  miniAppLoginEnabled?: boolean;
   permissionIds?: number[];
 }
 
@@ -17,6 +18,7 @@ export interface UpdateRoleDto {
   roleCode?: string;
   description?: string;
   status?: '启用' | '禁用';
+  miniAppLoginEnabled?: boolean;
   permissionIds?: number[];
 }
 
@@ -24,6 +26,7 @@ export interface SearchRoleDto {
   roleName?: string;
   roleCode?: string;
   status?: '启用' | '禁用';
+  miniAppLoginEnabled?: boolean;
   page?: number;
   size?: number;
 }
@@ -50,7 +53,8 @@ export class RolesService {
       roleName: createRoleDto.roleName,
       roleCode: createRoleDto.roleCode,
       description: createRoleDto.description,
-      status: createRoleDto.status || '启用'
+      status: createRoleDto.status || '启用',
+      miniAppLoginEnabled: createRoleDto.miniAppLoginEnabled
     });
 
     const savedRole = await this.roleRepository.save(role);
@@ -76,22 +80,43 @@ export class RolesService {
     if (filters.status) {
       where.status = filters.status;
     }
+    if (filters.miniAppLoginEnabled !== undefined) {
+      where.miniAppLoginEnabled = filters.miniAppLoginEnabled;
+    }
 
     const [roles, total] = await this.roleRepository.findAndCount({
       where,
-      // relations: ['permissions'], // 暂时注释
+      relations: ['permissions'], // 启用权限关系
       skip: (page - 1) * size,
       take: size,
       order: { createTime: 'DESC' }
     });
 
-    return { roles, total };
+    // 为每个角色添加用户数量统计
+    const rolesWithUserCount = await Promise.all(
+      roles.map(async (role) => {
+        // 查询该角色的用户数量 - 直接查询关联表
+        const userCountQuery = await this.roleRepository.manager.query(
+          'SELECT COUNT(*) as count FROM t_user_roles WHERE role_id = ?',
+          [role.id]
+        );
+        
+        const userCount = userCountQuery[0]?.count || 0;
+
+        return {
+          ...role,
+          userCount: parseInt(userCount)
+        };
+      })
+    );
+
+    return { roles: rolesWithUserCount, total };
   }
 
   async findOne(id: number): Promise<Role> {
     const role = await this.roleRepository.findOne({
-      where: { id }
-      // relations: ['permissions'] // 暂时注释
+      where: { id },
+      relations: ['permissions'] // 启用权限关系
     });
     if (!role) {
       throw new NotFoundException('角色不存在');
@@ -116,7 +141,8 @@ export class RolesService {
       roleName: updateRoleDto.roleName,
       roleCode: updateRoleDto.roleCode,
       description: updateRoleDto.description,
-      status: updateRoleDto.status
+      status: updateRoleDto.status,
+      miniAppLoginEnabled: updateRoleDto.miniAppLoginEnabled
     });
 
     // 如果提供了权限ID，更新权限分配
@@ -134,21 +160,23 @@ export class RolesService {
 
   async assignPermissions(roleId: number, permissionIds: number[]): Promise<void> {
     const role = await this.roleRepository.findOne({
-      where: { id: roleId }
-      // relations: ['permissions'] // 暂时注释
+      where: { id: roleId },
+      relations: ['permissions'] // 启用权限关系
     });
     if (!role) {
       throw new NotFoundException('角色不存在');
     }
 
-    // 暂时注释权限分配逻辑
-    // if (permissionIds.length > 0) {
-    //   const permissions = await this.permissionRepository.findByIds(permissionIds);
-    //   role.permissions = permissions;
-    // } else {
-    //   role.permissions = [];
-    // }
+    // 权限分配逻辑
+    if (permissionIds.length > 0) {
+      const permissions = await this.permissionRepository.find({
+        where: { id: In(permissionIds) }
+      });
+      role.permissions = permissions;
+    } else {
+      role.permissions = [];
+    }
 
-    // await this.roleRepository.save(role);
+    await this.roleRepository.save(role);
   }
 } 

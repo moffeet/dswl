@@ -1,77 +1,71 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
-@Entity('t_customer')
+/**
+ * 客户实体
+ * 对应数据库表：t_customers
+ * 用于管理系统中的客户信息
+ */
+@Entity('t_customers')
 export class Customer {
-  @ApiProperty({ description: '客户ID' })
+  @ApiProperty({ 
+    description: '客户ID，主键，自动递增', 
+    example: 1,
+    type: 'number'
+  })
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ApiProperty({ description: '客户编码' })
-  @Column({ name: 'customer_code', length: 50, unique: true })
+  @ApiProperty({ 
+    description: '客户编号，系统自动生成，格式：C001、C002...，全局唯一', 
+    example: 'C001',
+    maxLength: 50,
+    uniqueItems: true
+  })
+  @Column({ name: 'customerNumber', length: 50, unique: true })
   customerNumber: string;
 
-  @ApiProperty({ description: '客户名称' })
-  @Column({ name: 'customer_name', length: 100 })
+  @ApiProperty({ 
+    description: '客户名称，必填字段', 
+    example: '深圳科技有限公司',
+    maxLength: 100
+  })
+  @Column({ name: 'customerName', length: 100 })
   customerName: string;
 
-  @ApiProperty({ description: '联系人' })
-  @Column({ name: 'contact_person', length: 50, nullable: true })
-  contactPerson: string;
-
-  @ApiProperty({ description: '联系电话' })
-  @Column({ name: 'phone', length: 20, nullable: true })
-  contactPhone: string;
-
-  @ApiProperty({ description: '详细地址' })
-  @Column({ name: 'address', length: 200, nullable: true })
+  @ApiProperty({ 
+    description: '客户地址，可选字段', 
+    example: '深圳市南山区科技园南区',
+    maxLength: 255,
+    required: false
+  })
+  @Column({ name: 'customerAddress', length: 255, nullable: true })
   customerAddress: string;
 
-  @ApiProperty({ description: '经度' })
-  @Column({ name: 'longitude', type: 'decimal', precision: 10, scale: 7, nullable: true })
-  longitude: number;
-
-  @ApiProperty({ description: '纬度' })
-  @Column({ name: 'latitude', type: 'decimal', precision: 10, scale: 7, nullable: true })
-  latitude: number;
-
-  @ApiProperty({ description: '省份' })
-  @Column({ name: 'province', length: 50, nullable: true })
-  province: string;
-
-  @ApiProperty({ description: '城市' })
-  @Column({ name: 'city', length: 50, nullable: true })
-  city: string;
-
-  @ApiProperty({ description: '区县' })
-  @Column({ name: 'district', length: 50, nullable: true })
-  district: string;
-
-  @ApiProperty({ description: '所属区域' })
-  @Column({ name: 'area', length: 50, nullable: true })
-  area: string;
-
-  @ApiProperty({ description: '客户类型' })
-  @Column({ name: 'customer_type', length: 20, nullable: true })
-  customerType: string;
-
-  @ApiProperty({ description: '是否启用' })
-  @Column({ name: 'enabled', type: 'tinyint', default: 1 })
-  status: string;
-
-  @ApiProperty({ description: '更新人' })
-  @Column({ name: 'update_by', length: 50, nullable: true })
+  @ApiProperty({ 
+    description: '更新人，记录最后修改该客户信息的用户', 
+    example: '管理员',
+    maxLength: 50,
+    required: false
+  })
+  @Column({ name: 'updateBy', length: 50, nullable: true })
   updateBy: string;
 
-  @ApiProperty({ description: '备注' })
-  @Column({ name: 'remark', type: 'text', nullable: true })
-  remark: string;
-
-  @ApiProperty({ description: '创建时间' })
-  @CreateDateColumn({ name: 'create_time' })
+  @ApiProperty({ 
+    description: '创建时间，记录自动生成', 
+    example: '2025-06-27T06:16:28.000Z',
+    type: 'string',
+    format: 'date-time'
+  })
+  @CreateDateColumn({ name: 'createdAt' })
   createTime: Date;
 
-  @ApiProperty({ description: '更新时间' })
-  @UpdateDateColumn({ name: 'update_time' })
+  @ApiProperty({ 
+    description: '更新时间，每次修改时自动更新', 
+    example: '2025-06-27T08:16:28.000Z',
+    type: 'string',
+    format: 'date-time'
+  })
+  @UpdateDateColumn({ name: 'updatedAt' })
   updateTime: Date;
 } 

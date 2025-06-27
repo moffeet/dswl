@@ -19,19 +19,19 @@ __decorate([
     __metadata("design:type", Number)
 ], Permission.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 100, comment: '权限名称' }),
+    (0, typeorm_1.Column)({ name: 'permission_name', length: 100, comment: '权限名称' }),
     __metadata("design:type", String)
 ], Permission.prototype, "permissionName", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 100, unique: true, comment: '权限编码' }),
+    (0, typeorm_1.Column)({ name: 'permission_code', length: 100, unique: true, comment: '权限编码' }),
     __metadata("design:type", String)
 ], Permission.prototype, "permissionCode", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'enum', enum: ['menu', 'button'], comment: '权限类型：menu-菜单权限，button-按钮权限' }),
+    (0, typeorm_1.Column)({ name: 'permission_type', type: 'enum', enum: ['menu', 'button'], comment: '权限类型：menu-菜单权限，button-按钮权限' }),
     __metadata("design:type", String)
 ], Permission.prototype, "permissionType", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'bigint', default: 0, comment: '父级权限ID，0表示顶级' }),
+    (0, typeorm_1.Column)({ name: 'parent_id', type: 'bigint', default: 0, comment: '父级权限ID，0表示顶级' }),
     __metadata("design:type", Number)
 ], Permission.prototype, "parentId", void 0);
 __decorate([
@@ -47,7 +47,7 @@ __decorate([
     __metadata("design:type", String)
 ], Permission.prototype, "icon", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', default: 0, comment: '排序' }),
+    (0, typeorm_1.Column)({ name: 'sort_order', type: 'int', default: 0, comment: '排序' }),
     __metadata("design:type", Number)
 ], Permission.prototype, "sortOrder", void 0);
 __decorate([
@@ -55,11 +55,11 @@ __decorate([
     __metadata("design:type", String)
 ], Permission.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)({ comment: '创建时间' }),
+    (0, typeorm_1.CreateDateColumn)({ name: 'create_time', comment: '创建时间' }),
     __metadata("design:type", Date)
 ], Permission.prototype, "createTime", void 0);
 __decorate([
-    (0, typeorm_1.UpdateDateColumn)({ comment: '更新时间' }),
+    (0, typeorm_1.UpdateDateColumn)({ name: 'update_time', comment: '更新时间' }),
     __metadata("design:type", Date)
 ], Permission.prototype, "updateTime", void 0);
 exports.Permission = Permission = __decorate([

@@ -5,8 +5,8 @@ export declare class User {
     nickname?: string;
     phone?: string;
     email?: string;
-    gender?: '男' | '女';
-    status: '启用' | '禁用';
+    gender?: 'male' | 'female';
+    status: 'normal' | 'disabled';
     avatar?: string;
     lastLoginTime?: Date;
     lastLoginIp?: string;

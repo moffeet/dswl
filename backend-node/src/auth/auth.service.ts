@@ -54,8 +54,8 @@ export class AuthService {
       return null;
     }
 
-    if (user.status !== '启用') {
-      throw new UnauthorizedException('用户已被禁用');
+    if (user.status !== 'normal') {
+      throw new UnauthorizedException('用户账号已被禁用');
     }
 
     // TODO: 实现密码验证

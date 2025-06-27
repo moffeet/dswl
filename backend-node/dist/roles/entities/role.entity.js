@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Role = void 0;
 const typeorm_1 = require("typeorm");
+const permission_entity_1 = require("../../permissions/entities/permission.entity");
 let Role = class Role {
 };
 exports.Role = Role;
@@ -19,11 +20,11 @@ __decorate([
     __metadata("design:type", Number)
 ], Role.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 50, comment: '角色名称' }),
+    (0, typeorm_1.Column)({ name: 'role_name', length: 50, comment: '角色名称' }),
     __metadata("design:type", String)
 ], Role.prototype, "roleName", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ length: 50, unique: true, comment: '角色编码' }),
+    (0, typeorm_1.Column)({ name: 'role_code', length: 50, unique: true, comment: '角色编码' }),
     __metadata("design:type", String)
 ], Role.prototype, "roleCode", void 0);
 __decorate([
@@ -35,17 +36,30 @@ __decorate([
     __metadata("design:type", String)
 ], Role.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'bigint', nullable: true, comment: '创建人ID' }),
+    (0, typeorm_1.Column)({ name: 'mini_app_login_enabled', type: 'boolean', default: false, comment: '是否允许小程序登录' }),
+    __metadata("design:type", Boolean)
+], Role.prototype, "miniAppLoginEnabled", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' }),
     __metadata("design:type", Number)
 ], Role.prototype, "createBy", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)({ comment: '创建时间' }),
+    (0, typeorm_1.CreateDateColumn)({ name: 'create_time', comment: '创建时间' }),
     __metadata("design:type", Date)
 ], Role.prototype, "createTime", void 0);
 __decorate([
-    (0, typeorm_1.UpdateDateColumn)({ comment: '更新时间' }),
+    (0, typeorm_1.UpdateDateColumn)({ name: 'update_time', comment: '更新时间' }),
     __metadata("design:type", Date)
 ], Role.prototype, "updateTime", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => permission_entity_1.Permission),
+    (0, typeorm_1.JoinTable)({
+        name: 't_role_permissions',
+        joinColumn: { name: 'role_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'permission_id', referencedColumnName: 'id' }
+    }),
+    __metadata("design:type", Array)
+], Role.prototype, "permissions", void 0);
 exports.Role = Role = __decorate([
     (0, typeorm_1.Entity)('t_roles')
 ], Role);
