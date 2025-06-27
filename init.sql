@@ -113,28 +113,36 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, path, component, icon, sort_order) VALUES
 ('客户管理', 'menu.business.customers', 'menu', 3, '/customers', 'CustomerManage', 'IconUser', 7);
 
--- 按钮权限数据
+-- 按钮权限数据（树形结构）
+-- 按钮权限作为对应菜单权限的子权限
+-- 获取菜单权限的ID
+SET @menu_users_id = (SELECT id FROM t_permissions WHERE permission_code = 'menu.system.users');
+SET @menu_roles_id = (SELECT id FROM t_permissions WHERE permission_code = 'menu.system.roles');
+SET @menu_customers_id = (SELECT id FROM t_permissions WHERE permission_code = 'menu.business.customers');
+
+-- 用户管理相关按钮权限（作为用户管理菜单的子权限）
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
--- 用户管理相关按钮权限
-('用户新增', 'btn.user.add', 'button', 0, 101),
-('用户编辑', 'btn.user.edit', 'button', 0, 102),
-('用户删除', 'btn.user.delete', 'button', 0, 103),
-('用户查看', 'btn.user.view', 'button', 0, 104),
-('用户导出', 'btn.user.export', 'button', 0, 105),
+('用户新增', 'btn.user.add', 'button', @menu_users_id, 101),
+('用户编辑', 'btn.user.edit', 'button', @menu_users_id, 102),
+('用户删除', 'btn.user.delete', 'button', @menu_users_id, 103),
+('用户查看', 'btn.user.view', 'button', @menu_users_id, 104),
+('用户导出', 'btn.user.export', 'button', @menu_users_id, 105);
 
--- 角色管理相关按钮权限
-('角色新增', 'btn.role.add', 'button', 0, 201),
-('角色编辑', 'btn.role.edit', 'button', 0, 202),
-('角色删除', 'btn.role.delete', 'button', 0, 203),
-('角色查看', 'btn.role.view', 'button', 0, 204),
-('角色分配权限', 'btn.role.assign_permission', 'button', 0, 205),
+-- 角色管理相关按钮权限（作为角色管理菜单的子权限）
+INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
+('角色新增', 'btn.role.add', 'button', @menu_roles_id, 201),
+('角色编辑', 'btn.role.edit', 'button', @menu_roles_id, 202),
+('角色删除', 'btn.role.delete', 'button', @menu_roles_id, 203),
+('角色查看', 'btn.role.view', 'button', @menu_roles_id, 204),
+('角色分配权限', 'btn.role.assign_permission', 'button', @menu_roles_id, 205);
 
--- 客户管理相关按钮权限
-('客户新增', 'btn.customer.add', 'button', 0, 301),
-('客户编辑', 'btn.customer.edit', 'button', 0, 302),
-('客户删除', 'btn.customer.delete', 'button', 0, 303),
-('客户查看', 'btn.customer.view', 'button', 0, 304),
-('客户导出', 'btn.customer.export', 'button', 0, 305);
+-- 客户管理相关按钮权限（作为客户管理菜单的子权限）
+INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
+('客户新增', 'btn.customer.add', 'button', @menu_customers_id, 301),
+('客户编辑', 'btn.customer.edit', 'button', @menu_customers_id, 302),
+('客户删除', 'btn.customer.delete', 'button', @menu_customers_id, 303),
+('客户查看', 'btn.customer.view', 'button', @menu_customers_id, 304),
+('客户导出', 'btn.customer.export', 'button', @menu_customers_id, 305);
 
 -- 插入角色数据（包含小程序登录权限）
 INSERT INTO t_roles (role_name, role_code, description, mini_app_login_enabled, create_by) VALUES
@@ -170,11 +178,9 @@ SELECT 2, id FROM t_permissions
 WHERE permission_code IN (
     -- 菜单权限
     'menu.dashboard', 'menu.system', 'menu.system.users', 'menu.system.roles', 'menu.system.permissions',
-    'menu.business', 'menu.business.customers',
     -- 按钮权限
     'btn.user.add', 'btn.user.edit', 'btn.user.delete', 'btn.user.view', 'btn.user.export',
-    'btn.role.add', 'btn.role.edit', 'btn.role.delete', 'btn.role.view', 'btn.role.assign_permission',
-    'btn.customer.add', 'btn.customer.edit', 'btn.customer.view', 'btn.customer.export'
+    'btn.role.add', 'btn.role.edit', 'btn.role.delete', 'btn.role.view', 'btn.role.assign_permission'
 );
 
 -- 3. 司机角色权限（主要是查看类权限）

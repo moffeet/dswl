@@ -107,6 +107,28 @@ export class PermissionsService {
     });
   }
 
+  async findButtonTree(): Promise<Permission[]> {
+    // 获取所有按钮权限
+    const buttonPermissions = await this.permissionRepository.find({
+      where: { permissionType: 'button', status: 'normal' },
+      order: { sortOrder: 'ASC' }
+    });
+
+    // 构建树形结构
+    return this.buildTree(buttonPermissions);
+  }
+
+  async findCompletePermissionTree(): Promise<Permission[]> {
+    // 获取所有权限（菜单权限和按钮权限）
+    const allPermissions = await this.permissionRepository.find({
+      where: { status: 'normal' },
+      order: { sortOrder: 'ASC' }
+    });
+
+    // 构建完整的权限树（包含菜单和按钮）
+    return this.buildTree(allPermissions);
+  }
+
   async findOne(id: number): Promise<Permission> {
     const permission = await this.permissionRepository.findOne({
       where: { id }

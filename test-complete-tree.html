@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完整权限树测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .api-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .api-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f8f9fa;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .tree-item {
+            margin-bottom: 5px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .tree-menu {
+            font-weight: bold;
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .tree-button {
+            color: #10b981;
+            background: #f0fdf4;
+            margin-left: 20px;
+            font-size: 13px;
+        }
+        
+        .icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        
+        .icon-menu {
+            background: #3b82f6;
+            border-radius: 2px;
+        }
+        
+        .icon-button {
+            background: #10b981;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>完整权限树结构测试</h1>
+        
+        <div class="api-section">
+            <div class="api-title">1. 测试完整权限树API</div>
+            <button onclick="testCompleteTree()">获取完整权限树</button>
+            <div id="completeTreeResult" class="result"></div>
+        </div>
+        
+        <div class="api-section">
+            <div class="api-title">2. 可视化完整权限树</div>
+            <button onclick="showCompleteTree()">显示权限树结构</button>
+            <div id="visualCompleteTree" class="result"></div>
+        </div>
+        
+        <div class="api-section">
+            <div class="api-title">3. 对比：分别获取菜单和按钮权限</div>
+            <button onclick="testSeparatePermissions()">分别获取权限</button>
+            <div id="separateResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        
+        async function testCompleteTree() {
+            try {
+                const response = await fetch(`${API_BASE}/permissions/complete-tree`);
+                const result = await response.json();
+                document.getElementById('completeTreeResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('completeTreeResult').textContent = '请求失败: ' + error.message;
+            }
+        }
+        
+        async function showCompleteTree() {
+            try {
+                const response = await fetch(`${API_BASE}/permissions/complete-tree`);
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    const treeHtml = renderCompleteTree(result.data);
+                    document.getElementById('visualCompleteTree').innerHTML = treeHtml;
+                } else {
+                    document.getElementById('visualCompleteTree').textContent = '获取数据失败: ' + result.message;
+                }
+            } catch (error) {
+                document.getElementById('visualCompleteTree').textContent = '请求失败: ' + error.message;
+            }
+        }
+        
+        async function testSeparatePermissions() {
+            try {
+                const [menuResponse, buttonResponse] = await Promise.all([
+                    fetch(`${API_BASE}/permissions/menu-tree`),
+                    fetch(`${API_BASE}/permissions/button-tree`)
+                ]);
+                
+                const menuResult = await menuResponse.json();
+                const buttonResult = await buttonResponse.json();
+                
+                const combined = {
+                    menuPermissions: menuResult,
+                    buttonPermissions: buttonResult
+                };
+                
+                document.getElementById('separateResult').textContent = JSON.stringify(combined, null, 2);
+            } catch (error) {
+                document.getElementById('separateResult').textContent = '请求失败: ' + error.message;
+            }
+        }
+        
+        function renderCompleteTree(nodes, level = 0) {
+            let html = '';
+            nodes.forEach(node => {
+                const indent = '&nbsp;'.repeat(level * 4);
+                const isMenu = node.permissionType === 'menu';
+                const isButton = node.permissionType === 'button';
+                
+                const className = isMenu ? 'tree-menu' : (isButton ? 'tree-button' : '');
+                const iconClass = isMenu ? 'icon-menu' : (isButton ? 'icon-button' : '');
+                const typeLabel = isButton ? ' [按钮]' : '';
+                
+                html += `<div class="tree-item ${className}">
+                    ${indent}
+                    <span class="icon ${iconClass}"></span>
+                    ${node.permissionName} (${node.permissionCode})${typeLabel}
+                </div>`;
+                
+                if (node.children && node.children.length > 0) {
+                    html += renderCompleteTree(node.children, level + 1);
+                }
+            });
+            return html;
+        }
+    </script>
+</body>
+</html> 

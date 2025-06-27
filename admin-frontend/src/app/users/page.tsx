@@ -171,7 +171,7 @@ export default function UsersPage() {
 
   // 加载数据
   const loadData = async () => {
-    setLoading(true);
+      setLoading(true);
     try {
       const [usersData, rolesData] = await Promise.all([
         fetchUsers(currentPage, pageSize),
@@ -281,12 +281,12 @@ export default function UsersPage() {
       fixed: 'right',
       render: (_, record) => (
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-          <Button
+            <Button
             type="text"
-            size="small"
+              size="small"
             icon={<IconEdit />}
             onClick={() => handleEdit(record)}
-            style={{
+              style={{ 
               color: '#3b82f6',
               padding: '4px 8px',
               borderRadius: '4px'
@@ -302,7 +302,7 @@ export default function UsersPage() {
               type="text"
               size="small"
               icon={<IconDelete />}
-              style={{
+              style={{ 
                 color: '#ef4444',
                 padding: '4px 8px',
                 borderRadius: '4px'
@@ -382,7 +382,7 @@ export default function UsersPage() {
     <div style={{ 
       padding: '24px', 
       backgroundColor: '#f5f6fa', 
-      minHeight: '100vh' 
+      minHeight: '100vh'
     }}>
       {/* 统计卡片区域 */}
       <GridRow gutter={16} style={{ marginBottom: '24px' }}>
@@ -397,7 +397,7 @@ export default function UsersPage() {
               <div>
                 <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
                   总用户数
-                </div>
+              </div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
                   {stats.total}
                 </div>
@@ -417,7 +417,7 @@ export default function UsersPage() {
               <div>
                 <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
                   启用用户
-                </div>
+              </div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
                   {stats.active}
                 </div>
@@ -437,7 +437,7 @@ export default function UsersPage() {
               <div>
                 <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
                   禁用用户
-                </div>
+              </div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
                   {stats.inactive}
                 </div>
@@ -457,7 +457,7 @@ export default function UsersPage() {
               <div>
                 <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
                   已分配角色
-                </div>
+              </div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
                   {stats.withRoles}
                 </div>
@@ -490,18 +490,18 @@ export default function UsersPage() {
             alignItems: 'center',
             flexWrap: 'wrap'
           }}>
-            <Input
+                <Input 
               placeholder="请输入用户名或邮箱"
               value={searchKeyword}
               onChange={setSearchKeyword}
-              style={{ 
+                  style={{ 
                 width: '200px',
                 borderRadius: '8px'
               }}
               prefix={<IconSearch />}
             />
             
-            <Select
+                <Select 
               placeholder="状态"
               value={selectedStatus}
               onChange={setSelectedStatus}
@@ -509,7 +509,7 @@ export default function UsersPage() {
                 width: '120px',
                 borderRadius: '8px'
               }}
-              allowClear
+                  allowClear
             >
               <Option value="normal">启用</Option>
               <Option value="disabled">禁用</Option>
@@ -519,7 +519,7 @@ export default function UsersPage() {
               placeholder="角色"
               value={selectedRole}
               onChange={setSelectedRole}
-              style={{ 
+                  style={{ 
                 width: '150px',
                 borderRadius: '8px'
               }}
@@ -530,7 +530,7 @@ export default function UsersPage() {
                   {role.roleName}
                 </Option>
               ))}
-            </Select>
+                </Select>
 
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button
@@ -574,22 +574,22 @@ export default function UsersPage() {
             <IconUser style={{ color: '#3b82f6' }} />
             用户管理
           </div>
-          <Button
-            type="primary"
+              <Button
+                type="primary"
             icon={<IconPlus />} 
-            onClick={handleAdd}
-            style={{
+                onClick={handleAdd}
+                style={{
               height: '40px',
               borderRadius: '8px',
               background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              border: 'none',
+                  border: 'none',
               fontSize: '14px',
               fontWeight: '500',
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-            }}
-          >
-            新增用户
-          </Button>
+                }}
+              >
+                新增用户
+              </Button>
         </div>
 
         {/* 表格 */}
@@ -675,12 +675,12 @@ export default function UsersPage() {
           style={{ marginTop: '16px' }}
         >
           <GridRow gutter={16}>
-            <Col span={12}>
-              <Form.Item
+              <Col span={12}>
+                <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>用户名</span>}
-                field="username"
-                rules={[{ required: true, message: '请输入用户名' }]}
-              >
+                  field="username"
+                  rules={[{ required: true, message: '请输入用户名' }]}
+                >
                 <Input 
                   placeholder="请输入用户名" 
                   style={{ 
@@ -688,10 +688,10 @@ export default function UsersPage() {
                     height: '36px'
                   }}
                 />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>昵称</span>}
                 field="nickname"
               >
@@ -702,16 +702,16 @@ export default function UsersPage() {
                     height: '36px'
                   }}
                 />
-              </Form.Item>
-            </Col>
+                </Form.Item>
+              </Col>
           </GridRow>
 
           <GridRow gutter={16}>
-            <Col span={12}>
-              <Form.Item
+              <Col span={12}>
+                <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>邮箱</span>}
                 field="email"
-                rules={[
+                  rules={[
                   { type: 'email', message: '请输入有效的邮箱地址' }
                 ]}
               >
@@ -722,10 +722,10 @@ export default function UsersPage() {
                     height: '36px'
                   }}
                 />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>手机号</span>}
                 field="phone"
               >
@@ -736,12 +736,12 @@ export default function UsersPage() {
                     height: '36px'
                   }}
                 />
-              </Form.Item>
-            </Col>
+                </Form.Item>
+              </Col>
           </GridRow>
 
           {!editingUser && (
-            <Form.Item
+                <Form.Item
               label={<span style={{ fontSize: '14px', fontWeight: '500' }}>密码</span>}
               field="password"
               rules={[{ required: true, message: '请输入密码' }]}
@@ -753,12 +753,12 @@ export default function UsersPage() {
                   height: '36px'
                 }}
               />
-            </Form.Item>
+                </Form.Item>
           )}
 
           <GridRow gutter={16}>
-            <Col span={12}>
-              <Form.Item
+              <Col span={12}>
+                <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色</span>}
                 field="roleIds"
               >
@@ -775,13 +775,13 @@ export default function UsersPage() {
                       {role.roleName}
                     </Option>
                   ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>状态</span>}
-                field="status"
+                  field="status"
                 initialValue="normal"
               >
                 <Select 
@@ -792,11 +792,11 @@ export default function UsersPage() {
                 >
                   <Option value="normal">启用</Option>
                   <Option value="disabled">禁用</Option>
-                </Select>
-              </Form.Item>
-            </Col>
+                  </Select>
+                </Form.Item>
+              </Col>
           </GridRow>
-        </Form>
+          </Form>
       </Modal>
     </div>
   );

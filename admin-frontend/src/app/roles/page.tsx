@@ -18,7 +18,6 @@ import {
   Space,
   Statistic,
   Tree,
-  Tabs,
   Grid
 } from '@arco-design/web-react';
 import type { ColumnProps } from '@arco-design/web-react/lib/Table';
@@ -32,13 +31,14 @@ import {
   IconUser,
   IconLock,
   IconCheckCircle,
-  IconUserGroup
+  IconUserGroup,
+  IconMenuUnfold,
+  IconCode
 } from '@arco-design/web-react/icon';
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Row: GridRow, Col } = Grid;
-const { TabPane } = Tabs;
 
 // 角色数据接口
 interface Role {
@@ -99,14 +99,10 @@ const fetchMenuPermissions = async (): Promise<Permission[]> => {
     const response = await fetch('http://localhost:3000/permissions/menu-tree', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        'Content-Type': 'application/json',
       },
     });
     const result = await response.json();
-    if (result.code === 200) {
-      return result.data || [];
-    }
-    return [];
+    return result.code === 200 ? result.data : [];
   } catch (error) {
     console.error('获取菜单权限失败:', error);
     return [];
@@ -115,19 +111,30 @@ const fetchMenuPermissions = async (): Promise<Permission[]> => {
 
 const fetchButtonPermissions = async (): Promise<Permission[]> => {
   try {
-    const response = await fetch('http://localhost:3000/permissions/buttons', {
+    const response = await fetch('http://localhost:3000/permissions/button-tree', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        'Content-Type': 'application/json',
       },
     });
     const result = await response.json();
-    if (result.code === 200) {
-      return result.data || [];
-    }
-    return [];
+    return result.code === 200 ? result.data : [];
   } catch (error) {
     console.error('获取按钮权限失败:', error);
+    return [];
+  }
+};
+
+const fetchCompletePermissions = async (): Promise<Permission[]> => {
+  try {
+    const response = await fetch('http://localhost:3000/permissions/complete-tree', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+      },
+    });
+    const result = await response.json();
+    return result.code === 200 ? result.data : [];
+  } catch (error) {
+    console.error('获取完整权限失败:', error);
     return [];
   }
 };
@@ -223,8 +230,7 @@ const toggleMiniAppLogin = async (roleId: number, enabled: boolean): Promise<boo
 
 export default function RolesPage() {
   const [data, setData] = useState<Role[]>([]);
-  const [menuPermissions, setMenuPermissions] = useState<Permission[]>([]);
-  const [buttonPermissions, setButtonPermissions] = useState<Permission[]>([]);
+  const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -241,22 +247,19 @@ export default function RolesPage() {
   const [total, setTotal] = useState(0);
 
   // 权限选择状态
-  const [selectedMenuPermissions, setSelectedMenuPermissions] = useState<number[]>([]);
-  const [selectedButtonPermissions, setSelectedButtonPermissions] = useState<number[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
 
   // 加载数据
   const loadData = async () => {
     setLoading(true);
     try {
-      const [rolesData, menuData, buttonData] = await Promise.all([
+      const [rolesData, permissionsData] = await Promise.all([
         fetchRoles(currentPage, pageSize),
-        fetchMenuPermissions(),
-        fetchButtonPermissions()
+        fetchCompletePermissions()
       ]);
       setData(rolesData.list);
       setTotal(rolesData.total);
-      setMenuPermissions(menuData);
-      setButtonPermissions(buttonData);
+      setAllPermissions(permissionsData);
     } catch (error) {
       Message.error('加载数据失败');
     } finally {
@@ -278,11 +281,69 @@ export default function RolesPage() {
 
   // 构建权限树数据
   const buildTreeData = (permissions: Permission[]): any[] => {
-    return permissions.map(permission => ({
-      title: permission.permissionName,
-      key: permission.id.toString(),
-      children: permission.children ? buildTreeData(permission.children) : undefined
-    }));
+    return permissions.map(permission => {
+      const isMenuPermission = permission.permissionType === 'menu';
+      const isButtonPermission = permission.permissionType === 'button';
+      
+      return {
+        title: (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {isMenuPermission && (
+              <IconMenuUnfold style={{ color: '#3b82f6', fontSize: '14px' }} />
+            )}
+            {isButtonPermission && (
+              <IconCode style={{ color: '#10b981', fontSize: '14px' }} />
+            )}
+            <span style={{ 
+              color: isButtonPermission ? '#10b981' : '#374151',
+              fontWeight: isMenuPermission ? '500' : '400'
+            }}>
+              {permission.permissionName}
+            </span>
+            {isButtonPermission && (
+              <span style={{ 
+                color: '#9ca3af', 
+                fontSize: '12px', 
+                marginLeft: '4px' 
+              }}>
+                按钮
+              </span>
+            )}
+        </div>
+      ),
+        key: permission.id.toString(),
+        children: permission.children ? buildTreeData(permission.children) : undefined
+      };
+    });
+  };
+
+  // 递归获取所有权限ID（包括子权限）
+  const getAllPermissionIds = (permissions: Permission[]): number[] => {
+    let ids: number[] = [];
+    permissions.forEach(permission => {
+      ids.push(permission.id);
+      if (permission.children && permission.children.length > 0) {
+        ids = ids.concat(getAllPermissionIds(permission.children));
+      }
+    });
+    return ids;
+  };
+
+  // 从树形数据中提取选中的权限ID
+  const extractSelectedPermissions = (treeData: Permission[], selectedKeys: string[]): number[] => {
+    let result: number[] = [];
+    const traverse = (nodes: Permission[]) => {
+      nodes.forEach(node => {
+        if (selectedKeys.includes(node.id.toString())) {
+          result.push(node.id);
+        }
+        if (node.children) {
+          traverse(node.children);
+        }
+      });
+    };
+    traverse(treeData);
+    return result;
   };
 
   // 表格列定义
@@ -310,7 +371,7 @@ export default function RolesPage() {
       render: (roleCode: string) => (
         <Tag color="blue" size="small">
           {roleCode}
-        </Tag>
+            </Tag>
       ),
     },
     {
@@ -431,8 +492,7 @@ export default function RolesPage() {
   const handleAdd = () => {
     setEditingRole(null);
     form.resetFields();
-    setSelectedMenuPermissions([]);
-    setSelectedButtonPermissions([]);
+    setSelectedPermissions([]);
     setVisible(true);
   };
 
@@ -448,15 +508,8 @@ export default function RolesPage() {
     
     // 设置已选择的权限
     if (role.permissions) {
-      const menuIds = role.permissions
-        .filter(p => p.permissionType === 'menu')
-        .map(p => p.id);
-      const buttonIds = role.permissions
-        .filter(p => p.permissionType === 'button')
-        .map(p => p.id);
-      
-      setSelectedMenuPermissions(menuIds);
-      setSelectedButtonPermissions(buttonIds);
+      const permissionIds = role.permissions.map(p => p.id);
+      setSelectedPermissions(permissionIds);
     }
     
     setVisible(true);
@@ -466,7 +519,7 @@ export default function RolesPage() {
     try {
       const success = await deleteRole(id);
       if (success) {
-        Message.success('删除成功');
+      Message.success('删除成功');
         loadData();
       } else {
         Message.error('删除失败');
@@ -493,12 +546,9 @@ export default function RolesPage() {
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
-      // 合并菜单权限和按钮权限
-      const allPermissionIds = [...selectedMenuPermissions, ...selectedButtonPermissions];
-      
       const roleData = {
-        ...values,
-        permissionIds: allPermissionIds
+            ...values,
+        permissionIds: selectedPermissions
       };
 
       const success = editingRole
@@ -507,10 +557,9 @@ export default function RolesPage() {
       
       if (success) {
         Message.success(editingRole ? '更新成功' : '创建成功');
-        setVisible(false);
-        form.resetFields();
-        setSelectedMenuPermissions([]);
-        setSelectedButtonPermissions([]);
+      setVisible(false);
+      form.resetFields();
+        setSelectedPermissions([]);
         loadData();
       } else {
         Message.error(editingRole ? '更新失败' : '创建失败');
@@ -634,22 +683,22 @@ export default function RolesPage() {
             alignItems: 'center',
             flexWrap: 'wrap'
           }}>
-            <Input
+              <Input
               placeholder="请输入角色名称或编码"
-              value={searchKeyword}
+                value={searchKeyword}
               onChange={(value) => setSearchKeyword(value)}
-              style={{ 
+                style={{
                 width: '200px',
                 borderRadius: '8px'
               }}
               prefix={<IconSearch />}
             />
             
-            <Select
+              <Select
               placeholder="状态"
               value={selectedStatus}
               onChange={(value) => setSelectedStatus(value)}
-              style={{ 
+                style={{ 
                 width: '120px',
                 borderRadius: '8px'
               }}
@@ -657,13 +706,13 @@ export default function RolesPage() {
             >
               <Option value="active">启用</Option>
               <Option value="inactive">禁用</Option>
-            </Select>
+              </Select>
 
-            <Select
+              <Select
               placeholder="小程序登录"
               value={selectedMiniApp}
               onChange={(value) => setSelectedMiniApp(value)}
-              style={{ 
+                style={{ 
                 width: '150px',
                 borderRadius: '8px'
               }}
@@ -671,10 +720,10 @@ export default function RolesPage() {
             >
               <Option value="true">允许</Option>
               <Option value="false">禁止</Option>
-            </Select>
-
+              </Select>
+            
             <div style={{ display: 'flex', gap: '8px' }}>
-              <Button
+              <Button 
                 icon={<IconSearch />}
                 style={{
                   borderRadius: '8px',
@@ -683,7 +732,7 @@ export default function RolesPage() {
               >
                 搜索
               </Button>
-              <Button
+              <Button 
                 icon={<IconRefresh />}
                 onClick={handleReset}
                 style={{
@@ -700,23 +749,23 @@ export default function RolesPage() {
         {/* 操作按钮 */}
         <div style={{ 
           marginBottom: '16px',
-          display: 'flex',
-          justifyContent: 'space-between',
+          display: 'flex', 
+          justifyContent: 'space-between', 
           alignItems: 'center'
         }}>
           <div style={{
             fontSize: '16px',
-            fontWeight: '600',
-            color: '#1e293b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
+              fontWeight: '600',
+              color: '#1e293b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
             <IconUserGroup style={{ color: '#3b82f6' }} />
             角色管理
           </div>
-          <Button
-            type="primary"
+          <Button 
+            type="primary" 
             icon={<IconPlus />} 
             onClick={handleAdd}
             style={{
@@ -791,8 +840,7 @@ export default function RolesPage() {
         onCancel={() => {
           setVisible(false);
           form.resetFields();
-          setSelectedMenuPermissions([]);
-          setSelectedButtonPermissions([]);
+          setSelectedPermissions([]);
         }}
         confirmLoading={loading}
         style={{
@@ -857,7 +905,7 @@ export default function RolesPage() {
           >
             <TextArea 
               placeholder="请输入角色描述" 
-              rows={3}
+              rows={3} 
               style={{ 
                 borderRadius: '6px'
               }}
@@ -866,12 +914,12 @@ export default function RolesPage() {
 
           <GridRow gutter={16}>
             <Col span={12}>
-              <Form.Item
+          <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>状态</span>}
                 field="status"
                 initialValue="active"
-              >
-                <Select 
+          >
+            <Select
                   style={{ 
                     borderRadius: '6px',
                     height: '36px'
@@ -879,8 +927,8 @@ export default function RolesPage() {
                 >
                   <Option value="active">启用</Option>
                   <Option value="inactive">禁用</Option>
-                </Select>
-              </Form.Item>
+            </Select>
+          </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
@@ -905,63 +953,48 @@ export default function RolesPage() {
           <Form.Item
             label={<span style={{ fontSize: '14px', fontWeight: '500' }}>权限分配</span>}
           >
-            <Tabs defaultActiveTab="menu" style={{ marginTop: '8px' }}>
-              <TabPane key="menu" title="菜单权限">
-                <div style={{ 
-                  maxHeight: '300px', 
-                  overflow: 'auto',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  padding: '12px'
-                }}>
-                  <Tree
-                    checkable
-                    checkedKeys={selectedMenuPermissions.map(id => id.toString())}
-                    onCheck={(checkedKeys) => {
-                      setSelectedMenuPermissions((checkedKeys as string[]).map(key => parseInt(key)));
-                    }}
-                    treeData={buildTreeData(menuPermissions)}
-                    fieldNames={{
-                      key: 'key',
-                      title: 'title',
-                      children: 'children'
-                    }}
-                  />
-                </div>
-              </TabPane>
-              <TabPane key="button" title="按钮权限">
-                <div style={{ 
-                  maxHeight: '300px', 
-                  overflow: 'auto',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  padding: '12px'
-                }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {buttonPermissions.map(permission => (
-                      <Tag
-                        key={permission.id}
-                        checkable
-                        checked={selectedButtonPermissions.includes(permission.id)}
-                        onChange={(checked) => {
-                          if (checked) {
-                            setSelectedButtonPermissions([...selectedButtonPermissions, permission.id]);
-                          } else {
-                            setSelectedButtonPermissions(selectedButtonPermissions.filter(id => id !== permission.id));
-                          }
-                        }}
-                        style={{ 
-                          marginBottom: '4px',
-                          borderRadius: '4px'
-                        }}
-                      >
-                        {permission.permissionName}
-                      </Tag>
-                    ))}
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ 
+                marginBottom: '12px',
+                padding: '8px 12px',
+                background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: '#64748b'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <IconMenuUnfold style={{ color: '#3b82f6', fontSize: '12px' }} />
+                    <span>菜单权限</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <IconCode style={{ color: '#10b981', fontSize: '12px' }} />
+                    <span>按钮权限</span>
                   </div>
                 </div>
-              </TabPane>
-            </Tabs>
+              </div>
+              <div style={{ 
+                maxHeight: '400px', 
+                overflow: 'auto',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '12px'
+              }}>
+                <Tree
+                  checkable
+                  checkedKeys={selectedPermissions.map(id => id.toString())}
+                  onCheck={(checkedKeys) => {
+                    setSelectedPermissions((checkedKeys as string[]).map(key => parseInt(key)));
+                  }}
+                  treeData={buildTreeData(allPermissions)}
+                  fieldNames={{
+                    key: 'key',
+                    title: 'title',
+                    children: 'children'
+                  }}
+                />
+              </div>
+            </div>
           </Form.Item>
         </Form>
       </Modal>

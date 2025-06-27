@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按钮权限树测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .api-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .api-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f8f9fa;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .tree-item {
+            margin-left: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .tree-parent {
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .tree-child {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>按钮权限树形结构测试</h1>
+        
+        <div class="api-section">
+            <div class="api-title">1. 测试平级按钮权限API</div>
+            <button onclick="testButtonPermissions()">获取按钮权限列表</button>
+            <div id="buttonResult" class="result"></div>
+        </div>
+        
+        <div class="api-section">
+            <div class="api-title">2. 测试树形按钮权限API</div>
+            <button onclick="testButtonTree()">获取按钮权限树</button>
+            <div id="buttonTreeResult" class="result"></div>
+        </div>
+        
+        <div class="api-section">
+            <div class="api-title">3. 可视化树形结构</div>
+            <button onclick="showButtonTree()">显示树形结构</button>
+            <div id="visualTree" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        
+        async function testButtonPermissions() {
+            try {
+                const response = await fetch(`${API_BASE}/permissions/buttons`);
+                const result = await response.json();
+                document.getElementById('buttonResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('buttonResult').textContent = '请求失败: ' + error.message;
+            }
+        }
+        
+        async function testButtonTree() {
+            try {
+                const response = await fetch(`${API_BASE}/permissions/button-tree`);
+                const result = await response.json();
+                document.getElementById('buttonTreeResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('buttonTreeResult').textContent = '请求失败: ' + error.message;
+            }
+        }
+        
+        async function showButtonTree() {
+            try {
+                const response = await fetch(`${API_BASE}/permissions/button-tree`);
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    const treeHtml = renderTree(result.data);
+                    document.getElementById('visualTree').innerHTML = treeHtml;
+                } else {
+                    document.getElementById('visualTree').textContent = '获取数据失败: ' + result.message;
+                }
+            } catch (error) {
+                document.getElementById('visualTree').textContent = '请求失败: ' + error.message;
+            }
+        }
+        
+        function renderTree(nodes, level = 0) {
+            let html = '';
+            nodes.forEach(node => {
+                const indent = '&nbsp;'.repeat(level * 4);
+                const className = level === 0 ? 'tree-parent' : 'tree-child';
+                html += `<div class="tree-item ${className}">${indent}${node.permissionName} (${node.permissionCode})</div>`;
+                
+                if (node.children && node.children.length > 0) {
+                    html += renderTree(node.children, level + 1);
+                }
+            });
+            return html;
+        }
+    </script>
+</body>
+</html> 
