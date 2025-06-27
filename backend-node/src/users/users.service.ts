@@ -208,4 +208,27 @@ export class UsersService {
     }
     return null;
   }
+
+  async findByWechatOpenid(openid: string): Promise<User | null> {
+    return await this.userRepository.findOne({
+      where: { wechatOpenid: openid },
+      relations: ['roles']
+    });
+  }
+
+  async createWechatUser(openid: string): Promise<User> {
+    const user = this.userRepository.create({
+      username: `wx_${openid.slice(-8)}`, // 使用openid后8位作为用户名
+      password: '', // 微信用户不需要密码
+      nickname: '微信用户',
+      wechatOpenid: openid,
+      status: 'normal'
+    });
+
+    return await this.userRepository.save(user);
+  }
+
+  async updateLoginInfo(userId: number, updateData: { lastLoginTime?: Date; lastLoginIp?: string }): Promise<void> {
+    await this.userRepository.update(userId, updateData);
+  }
 } 

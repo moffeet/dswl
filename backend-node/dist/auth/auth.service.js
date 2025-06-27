@@ -1,10 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -18,13 +51,14 @@ const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const users_service_1 = require("../users/users.service");
 const axios_1 = __importDefault(require("axios"));
+const bcrypt = __importStar(require("bcryptjs"));
 let AuthService = class AuthService {
     constructor(usersService, jwtService, configService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.configService = configService;
     }
-    async login(loginDto) {
+    async login(loginDto, req) {
         const user = await this.validateUser(loginDto.username, loginDto.password);
         if (!user) {
             throw new common_1.UnauthorizedException('用户名或密码错误');
@@ -32,8 +66,12 @@ let AuthService = class AuthService {
         const payload = {
             sub: user.id,
             username: user.username,
+            nickname: user.nickname,
+            roles: user.roles || [],
+            userType: 'admin',
         };
         const accessToken = this.jwtService.sign(payload);
+        await this.updateLastLogin(user.id, req);
         return {
             accessToken,
             user: {
@@ -41,28 +79,83 @@ let AuthService = class AuthService {
                 username: user.username,
                 nickname: user.nickname,
                 status: user.status,
+                roles: user.roles || [],
             },
         };
     }
     async wechatLogin(wechatLoginDto) {
-        throw new common_1.UnauthorizedException('微信登录功能暂未实现');
+        try {
+            const openid = await this.getWechatOpenid(wechatLoginDto.code);
+            let user = await this.usersService.findByWechatOpenid(openid);
+            if (!user) {
+                user = await this.usersService.createWechatUser(openid);
+            }
+            if (user.status !== 'normal') {
+                throw new common_1.UnauthorizedException('用户账号已被禁用');
+            }
+            const payload = {
+                sub: user.id,
+                username: user.username,
+                nickname: user.nickname,
+                roles: user.roles || [],
+                userType: 'wechat',
+            };
+            const accessToken = this.jwtService.sign(payload);
+            return {
+                accessToken,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    nickname: user.nickname,
+                    status: user.status,
+                    roles: user.roles || [],
+                },
+            };
+        }
+        catch (error) {
+            throw new common_1.UnauthorizedException('微信登录失败');
+        }
+    }
+    async logout(userId) {
+        return { message: '登出成功' };
     }
     async validateUser(username, password) {
         const user = await this.usersService.findByUsername(username);
         if (!user) {
             return null;
         }
-        if (user.status !== '启用') {
-            throw new common_1.UnauthorizedException('用户已被禁用');
+        if (user.status !== 'normal') {
+            throw new common_1.UnauthorizedException('用户账号已被禁用');
         }
-        if (password !== user.password) {
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
             return null;
         }
         return user;
     }
+    async updateLastLogin(userId, req) {
+        try {
+            const updateData = {
+                lastLoginTime: new Date(),
+            };
+            if (req) {
+                const ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress ||
+                    (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+                    req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '127.0.0.1';
+                updateData.lastLoginIp = Array.isArray(ip) ? ip[0] : ip;
+            }
+            await this.usersService.updateLoginInfo(userId, updateData);
+        }
+        catch (error) {
+            console.error('更新登录信息失败:', error);
+        }
+    }
     async getWechatOpenid(code) {
         const appid = this.configService.get('WECHAT_APPID');
         const secret = this.configService.get('WECHAT_SECRET');
+        if (!appid || !secret) {
+            throw new common_1.UnauthorizedException('微信配置未设置');
+        }
         const url = 'https://api.weixin.qq.com/sns/jscode2session';
         const params = {
             appid,

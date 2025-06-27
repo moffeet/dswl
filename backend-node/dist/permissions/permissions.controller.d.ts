@@ -27,6 +27,16 @@ export declare class PermissionsController {
         message: string;
         data: import("./entities/permission.entity").Permission[];
     }>;
+    findButtonTree(): Promise<{
+        code: number;
+        message: string;
+        data: import("./entities/permission.entity").Permission[];
+    }>;
+    findCompleteTree(): Promise<{
+        code: number;
+        message: string;
+        data: import("./entities/permission.entity").Permission[];
+    }>;
     findOne(id: number): Promise<{
         code: number;
         message: string;

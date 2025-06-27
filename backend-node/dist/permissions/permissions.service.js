@@ -78,6 +78,20 @@ let PermissionsService = class PermissionsService {
             order: { sortOrder: 'ASC' }
         });
     }
+    async findButtonTree() {
+        const buttonPermissions = await this.permissionRepository.find({
+            where: { permissionType: 'button', status: 'normal' },
+            order: { sortOrder: 'ASC' }
+        });
+        return this.buildTree(buttonPermissions);
+    }
+    async findCompletePermissionTree() {
+        const allPermissions = await this.permissionRepository.find({
+            where: { status: 'normal' },
+            order: { sortOrder: 'ASC' }
+        });
+        return this.buildTree(allPermissions);
+    }
     async findOne(id) {
         const permission = await this.permissionRepository.findOne({
             where: { id }

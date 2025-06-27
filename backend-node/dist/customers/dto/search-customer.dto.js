@@ -21,37 +21,43 @@ class SearchCustomerDto {
 }
 exports.SearchCustomerDto = SearchCustomerDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户编号', required: false }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户编号，支持模糊匹配',
+        example: 'C001',
+        required: false
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], SearchCustomerDto.prototype, "customerNumber", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户名称', required: false }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户名称，支持模糊匹配',
+        example: '科技',
+        required: false
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], SearchCustomerDto.prototype, "customerName", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户地址', required: false }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户地址，支持模糊匹配',
+        example: '深圳',
+        required: false
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], SearchCustomerDto.prototype, "customerAddress", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '联系人', required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], SearchCustomerDto.prototype, "contactPerson", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '所属区域', required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], SearchCustomerDto.prototype, "area", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '页码', example: 1, required: false }),
+    (0, swagger_1.ApiProperty)({
+        description: '页码，从1开始',
+        example: 1,
+        minimum: 1,
+        default: 1,
+        required: false
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(1),
@@ -59,7 +65,14 @@ __decorate([
     __metadata("design:type", Number)
 ], SearchCustomerDto.prototype, "page", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '每页数量', example: 10, required: false }),
+    (0, swagger_1.ApiProperty)({
+        description: '每页数量，范围1-100',
+        example: 10,
+        minimum: 1,
+        maximum: 100,
+        default: 10,
+        required: false
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(1),
@@ -71,35 +84,52 @@ class CustomerSearchResultDto {
 }
 exports.CustomerSearchResultDto = CustomerSearchResultDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户ID' }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户ID',
+        example: 1
+    }),
     __metadata("design:type", Number)
 ], CustomerSearchResultDto.prototype, "id", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户编号' }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户编号',
+        example: 'C001'
+    }),
     __metadata("design:type", String)
-], CustomerSearchResultDto.prototype, "customerCode", void 0);
+], CustomerSearchResultDto.prototype, "customerNumber", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户名称' }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户名称',
+        example: '深圳科技有限公司'
+    }),
     __metadata("design:type", String)
 ], CustomerSearchResultDto.prototype, "customerName", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '联系人' }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户地址',
+        example: '深圳市南山区科技园南区'
+    }),
     __metadata("design:type", String)
-], CustomerSearchResultDto.prototype, "contactPerson", void 0);
+], CustomerSearchResultDto.prototype, "customerAddress", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '联系电话' }),
+    (0, swagger_1.ApiProperty)({
+        description: '更新人',
+        example: '管理员'
+    }),
     __metadata("design:type", String)
-], CustomerSearchResultDto.prototype, "phone", void 0);
+], CustomerSearchResultDto.prototype, "updateBy", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '地址' }),
-    __metadata("design:type", String)
-], CustomerSearchResultDto.prototype, "address", void 0);
+    (0, swagger_1.ApiProperty)({
+        description: '创建时间',
+        example: '2025-06-27T06:16:28.000Z'
+    }),
+    __metadata("design:type", Date)
+], CustomerSearchResultDto.prototype, "createTime", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '经度' }),
-    __metadata("design:type", Number)
-], CustomerSearchResultDto.prototype, "longitude", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '纬度' }),
-    __metadata("design:type", Number)
-], CustomerSearchResultDto.prototype, "latitude", void 0);
+    (0, swagger_1.ApiProperty)({
+        description: '更新时间',
+        example: '2025-06-27T08:16:28.000Z'
+    }),
+    __metadata("design:type", Date)
+], CustomerSearchResultDto.prototype, "updateTime", void 0);
 //# sourceMappingURL=search-customer.dto.js.map

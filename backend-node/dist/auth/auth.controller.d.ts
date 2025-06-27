@@ -1,19 +1,25 @@
 import { AuthService } from './auth.service';
-import { LoginDto, WechatLoginDto, LoginResponseDto } from './dto/login.dto';
+import { LoginDto, WechatLoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    login(loginDto: LoginDto): Promise<LoginResponseDto>;
+    login(loginDto: LoginDto, req: any): Promise<LoginResponseDto>;
     wechatLogin(wechatLoginDto: WechatLoginDto): Promise<LoginResponseDto>;
+    logout(req: any): Promise<LogoutResponseDto>;
     getProfile(req: any): Promise<{
-        id: any;
-        username: any;
-        realName: any;
-        userType: any;
-        status: any;
-        phone: any;
-        avatar: any;
-        driverCode: any;
-        lastLoginAt: any;
+        code: number;
+        message: string;
+        data: {
+            id: any;
+            username: any;
+            nickname: any;
+            status: any;
+            phone: any;
+            email: any;
+            avatar: any;
+            roles: any;
+            lastLoginTime: any;
+            lastLoginIp: any;
+        };
     }>;
 }

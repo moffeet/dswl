@@ -57,6 +57,22 @@ let PermissionsController = class PermissionsController {
             data: buttons
         };
     }
+    async findButtonTree() {
+        const buttonTree = await this.permissionsService.findButtonTree();
+        return {
+            code: 200,
+            message: '获取成功',
+            data: buttonTree
+        };
+    }
+    async findCompleteTree() {
+        const completeTree = await this.permissionsService.findCompletePermissionTree();
+        return {
+            code: 200,
+            message: '获取成功',
+            data: completeTree
+        };
+    }
     async findOne(id) {
         const permission = await this.permissionsService.findOne(id);
         return {
@@ -320,6 +336,120 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], PermissionsController.prototype, "findButtonPermissions", null);
+__decorate([
+    (0, common_1.Get)('button-tree'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取按钮权限树',
+        description: '获取树形结构的按钮权限列表，用于角色权限配置时的按钮权限选择。返回的数据包含父子关系，可直接用于前端树形组件。按钮权限按照功能模块进行分组。'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                code: { type: 'number', example: 200 },
+                message: { type: 'string', example: '获取成功' },
+                data: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'number', example: 100 },
+                            permissionName: { type: 'string', example: '用户管理按钮' },
+                            permissionCode: { type: 'string', example: 'btn.user' },
+                            permissionType: { type: 'string', example: 'button' },
+                            parentId: { type: 'number', example: 0 },
+                            sortOrder: { type: 'number', example: 100 },
+                            status: { type: 'string', example: 'normal' },
+                            children: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        id: { type: 'number', example: 101 },
+                                        permissionName: { type: 'string', example: '用户新增' },
+                                        permissionCode: { type: 'string', example: 'btn.user.add' },
+                                        permissionType: { type: 'string', example: 'button' },
+                                        parentId: { type: 'number', example: 100 },
+                                        sortOrder: { type: 'number', example: 101 }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], PermissionsController.prototype, "findButtonTree", null);
+__decorate([
+    (0, common_1.Get)('complete-tree'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取完整权限树',
+        description: '获取包含菜单权限和按钮权限的完整权限树。菜单权限作为上级节点，按钮权限作为叶子节点。适用于角色权限配置界面的统一权限选择。'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                code: { type: 'number', example: 200 },
+                message: { type: 'string', example: '获取成功' },
+                data: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'number', example: 1 },
+                            permissionName: { type: 'string', example: '系统管理' },
+                            permissionCode: { type: 'string', example: 'menu.system' },
+                            permissionType: { type: 'string', example: 'menu' },
+                            parentId: { type: 'number', example: 0 },
+                            path: { type: 'string', example: '/system' },
+                            icon: { type: 'string', example: 'IconSettings' },
+                            sortOrder: { type: 'number', example: 1 },
+                            status: { type: 'string', example: 'normal' },
+                            children: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        id: { type: 'number', example: 2 },
+                                        permissionName: { type: 'string', example: '用户管理' },
+                                        permissionCode: { type: 'string', example: 'menu.system.users' },
+                                        permissionType: { type: 'string', example: 'menu' },
+                                        parentId: { type: 'number', example: 1 },
+                                        children: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    id: { type: 'number', example: 101 },
+                                                    permissionName: { type: 'string', example: '用户新增' },
+                                                    permissionCode: { type: 'string', example: 'btn.user.add' },
+                                                    permissionType: { type: 'string', example: 'button' },
+                                                    parentId: { type: 'number', example: 2 }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], PermissionsController.prototype, "findCompleteTree", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: '获取权限详情' }),

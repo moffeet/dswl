@@ -61,10 +61,12 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("./entities/user.entity");
+const role_entity_1 = require("../roles/entities/role.entity");
 const bcrypt = __importStar(require("bcryptjs"));
 let UsersService = class UsersService {
-    constructor(userRepository) {
+    constructor(userRepository, roleRepository) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
     }
     async create(createUserDto) {
         const existingUser = await this.userRepository.findOne({
@@ -93,7 +95,14 @@ let UsersService = class UsersService {
         const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
         const user = this.userRepository.create(Object.assign(Object.assign({}, createUserDto), { password: hashedPassword, status: createUserDto.status || 'normal' }));
         const savedUser = await this.userRepository.save(user);
-        return savedUser;
+        if (createUserDto.roleIds && createUserDto.roleIds.length > 0) {
+            const roles = await this.roleRepository.find({
+                where: { id: (0, typeorm_2.In)(createUserDto.roleIds) }
+            });
+            savedUser.roles = roles;
+            await this.userRepository.save(savedUser);
+        }
+        return await this.findOne(savedUser.id);
     }
     async findAll(searchDto) {
         const { page = 1, size = 10 } = searchDto, filters = __rest(searchDto, ["page", "size"]);
@@ -118,6 +127,7 @@ let UsersService = class UsersService {
         }
         const [users, total] = await this.userRepository.findAndCount({
             where,
+            relations: ['roles'],
             skip: (page - 1) * size,
             take: size,
             order: { createTime: 'DESC' }
@@ -126,7 +136,8 @@ let UsersService = class UsersService {
     }
     async findOne(id) {
         const user = await this.userRepository.findOne({
-            where: { id }
+            where: { id },
+            relations: ['roles']
         });
         if (!user) {
             throw new common_1.NotFoundException('用户不存在');
@@ -168,7 +179,32 @@ let UsersService = class UsersService {
             const salt = await bcrypt.genSalt(10);
             updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
         }
-        await this.userRepository.update(id, updateUserDto);
+        const { roleIds } = updateUserDto, updateData = __rest(updateUserDto, ["roleIds"]);
+        await this.userRepository.update(id, updateData);
+        if (roleIds !== undefined) {
+            try {
+                const updatedUser = await this.userRepository.findOne({
+                    where: { id },
+                    relations: ['roles']
+                });
+                if (!updatedUser) {
+                    throw new common_1.NotFoundException('更新后的用户不存在');
+                }
+                if (roleIds.length > 0) {
+                    const roles = await this.roleRepository.find({
+                        where: { id: (0, typeorm_2.In)(roleIds) }
+                    });
+                    updatedUser.roles = roles;
+                }
+                else {
+                    updatedUser.roles = [];
+                }
+                await this.userRepository.save(updatedUser);
+            }
+            catch (error) {
+                console.error('角色更新失败:', error);
+            }
+        }
         return await this.findOne(id);
     }
     async remove(id) {
@@ -182,11 +218,32 @@ let UsersService = class UsersService {
         }
         return null;
     }
+    async findByWechatOpenid(openid) {
+        return await this.userRepository.findOne({
+            where: { wechatOpenid: openid },
+            relations: ['roles']
+        });
+    }
+    async createWechatUser(openid) {
+        const user = this.userRepository.create({
+            username: `wx_${openid.slice(-8)}`,
+            password: '',
+            nickname: '微信用户',
+            wechatOpenid: openid,
+            status: 'normal'
+        });
+        return await this.userRepository.save(user);
+    }
+    async updateLoginInfo(userId, updateData) {
+        await this.userRepository.update(userId, updateData);
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(role_entity_1.Role)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

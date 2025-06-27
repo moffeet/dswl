@@ -19,9 +19,11 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
+            wechatOpenid?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;
+            roles: import("../roles/entities/role.entity").Role[];
         };
     }>;
     findAll(searchDto: SearchUserDto): Promise<{
@@ -39,9 +41,11 @@ export declare class UsersController {
                 avatar?: string;
                 lastLoginTime?: Date;
                 lastLoginIp?: string;
+                wechatOpenid?: string;
                 createBy?: number;
                 createTime: Date;
                 updateTime: Date;
+                roles: import("../roles/entities/role.entity").Role[];
             }[];
             total: number;
             page: number;
@@ -62,9 +66,11 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
+            wechatOpenid?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;
+            roles: import("../roles/entities/role.entity").Role[];
         };
     }>;
     update(id: number, updateUserDto: UpdateUserDto): Promise<{
@@ -81,9 +87,11 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
+            wechatOpenid?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;
+            roles: import("../roles/entities/role.entity").Role[];
         };
     }>;
     remove(id: number): Promise<{

@@ -16,96 +16,74 @@ let Customer = class Customer {
 };
 exports.Customer = Customer;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户ID' }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户ID，主键，自动递增',
+        example: 1,
+        type: 'number'
+    }),
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
 ], Customer.prototype, "id", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户编码' }),
-    (0, typeorm_1.Column)({ name: 'customer_code', length: 50, unique: true }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户编号，系统自动生成，格式：C001、C002...，全局唯一',
+        example: 'C001',
+        maxLength: 50,
+        uniqueItems: true
+    }),
+    (0, typeorm_1.Column)({ name: 'customerNumber', length: 50, unique: true }),
     __metadata("design:type", String)
 ], Customer.prototype, "customerNumber", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户名称' }),
-    (0, typeorm_1.Column)({ name: 'customer_name', length: 100 }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户名称，必填字段',
+        example: '深圳科技有限公司',
+        maxLength: 100
+    }),
+    (0, typeorm_1.Column)({ name: 'customerName', length: 100 }),
     __metadata("design:type", String)
 ], Customer.prototype, "customerName", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '联系人' }),
-    (0, typeorm_1.Column)({ name: 'contact_person', length: 50, nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "contactPerson", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '联系电话' }),
-    (0, typeorm_1.Column)({ name: 'phone', length: 20, nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "contactPhone", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '详细地址' }),
-    (0, typeorm_1.Column)({ name: 'address', length: 200, nullable: true }),
+    (0, swagger_1.ApiProperty)({
+        description: '客户地址，可选字段',
+        example: '深圳市南山区科技园南区',
+        maxLength: 255,
+        required: false
+    }),
+    (0, typeorm_1.Column)({ name: 'customerAddress', length: 255, nullable: true }),
     __metadata("design:type", String)
 ], Customer.prototype, "customerAddress", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '经度' }),
-    (0, typeorm_1.Column)({ name: 'longitude', type: 'decimal', precision: 10, scale: 7, nullable: true }),
-    __metadata("design:type", Number)
-], Customer.prototype, "longitude", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '纬度' }),
-    (0, typeorm_1.Column)({ name: 'latitude', type: 'decimal', precision: 10, scale: 7, nullable: true }),
-    __metadata("design:type", Number)
-], Customer.prototype, "latitude", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '省份' }),
-    (0, typeorm_1.Column)({ name: 'province', length: 50, nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "province", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '城市' }),
-    (0, typeorm_1.Column)({ name: 'city', length: 50, nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "city", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '区县' }),
-    (0, typeorm_1.Column)({ name: 'district', length: 50, nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "district", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '所属区域' }),
-    (0, typeorm_1.Column)({ name: 'area', length: 50, nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "area", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '客户类型' }),
-    (0, typeorm_1.Column)({ name: 'customer_type', length: 20, nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "customerType", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '是否启用' }),
-    (0, typeorm_1.Column)({ name: 'enabled', type: 'tinyint', default: 1 }),
-    __metadata("design:type", String)
-], Customer.prototype, "status", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '更新人' }),
-    (0, typeorm_1.Column)({ name: 'update_by', length: 50, nullable: true }),
+    (0, swagger_1.ApiProperty)({
+        description: '更新人，记录最后修改该客户信息的用户',
+        example: '管理员',
+        maxLength: 50,
+        required: false
+    }),
+    (0, typeorm_1.Column)({ name: 'updateBy', length: 50, nullable: true }),
     __metadata("design:type", String)
 ], Customer.prototype, "updateBy", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '备注' }),
-    (0, typeorm_1.Column)({ name: 'remark', type: 'text', nullable: true }),
-    __metadata("design:type", String)
-], Customer.prototype, "remark", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '创建时间' }),
-    (0, typeorm_1.CreateDateColumn)({ name: 'create_time' }),
+    (0, swagger_1.ApiProperty)({
+        description: '创建时间，记录自动生成',
+        example: '2025-06-27T06:16:28.000Z',
+        type: 'string',
+        format: 'date-time'
+    }),
+    (0, typeorm_1.CreateDateColumn)({ name: 'createdAt' }),
     __metadata("design:type", Date)
 ], Customer.prototype, "createTime", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '更新时间' }),
-    (0, typeorm_1.UpdateDateColumn)({ name: 'update_time' }),
+    (0, swagger_1.ApiProperty)({
+        description: '更新时间，每次修改时自动更新',
+        example: '2025-06-27T08:16:28.000Z',
+        type: 'string',
+        format: 'date-time'
+    }),
+    (0, typeorm_1.UpdateDateColumn)({ name: 'updatedAt' }),
     __metadata("design:type", Date)
 ], Customer.prototype, "updateTime", void 0);
 exports.Customer = Customer = __decorate([
-    (0, typeorm_1.Entity)('t_customer')
+    (0, typeorm_1.Entity)('t_customers')
 ], Customer);
 //# sourceMappingURL=customer.entity.js.map

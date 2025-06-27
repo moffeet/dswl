@@ -40,6 +40,8 @@ export declare class PermissionsService {
     }>;
     findMenuTree(): Promise<Permission[]>;
     findButtonPermissions(): Promise<Permission[]>;
+    findButtonTree(): Promise<Permission[]>;
+    findCompletePermissionTree(): Promise<Permission[]>;
     findOne(id: number): Promise<Permission>;
     update(id: number, updatePermissionDto: UpdatePermissionDto): Promise<Permission>;
     remove(id: number): Promise<void>;

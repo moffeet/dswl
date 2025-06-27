@@ -30,8 +30,8 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         if (!user) {
             throw new common_1.UnauthorizedException('用户不存在');
         }
-        if (user.status !== '启用') {
-            throw new common_1.UnauthorizedException('用户已被禁用');
+        if (user.status !== 'normal') {
+            throw new common_1.UnauthorizedException('用户账号已被禁用');
         }
         return user;
     }

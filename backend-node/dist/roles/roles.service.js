@@ -129,7 +129,9 @@ let RolesService = class RolesService {
             throw new common_1.NotFoundException('角色不存在');
         }
         if (permissionIds.length > 0) {
-            const permissions = await this.permissionRepository.findByIds(permissionIds);
+            const permissions = await this.permissionRepository.find({
+                where: { id: (0, typeorm_2.In)(permissionIds) }
+            });
             role.permissions = permissions;
         }
         else {

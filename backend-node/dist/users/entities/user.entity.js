@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const typeorm_1 = require("typeorm");
 const swagger_1 = require("@nestjs/swagger");
+const role_entity_1 = require("../../roles/entities/role.entity");
 let User = class User {
 };
 exports.User = User;
@@ -62,29 +63,43 @@ __decorate([
 ], User.prototype, "avatar", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: '最后登录时间', required: false }),
-    (0, typeorm_1.Column)({ type: 'datetime', nullable: true, comment: '最后登录时间' }),
+    (0, typeorm_1.Column)({ name: 'last_login_time', type: 'datetime', nullable: true, comment: '最后登录时间' }),
     __metadata("design:type", Date)
 ], User.prototype, "lastLoginTime", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: '最后登录IP', required: false }),
-    (0, typeorm_1.Column)({ length: 50, nullable: true, comment: '最后登录IP' }),
+    (0, typeorm_1.Column)({ name: 'last_login_ip', length: 50, nullable: true, comment: '最后登录IP' }),
     __metadata("design:type", String)
 ], User.prototype, "lastLoginIp", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: '微信OpenID', required: false }),
+    (0, typeorm_1.Column)({ name: 'wechat_openid', length: 100, nullable: true, unique: true, comment: '微信OpenID' }),
+    __metadata("design:type", String)
+], User.prototype, "wechatOpenid", void 0);
+__decorate([
     (0, swagger_1.ApiProperty)({ description: '创建人ID', required: false }),
-    (0, typeorm_1.Column)({ type: 'bigint', nullable: true, comment: '创建人ID' }),
+    (0, typeorm_1.Column)({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' }),
     __metadata("design:type", Number)
 ], User.prototype, "createBy", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: '创建时间' }),
-    (0, typeorm_1.CreateDateColumn)({ comment: '创建时间' }),
+    (0, typeorm_1.CreateDateColumn)({ name: 'create_time', comment: '创建时间' }),
     __metadata("design:type", Date)
 ], User.prototype, "createTime", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: '更新时间' }),
-    (0, typeorm_1.UpdateDateColumn)({ comment: '更新时间' }),
+    (0, typeorm_1.UpdateDateColumn)({ name: 'update_time', comment: '更新时间' }),
     __metadata("design:type", Date)
 ], User.prototype, "updateTime", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => role_entity_1.Role),
+    (0, typeorm_1.JoinTable)({
+        name: 't_user_roles',
+        joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' }
+    }),
+    __metadata("design:type", Array)
+], User.prototype, "roles", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('t_users')
 ], User);

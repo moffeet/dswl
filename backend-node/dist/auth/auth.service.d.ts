@@ -7,8 +7,12 @@ export declare class AuthService {
     private jwtService;
     private configService;
     constructor(usersService: UsersService, jwtService: JwtService, configService: ConfigService);
-    login(loginDto: LoginDto): Promise<LoginResponseDto>;
+    login(loginDto: LoginDto, req?: any): Promise<LoginResponseDto>;
     wechatLogin(wechatLoginDto: WechatLoginDto): Promise<LoginResponseDto>;
+    logout(userId: number): Promise<{
+        message: string;
+    }>;
     private validateUser;
+    private updateLastLogin;
     private getWechatOpenid;
 }

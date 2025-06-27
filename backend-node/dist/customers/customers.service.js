@@ -28,7 +28,7 @@ let CustomersService = class CustomersService {
             .getOne();
         const nextNumber = lastCustomer ? lastCustomer.id + 1 : 1;
         const customerNumber = `C${String(nextNumber).padStart(3, '0')}`;
-        const customer = this.customerRepository.create(Object.assign(Object.assign({}, createCustomerDto), { customerNumber, status: '1', updateBy: '管理员' }));
+        const customer = this.customerRepository.create(Object.assign(Object.assign({}, createCustomerDto), { customerNumber, updateBy: '管理员' }));
         return await this.customerRepository.save(customer);
     }
     async findAll(page = 1, limit = 10) {
@@ -59,16 +59,6 @@ let CustomersService = class CustomersService {
         if (searchDto.customerAddress) {
             queryBuilder.andWhere('customer.customerAddress LIKE :customerAddress', {
                 customerAddress: `%${searchDto.customerAddress}%`,
-            });
-        }
-        if (searchDto.area) {
-            queryBuilder.andWhere('customer.area = :area', {
-                area: searchDto.area,
-            });
-        }
-        if (searchDto.contactPerson) {
-            queryBuilder.andWhere('customer.contactPerson LIKE :contactPerson', {
-                contactPerson: `%${searchDto.contactPerson}%`,
             });
         }
         const data = await queryBuilder
@@ -103,17 +93,11 @@ let CustomersService = class CustomersService {
         if (customers.length === 0) {
             throw new common_1.NotFoundException('未找到有效的客户地址');
         }
-        let url = 'https://uri.amap.com/navigation?';
-        customers.forEach((customer, index) => {
-            if (index === 0) {
-                url += `to=${customer.longitude},${customer.latitude}`;
-            }
-            else {
-                url += `&mid=${customer.longitude},${customer.latitude}`;
-            }
-        });
-        url += '&dev=0&t=0';
-        return url;
+        const addresses = customers.map(customer => customer.customerAddress).filter(Boolean);
+        if (addresses.length === 0) {
+            throw new common_1.NotFoundException('未找到有效的客户地址信息');
+        }
+        return addresses.join(' -> ');
     }
 };
 exports.CustomersService = CustomersService;
