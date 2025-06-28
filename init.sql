@@ -18,6 +18,8 @@ CREATE TABLE t_users (
     avatar VARCHAR(255) COMMENT '头像URL',
     last_login_time DATETIME COMMENT '最后登录时间',
     last_login_ip VARCHAR(50) COMMENT '最后登录IP',
+    current_login_ip VARCHAR(50) COMMENT '当前登录IP',
+    current_token VARCHAR(500) COMMENT '当前登录token',
     create_by BIGINT COMMENT '创建人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
@@ -152,12 +154,12 @@ INSERT INTO t_roles (role_name, role_code, description, mini_app_login_enabled, 
 ('销售', 'sales', '销售角色，主要负责客户和订单管理', TRUE, 1),
 ('客服', 'service', '客服角色，主要负责客户服务', TRUE, 1);
 
--- 插入用户数据
+-- 插入用户数据（密码均为：123456）
 INSERT INTO t_users (username, password, nickname, phone, email, gender, create_by) VALUES
-('admin', '$2a$10$7JB720yubVSVG8QD.yzQhe/nfO.iT4CZyoWp3SrBqK4jf.VQHCYAu', '系统管理员', '13800138000', 'admin@logistics.com', 'male', 1),
-('manager001', '$2a$10$7JB720yubVSVG8QD.yzQhe/nfO.iT4CZyoWp3SrBqK4jf.VQHCYAu', '张经理', '13800138001', 'manager@logistics.com', 'male', 1),
-('driver001', '$2a$10$7JB720yubVSVG8QD.yzQhe/nfO.iT4CZyoWp3SrBqK4jf.VQHCYAu', '李师傅', '13800138002', 'driver001@logistics.com', 'male', 1),
-('sales001', '$2a$10$7JB720yubVSVG8QD.yzQhe/nfO.iT4CZyoWp3SrBqK4jf.VQHCYAu', '王销售', '13800138003', 'sales001@logistics.com', 'female', 1);
+('admin', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '系统管理员', '13800138000', 'admin@logistics.com', 'male', 1),
+('manager001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '张经理', '13800138001', 'manager@logistics.com', 'male', 1),
+('driver001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '李师傅', '13800138002', 'driver001@logistics.com', 'male', 1),
+('sales001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '王销售', '13800138003', 'sales001@logistics.com', 'female', 1);
 
 -- 分配用户角色
 INSERT INTO t_user_roles (user_id, role_id) VALUES
@@ -209,4 +211,38 @@ INSERT INTO t_customers (customerNumber, customerName, customerAddress, updateBy
 ('C002', '广州贸易公司', '广州市天河区珠江新城', '管理员'),
 ('C003', '东莞制造企业', '东莞市长安镇工业区', '管理员'),
 ('C004', '佛山物流中心', '佛山市禅城区物流园', '系统'),
-('C005', '惠州电子厂', '惠州市惠城区工业园', '管理员'); 
+('C005', '惠州电子厂', '惠州市惠城区工业园', '管理员');
+
+-- ========================================
+-- 🎉 数据库初始化完成！
+-- ========================================
+
+-- 验证用户表结构
+SELECT '✅ 用户表结构验证' AS message;
+DESCRIBE t_users;
+
+-- 验证admin用户
+SELECT '✅ Admin用户验证' AS message;
+SELECT 
+    id,
+    username,
+    nickname,
+    status,
+    phone,
+    email,
+    create_time
+FROM t_users 
+WHERE username = 'admin';
+
+-- 显示初始化完成信息
+SELECT '🚀 物流配送管理系统 - 数据库初始化完成！' AS message;
+SELECT '📋 登录信息：' AS info;
+SELECT '   👤 用户名: admin' AS username;
+SELECT '   🔑 密码: 123456' AS password;
+SELECT '   🌐 前端地址: http://localhost:3001' AS frontend_url;
+SELECT '   🔗 后端地址: http://localhost:3000' AS backend_url;
+SELECT '✨ 系统已集成安全增强功能：' AS features;
+SELECT '   • Token黑名单机制' AS feature1;
+SELECT '   • IP登录冲突检测' AS feature2; 
+SELECT '   • 强制登录功能' AS feature3;
+SELECT '   • 自动Token过期处理' AS feature4; 

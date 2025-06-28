@@ -48,6 +48,14 @@ export class User {
   @Column({ name: 'last_login_ip', length: 50, nullable: true, comment: '最后登录IP' })
   lastLoginIp?: string;
 
+  @ApiProperty({ description: '当前登录IP', required: false })
+  @Column({ name: 'current_login_ip', length: 50, nullable: true, comment: '当前登录IP' })
+  currentLoginIp?: string;
+
+  @ApiProperty({ description: '当前登录token', required: false })
+  @Column({ name: 'current_token', length: 500, nullable: true, comment: '当前登录token' })
+  currentToken?: string;
+
 
 
   @ApiProperty({ description: '创建人ID', required: false })

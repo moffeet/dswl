@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '../../utils/api';
 
 interface User {
   id: number;
@@ -66,13 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // 调用后端登出接口
       if (token) {
-        await fetch('http://localhost:3000/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        await api.post('/auth/logout');
       }
     } catch (error) {
       console.error('登出请求失败:', error);

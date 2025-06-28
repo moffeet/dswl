@@ -7,6 +7,8 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { CaslAbilityFactory } from './casl/casl-ability.factory';
+import { BlacklistService } from './blacklist.service';
+import { IpLimitService } from './ip-limit.service';
 
 @Module({
   imports: [
@@ -20,7 +22,7 @@ import { CaslAbilityFactory } from './casl/casl-ability.factory';
     UsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, CaslAbilityFactory],
-  exports: [AuthService, CaslAbilityFactory],
+  providers: [AuthService, JwtStrategy, CaslAbilityFactory, BlacklistService, IpLimitService],
+  exports: [AuthService, CaslAbilityFactory, BlacklistService, IpLimitService],
 })
 export class AuthModule {} 

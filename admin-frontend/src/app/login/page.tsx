@@ -14,6 +14,7 @@ import {
 } from '@arco-design/web-react/icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/auth';
+import api from '../../utils/api';
 
 interface LoginForm {
   username: string;
@@ -24,6 +25,8 @@ export default function LoginPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForceLogin, setShowForceLogin] = useState(false);
+  const [loginData, setLoginData] = useState<LoginForm | null>(null);
   const router = useRouter();
   const { login } = useAuth();
 
@@ -35,38 +38,46 @@ export default function LoginPage() {
     });
   }, [form]);
 
-  const handleLogin = async (values: LoginForm) => {
+  const handleLogin = async (values: LoginForm, force = false) => {
     setLoading(true);
     setError(''); // 清除之前的错误信息
     
     try {
-      const response = await fetch('http://localhost:3000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
+      const endpoint = force ? '/auth/login/force' : '/auth/login';
+      const result = await api.post(endpoint, values);
 
-      const result = await response.json();
-
-      if (response.ok && result.accessToken) {
+      if (result.code === 200 && result.data.accessToken) {
         // 使用认证上下文的login方法
-        login(result.accessToken, result.user);
+        login(result.data.accessToken, result.data.user);
         
-        Message.success('登录成功！');
+        Message.success(force ? '强制登录成功！' : '登录成功！');
+        
+        // 重置状态
+        setShowForceLogin(false);
+        setLoginData(null);
         
         // 跳转到主页
         router.push('/');
+      } else if (result.code === 409) {
+        // IP冲突，显示强制登录选项
+        setLoginData(values);
+        setShowForceLogin(true);
+        setError(result.message);
       } else {
         // 设置错误信息到状态，而不是使用全局Message
         setError(result.message || '登录失败，请检查用户名和密码');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('登录错误:', error);
-      setError('网络连接失败，请稍后重试');
+      setError(error.message || '网络连接失败，请稍后重试');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForceLogin = () => {
+    if (loginData) {
+      handleLogin(loginData, true);
     }
   };
 
@@ -176,6 +187,30 @@ export default function LoginPage() {
               {loading ? '登录中...' : '登录'}
             </Button>
           </Form.Item>
+          
+          {/* 强制登录按钮 */}
+          {showForceLogin && (
+            <Form.Item style={{ marginTop: '-8px', marginBottom: '24px' }}>
+              <Button
+                type="default"
+                onClick={handleForceLogin}
+                loading={loading}
+                size="large"
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  backgroundColor: '#F53F3F',
+                  borderColor: '#F53F3F',
+                  color: 'white'
+                }}
+              >
+                {loading ? '强制登录中...' : '强制登录（踢出其他会话）'}
+              </Button>
+            </Form.Item>
+          )}
         </Form>
 
         <div style={{
