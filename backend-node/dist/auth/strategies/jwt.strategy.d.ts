@@ -1,6 +1,7 @@
 import { Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
+import { BlacklistService } from '../blacklist.service';
 export interface JwtPayload {
     sub: number;
     username: string;
@@ -12,7 +13,8 @@ declare const JwtStrategy_base: new (...args: [opt: import("passport-jwt").Strat
 export declare class JwtStrategy extends JwtStrategy_base {
     private configService;
     private usersService;
-    constructor(configService: ConfigService, usersService: UsersService);
-    validate(payload: JwtPayload): Promise<import("../../users/entities/user.entity").User>;
+    private blacklistService;
+    constructor(configService: ConfigService, usersService: UsersService, blacklistService: BlacklistService);
+    validate(req: any, payload: JwtPayload): Promise<import("../../users/entities/user.entity").User>;
 }
 export {};

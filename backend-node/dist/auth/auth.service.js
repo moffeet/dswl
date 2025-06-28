@@ -47,17 +47,31 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const users_service_1 = require("../users/users.service");
+const blacklist_service_1 = require("./blacklist.service");
+const ip_limit_service_1 = require("./ip-limit.service");
 const bcrypt = __importStar(require("bcryptjs"));
 let AuthService = class AuthService {
-    constructor(usersService, jwtService, configService) {
+    constructor(usersService, jwtService, configService, blacklistService, ipLimitService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.configService = configService;
+        this.blacklistService = blacklistService;
+        this.ipLimitService = ipLimitService;
     }
-    async login(loginDto, req) {
+    async login(loginDto, req, forceLogin) {
         const user = await this.validateUser(loginDto.username, loginDto.password);
         if (!user) {
             throw new common_1.UnauthorizedException('用户名或密码错误');
+        }
+        const currentIp = this.extractIpAddress(req);
+        if (!forceLogin) {
+            const conflict = await this.ipLimitService.checkLoginConflict(user.id, currentIp);
+            if (conflict.hasConflict) {
+                throw new common_1.UnauthorizedException(`账号已在其他位置登录 (${this.ipLimitService.getIpDisplay(conflict.conflictIp)}), 如需继续登录请选择强制登录`);
+            }
+        }
+        else {
+            await this.ipLimitService.forceLogoutOtherSessions(user.id);
         }
         const payload = {
             sub: user.id,
@@ -67,7 +81,7 @@ let AuthService = class AuthService {
             userType: 'admin',
         };
         const accessToken = this.jwtService.sign(payload);
-        await this.updateLastLogin(user.id, req);
+        await this.ipLimitService.updateCurrentLogin(user.id, currentIp, accessToken);
         return {
             accessToken,
             user: {
@@ -79,7 +93,11 @@ let AuthService = class AuthService {
             },
         };
     }
-    async logout(userId) {
+    async logout(userId, token) {
+        if (token) {
+            this.blacklistService.addToBlacklist(token);
+        }
+        await this.ipLimitService.clearCurrentLogin(userId);
         return { message: '登出成功' };
     }
     async validateUser(username, password) {
@@ -96,16 +114,24 @@ let AuthService = class AuthService {
         }
         return user;
     }
+    extractIpAddress(req) {
+        var _a, _b, _c;
+        if (!req) {
+            return '127.0.0.1';
+        }
+        const ip = req.ip || ((_a = req.connection) === null || _a === void 0 ? void 0 : _a.remoteAddress) || ((_b = req.socket) === null || _b === void 0 ? void 0 : _b.remoteAddress) ||
+            (((_c = req.connection) === null || _c === void 0 ? void 0 : _c.socket) ? req.connection.socket.remoteAddress : null) ||
+            req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '127.0.0.1';
+        return Array.isArray(ip) ? ip[0] : ip;
+    }
     async updateLastLogin(userId, req) {
         try {
             const updateData = {
                 lastLoginTime: new Date(),
             };
             if (req) {
-                const ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress ||
-                    (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-                    req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '127.0.0.1';
-                updateData.lastLoginIp = Array.isArray(ip) ? ip[0] : ip;
+                const ip = this.extractIpAddress(req);
+                updateData.lastLoginIp = ip;
             }
             await this.usersService.updateLoginInfo(userId, updateData);
         }
@@ -119,6 +145,8 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         jwt_1.JwtService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        blacklist_service_1.BlacklistService,
+        ip_limit_service_1.IpLimitService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

@@ -16,6 +16,7 @@ exports.RolesController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const roles_service_1 = require("./roles.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let RolesController = class RolesController {
     constructor(rolesService) {
         this.rolesService = rolesService;
@@ -293,6 +294,8 @@ __decorate([
 exports.RolesController = RolesController = __decorate([
     (0, swagger_1.ApiTags)('👥 角色管理'),
     (0, common_1.Controller)('roles'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
     __metadata("design:paramtypes", [roles_service_1.RolesService])
 ], RolesController);
 //# sourceMappingURL=roles.controller.js.map

@@ -1,10 +1,27 @@
 import { AuthService } from './auth.service';
-import { LoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
+import { LoginDto, LoginResponseDto } from './dto/login.dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    login(loginDto: LoginDto, req: any): Promise<LoginResponseDto>;
-    logout(req: any): Promise<LogoutResponseDto>;
+    login(loginDto: LoginDto, req: any): Promise<{
+        code: number;
+        message: string;
+        data: LoginResponseDto;
+    } | {
+        code: number;
+        message: any;
+        data: any;
+    }>;
+    forceLogin(loginDto: LoginDto, req: any): Promise<{
+        code: number;
+        message: string;
+        data: LoginResponseDto;
+    }>;
+    logout(req: any): Promise<{
+        code: number;
+        message: string;
+        data: any;
+    }>;
     getProfile(req: any): Promise<{
         code: number;
         message: string;

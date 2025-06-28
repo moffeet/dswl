@@ -15,6 +15,8 @@ const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const users_module_1 = require("../users/users.module");
 const casl_ability_factory_1 = require("./casl/casl-ability.factory");
+const blacklist_service_1 = require("./blacklist.service");
+const ip_limit_service_1 = require("./ip-limit.service");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -31,8 +33,8 @@ exports.AuthModule = AuthModule = __decorate([
             users_module_1.UsersModule,
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, casl_ability_factory_1.CaslAbilityFactory],
-        exports: [auth_service_1.AuthService, casl_ability_factory_1.CaslAbilityFactory],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, casl_ability_factory_1.CaslAbilityFactory, blacklist_service_1.BlacklistService, ip_limit_service_1.IpLimitService],
+        exports: [auth_service_1.AuthService, casl_ability_factory_1.CaslAbilityFactory, blacklist_service_1.BlacklistService, ip_limit_service_1.IpLimitService],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

@@ -72,6 +72,16 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "lastLoginIp", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: '当前登录IP', required: false }),
+    (0, typeorm_1.Column)({ name: 'current_login_ip', length: 50, nullable: true, comment: '当前登录IP' }),
+    __metadata("design:type", String)
+], User.prototype, "currentLoginIp", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '当前登录token', required: false }),
+    (0, typeorm_1.Column)({ name: 'current_token', length: 500, nullable: true, comment: '当前登录token' }),
+    __metadata("design:type", String)
+], User.prototype, "currentToken", void 0);
+__decorate([
     (0, swagger_1.ApiProperty)({ description: '创建人ID', required: false }),
     (0, typeorm_1.Column)({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' }),
     __metadata("design:type", Number)

@@ -15,17 +15,25 @@ const passport_1 = require("@nestjs/passport");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const users_service_1 = require("../../users/users.service");
+const blacklist_service_1 = require("../blacklist.service");
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
-    constructor(configService, usersService) {
+    constructor(configService, usersService, blacklistService) {
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: process.env.JWT_SECRET || 'logistics-system-jwt-secret-2024',
+            passReqToCallback: true,
         });
         this.configService = configService;
         this.usersService = usersService;
+        this.blacklistService = blacklistService;
     }
-    async validate(payload) {
+    async validate(req, payload) {
+        const authHeader = req.headers.authorization;
+        const token = this.blacklistService.extractToken(authHeader);
+        if (token && this.blacklistService.isBlacklisted(token)) {
+            throw new common_1.UnauthorizedException('Token已失效，请重新登录');
+        }
         const user = await this.usersService.findOne(payload.sub);
         if (!user) {
             throw new common_1.UnauthorizedException('用户不存在');
@@ -40,6 +48,7 @@ exports.JwtStrategy = JwtStrategy;
 exports.JwtStrategy = JwtStrategy = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService,
-        users_service_1.UsersService])
+        users_service_1.UsersService,
+        blacklist_service_1.BlacklistService])
 ], JwtStrategy);
 //# sourceMappingURL=jwt.strategy.js.map

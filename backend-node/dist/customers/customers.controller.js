@@ -19,6 +19,7 @@ const customers_service_1 = require("./customers.service");
 const create_customer_dto_1 = require("./dto/create-customer.dto");
 const update_customer_dto_1 = require("./dto/update-customer.dto");
 const search_customer_dto_1 = require("./dto/search-customer.dto");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let CustomersController = class CustomersController {
     constructor(customersService) {
         this.customersService = customersService;
@@ -439,6 +440,8 @@ __decorate([
 exports.CustomersController = CustomersController = __decorate([
     (0, swagger_1.ApiTags)('客户管理 - Customer Management'),
     (0, common_1.Controller)('api/customers'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
     __metadata("design:paramtypes", [customers_service_1.CustomersService])
 ], CustomersController);
 //# sourceMappingURL=customers.controller.js.map

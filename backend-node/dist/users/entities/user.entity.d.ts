@@ -11,6 +11,8 @@ export declare class User {
     avatar?: string;
     lastLoginTime?: Date;
     lastLoginIp?: string;
+    currentLoginIp?: string;
+    currentToken?: string;
     createBy?: number;
     createTime: Date;
     updateTime: Date;

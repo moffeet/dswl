@@ -21,5 +21,7 @@ export declare class UsersService {
     updateLoginInfo(userId: number, updateData: {
         lastLoginTime?: Date;
         lastLoginIp?: string;
+        currentLoginIp?: string;
+        currentToken?: string;
     }): Promise<void>;
 }

@@ -19,6 +19,8 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
+            currentLoginIp?: string;
+            currentToken?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;
@@ -40,6 +42,8 @@ export declare class UsersController {
                 avatar?: string;
                 lastLoginTime?: Date;
                 lastLoginIp?: string;
+                currentLoginIp?: string;
+                currentToken?: string;
                 createBy?: number;
                 createTime: Date;
                 updateTime: Date;
@@ -64,6 +68,8 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
+            currentLoginIp?: string;
+            currentToken?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;
@@ -84,6 +90,8 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
+            currentLoginIp?: string;
+            currentToken?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;

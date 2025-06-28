@@ -23,10 +23,42 @@ let AuthController = class AuthController {
         this.authService = authService;
     }
     async login(loginDto, req) {
-        return this.authService.login(loginDto, req);
+        try {
+            const result = await this.authService.login(loginDto, req);
+            return {
+                code: 200,
+                message: '登录成功',
+                data: result
+            };
+        }
+        catch (error) {
+            if (error.message.includes('账号已在其他位置登录')) {
+                return {
+                    code: 409,
+                    message: error.message,
+                    data: null
+                };
+            }
+            throw error;
+        }
+    }
+    async forceLogin(loginDto, req) {
+        const result = await this.authService.login(loginDto, req, true);
+        return {
+            code: 200,
+            message: '强制登录成功',
+            data: result
+        };
     }
     async logout(req) {
-        return this.authService.logout(req.user.id);
+        const authHeader = req.headers.authorization;
+        const token = (authHeader === null || authHeader === void 0 ? void 0 : authHeader.startsWith('Bearer ')) ? authHeader.slice(7) : null;
+        const result = await this.authService.logout(req.user.id, token);
+        return {
+            code: 200,
+            message: result.message,
+            data: null
+        };
     }
     async getProfile(req) {
         return {
@@ -58,6 +90,15 @@ __decorate([
     __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('login/force'),
+    (0, swagger_1.ApiOperation)({ summary: '强制登录（踢出其他会话）' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "forceLogin", null);
 __decorate([
     (0, swagger_1.ApiOperation)({ summary: '用户登出' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: '登出成功', type: login_dto_1.LogoutResponseDto }),
