@@ -23,17 +23,40 @@ let CustomersController = class CustomersController {
     constructor(customersService) {
         this.customersService = customersService;
     }
-    async findAll(page = 1, limit = 10) {
+    async findAll(query) {
         try {
-            const result = await this.customersService.findAll(parseInt(page.toString()), parseInt(limit.toString()));
-            return {
-                code: 0,
-                message: '获取成功',
-                data: result.data,
-                total: result.total,
-                page: result.page,
-                limit: result.limit,
-            };
+            const hasSearchParams = query.customerNumber || query.customerName || query.customerAddress;
+            if (hasSearchParams) {
+                const searchDto = {
+                    customerNumber: query.customerNumber,
+                    customerName: query.customerName,
+                    customerAddress: query.customerAddress,
+                    page: parseInt(query.page) || 1,
+                    limit: parseInt(query.limit || query.pageSize) || 10,
+                };
+                const result = await this.customersService.search(searchDto);
+                return {
+                    code: 0,
+                    message: '搜索成功',
+                    data: result.data,
+                    total: result.total,
+                    page: searchDto.page,
+                    limit: searchDto.limit,
+                };
+            }
+            else {
+                const page = parseInt(query.page) || 1;
+                const limit = parseInt(query.limit || query.pageSize) || 10;
+                const result = await this.customersService.findAll(page, limit);
+                return {
+                    code: 0,
+                    message: '获取成功',
+                    data: result.data,
+                    total: result.total,
+                    page: result.page,
+                    limit: result.limit,
+                };
+            }
         }
         catch (error) {
             return {
@@ -195,10 +218,9 @@ __decorate([
         }
     }),
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)('page')),
-    __param(1, (0, common_1.Query)('limit')),
+    __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "findAll", null);
 __decorate([

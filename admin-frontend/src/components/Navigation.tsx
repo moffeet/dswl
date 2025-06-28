@@ -16,8 +16,7 @@ export default function Navigation({}: NavigationProps) {
     { href: '/users', icon: '👥', label: '用户管理' },
     { href: '/roles', icon: '🔐', label: '角色权限' },
     { href: '/menus', icon: '📋', label: '菜单管理' },
-    { href: '/drivers', icon: '🚛', label: '司机管理' },
-    { href: '/checkin', icon: '📅', label: '打卡记录' },
+
   ];
 
   const userMenuItems = [

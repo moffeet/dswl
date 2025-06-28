@@ -72,9 +72,22 @@ interface Permission {
 }
 
 // API调用函数
-const fetchRoles = async (page: number = 1, size: number = 10): Promise<{list: Role[], total: number}> => {
+const fetchRoles = async (page: number = 1, size: number = 10, searchParams?: any): Promise<{list: Role[], total: number}> => {
   try {
-    const response = await fetch(`http://localhost:3000/roles?page=${page}&size=${size}`, {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+    });
+    
+    // 添加搜索参数
+    if (searchParams?.roleName) params.append('roleName', searchParams.roleName);
+    if (searchParams?.roleCode) params.append('roleCode', searchParams.roleCode);
+    if (searchParams?.status) params.append('status', searchParams.status);
+    if (searchParams?.miniAppLoginEnabled !== undefined) {
+      params.append('miniAppLoginEnabled', searchParams.miniAppLoginEnabled.toString());
+    }
+    
+    const response = await fetch(`http://localhost:3000/roles?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
@@ -253,8 +266,19 @@ export default function RolesPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // 构造搜索参数
+      const searchParams: any = {};
+      if (searchKeyword) {
+        searchParams.roleName = searchKeyword;
+        searchParams.roleCode = searchKeyword;
+      }
+      if (selectedStatus) searchParams.status = selectedStatus;
+      if (selectedMiniApp) {
+        searchParams.miniAppLoginEnabled = selectedMiniApp === 'true';
+      }
+      
       const [rolesData, permissionsData] = await Promise.all([
-        fetchRoles(currentPage, pageSize),
+        fetchRoles(currentPage, pageSize, searchParams),
         fetchCompletePermissions()
       ]);
       setData(rolesData.list);
@@ -269,7 +293,7 @@ export default function RolesPage() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, searchKeyword, selectedStatus, selectedMiniApp]);
 
   // 统计数据
   const stats = {

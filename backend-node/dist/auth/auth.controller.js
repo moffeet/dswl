@@ -25,9 +25,6 @@ let AuthController = class AuthController {
     async login(loginDto, req) {
         return this.authService.login(loginDto, req);
     }
-    async wechatLogin(wechatLoginDto) {
-        return this.authService.wechatLogin(wechatLoginDto);
-    }
     async logout(req) {
         return this.authService.logout(req.user.id);
     }
@@ -61,15 +58,6 @@ __decorate([
     __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
-__decorate([
-    (0, swagger_1.ApiOperation)({ summary: '微信小程序登录' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '登录成功', type: login_dto_1.LoginResponseDto }),
-    (0, common_1.Post)('wechat-login'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.WechatLoginDto]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "wechatLogin", null);
 __decorate([
     (0, swagger_1.ApiOperation)({ summary: '用户登出' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: '登出成功', type: login_dto_1.LogoutResponseDto }),

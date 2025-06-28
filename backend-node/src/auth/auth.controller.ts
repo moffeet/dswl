@@ -1,7 +1,7 @@
 import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, WechatLoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
+import { LoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('认证管理')
@@ -16,12 +16,7 @@ export class AuthController {
     return this.authService.login(loginDto, req);
   }
 
-  @ApiOperation({ summary: '微信小程序登录' })
-  @ApiResponse({ status: 200, description: '登录成功', type: LoginResponseDto })
-  @Post('wechat-login')
-  async wechatLogin(@Body() wechatLoginDto: WechatLoginDto): Promise<LoginResponseDto> {
-    return this.authService.wechatLogin(wechatLoginDto);
-  }
+
 
   @ApiOperation({ summary: '用户登出' })
   @ApiResponse({ status: 200, description: '登出成功', type: LogoutResponseDto })

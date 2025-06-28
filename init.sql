@@ -29,7 +29,7 @@ CREATE TABLE t_roles (
     role_name VARCHAR(50) NOT NULL COMMENT '角色名称',
     role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码',
     description TEXT COMMENT '角色描述',
-    status ENUM('启用', '禁用') DEFAULT '启用' COMMENT '角色状态',
+    status ENUM('enabled', 'disabled') DEFAULT 'enabled' COMMENT '角色状态',
     mini_app_login_enabled BOOLEAN DEFAULT FALSE COMMENT '是否允许小程序登录',
     create_by BIGINT COMMENT '创建人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

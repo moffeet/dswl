@@ -72,11 +72,6 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "lastLoginIp", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '微信OpenID', required: false }),
-    (0, typeorm_1.Column)({ name: 'wechat_openid', length: 100, nullable: true, unique: true, comment: '微信OpenID' }),
-    __metadata("design:type", String)
-], User.prototype, "wechatOpenid", void 0);
-__decorate([
     (0, swagger_1.ApiProperty)({ description: '创建人ID', required: false }),
     (0, typeorm_1.Column)({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' }),
     __metadata("design:type", Number)

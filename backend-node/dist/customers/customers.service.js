@@ -61,12 +61,16 @@ let CustomersService = class CustomersService {
                 customerAddress: `%${searchDto.customerAddress}%`,
             });
         }
-        const data = await queryBuilder
+        const page = searchDto.page || 1;
+        const limit = searchDto.limit || 10;
+        queryBuilder
             .orderBy('customer.createTime', 'DESC')
-            .getMany();
+            .skip((page - 1) * limit)
+            .take(limit);
+        const [data, total] = await queryBuilder.getManyAndCount();
         return {
             data,
-            total: data.length,
+            total,
         };
     }
     async findOne(id) {

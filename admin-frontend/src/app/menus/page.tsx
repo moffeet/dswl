@@ -48,9 +48,20 @@ interface MenuPermission {
 }
 
 // API调用函数
-const fetchMenuPermissions = async (): Promise<MenuPermission[]> => {
+const fetchMenuPermissions = async (page: number = 1, size: number = 10, searchParams?: any): Promise<{list: MenuPermission[], total: number}> => {
   try {
-    const response = await fetch('http://localhost:3000/permissions', {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+    });
+    
+    // 添加搜索参数
+    if (searchParams?.permissionName) params.append('permissionName', searchParams.permissionName);
+    if (searchParams?.permissionCode) params.append('permissionCode', searchParams.permissionCode);
+    if (searchParams?.permissionType) params.append('permissionType', searchParams.permissionType);
+    if (searchParams?.status) params.append('status', searchParams.status);
+    
+    const response = await fetch(`http://localhost:3000/permissions?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
@@ -58,12 +69,15 @@ const fetchMenuPermissions = async (): Promise<MenuPermission[]> => {
     });
     const result = await response.json();
     if (result.code === 200) {
-      return result.data.list || [];
+      return {
+        list: result.data.list || [],
+        total: result.data.total || 0
+      };
     }
-    return [];
+    return { list: [], total: 0 };
   } catch (error) {
     console.error('获取权限列表失败:', error);
-    return [];
+    return { list: [], total: 0 };
   }
 };
 
@@ -135,7 +149,6 @@ const statusOptions = [
 
 export default function MenusPage() {
   const [permissions, setPermissions] = useState<MenuPermission[]>([]);
-  const [filteredPermissions, setFilteredPermissions] = useState<MenuPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const [editingPermission, setEditingPermission] = useState<MenuPermission | null>(null);
@@ -149,14 +162,24 @@ export default function MenusPage() {
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
   // 加载权限数据
   const loadPermissions = async () => {
     setLoading(true);
     try {
-      const data = await fetchMenuPermissions();
-      setPermissions(data);
-      setFilteredPermissions(data);
+      // 构造搜索参数
+      const searchParams: any = {};
+      if (searchKeyword) {
+        searchParams.permissionName = searchKeyword;
+        searchParams.permissionCode = searchKeyword;
+      }
+      if (selectedType) searchParams.permissionType = selectedType;
+      if (selectedStatus) searchParams.status = selectedStatus;
+      
+      const data = await fetchMenuPermissions(currentPage, pageSize, searchParams);
+      setPermissions(data.list);
+      setTotal(data.total);
     } catch (error) {
       Message.error('加载权限数据失败');
     } finally {
@@ -166,37 +189,11 @@ export default function MenusPage() {
 
   useEffect(() => {
     loadPermissions();
-  }, []);
+  }, [currentPage, pageSize, searchKeyword, selectedType, selectedStatus]);
 
-  // 应用搜索和筛选
-  useEffect(() => {
-    let filtered = [...permissions];
-
-    // 关键词搜索
-    if (searchKeyword) {
-      filtered = filtered.filter(perm => 
-        perm.permissionName.includes(searchKeyword) ||
-        perm.permissionCode.includes(searchKeyword)
-      );
-    }
-
-    // 类型筛选
-    if (selectedType) {
-      filtered = filtered.filter(perm => perm.permissionType === selectedType);
-    }
-
-    // 状态筛选
-    if (selectedStatus) {
-      filtered = filtered.filter(perm => perm.status === selectedStatus);
-    }
-
-    setFilteredPermissions(filtered);
-    setCurrentPage(1);
-  }, [permissions, searchKeyword, selectedType, selectedStatus]);
-
-  // 统计数据
+  // 统计数据 - 显示搜索结果统计
   const stats = {
-    total: permissions.length,
+    total: total,
     menu: permissions.filter(p => p.permissionType === 'menu').length,
     button: permissions.filter(p => p.permissionType === 'button').length,
     disabled: permissions.filter(p => p.status === 'disabled').length,
@@ -407,10 +404,8 @@ export default function MenusPage() {
     }
   };
 
-  const paginatedData = filteredPermissions.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  // 分页由后端处理，直接使用permissions数据
+  const paginatedData = permissions;
 
   return (
     <div style={{ 
@@ -650,7 +645,7 @@ export default function MenusPage() {
           <Pagination
             current={currentPage}
             pageSize={pageSize}
-            total={filteredPermissions.length}
+            total={total}
             showTotal={(total, range) => 
               `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
             }

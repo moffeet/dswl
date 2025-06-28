@@ -48,9 +48,7 @@ export class User {
   @Column({ name: 'last_login_ip', length: 50, nullable: true, comment: '最后登录IP' })
   lastLoginIp?: string;
 
-  @ApiProperty({ description: '微信OpenID', required: false })
-  @Column({ name: 'wechat_openid', length: 100, nullable: true, unique: true, comment: '微信OpenID' })
-  wechatOpenid?: string;
+
 
   @ApiProperty({ description: '创建人ID', required: false })
   @Column({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' })

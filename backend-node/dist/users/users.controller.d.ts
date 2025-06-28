@@ -19,7 +19,6 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
-            wechatOpenid?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;
@@ -41,7 +40,6 @@ export declare class UsersController {
                 avatar?: string;
                 lastLoginTime?: Date;
                 lastLoginIp?: string;
-                wechatOpenid?: string;
                 createBy?: number;
                 createTime: Date;
                 updateTime: Date;
@@ -66,7 +64,6 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
-            wechatOpenid?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;
@@ -87,7 +84,6 @@ export declare class UsersController {
             avatar?: string;
             lastLoginTime?: Date;
             lastLoginIp?: string;
-            wechatOpenid?: string;
             createBy?: number;
             createTime: Date;
             updateTime: Date;

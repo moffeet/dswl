@@ -2,9 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
-import { LoginDto, WechatLoginDto, LoginResponseDto } from './dto/login.dto';
+import { LoginDto, LoginResponseDto } from './dto/login.dto';
 import { User } from '../users/entities/user.entity';
-import axios from 'axios';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -47,46 +46,7 @@ export class AuthService {
     };
   }
 
-  async wechatLogin(wechatLoginDto: WechatLoginDto): Promise<LoginResponseDto> {
-    try {
-      const openid = await this.getWechatOpenid(wechatLoginDto.code);
-      
-      // 根据openid查找用户，如果不存在则创建新用户
-      let user = await this.usersService.findByWechatOpenid(openid);
-      
-      if (!user) {
-        // 创建新的微信用户
-        user = await this.usersService.createWechatUser(openid);
-      }
 
-      if (user.status !== 'normal') {
-        throw new UnauthorizedException('用户账号已被禁用');
-      }
-
-      const payload = {
-        sub: user.id,
-        username: user.username,
-        nickname: user.nickname,
-        roles: user.roles || [],
-        userType: 'wechat',
-      };
-
-      const accessToken = this.jwtService.sign(payload);
-
-      return {
-        accessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          nickname: user.nickname,
-          status: user.status,
-          roles: user.roles || [],
-        },
-      };
-    } catch (error) {
-      throw new UnauthorizedException('微信登录失败');
-    }
-  }
 
   async logout(userId: number): Promise<{ message: string }> {
     // 可以在这里添加黑名单机制，将token加入黑名单
@@ -135,33 +95,5 @@ export class AuthService {
     }
   }
 
-  private async getWechatOpenid(code: string): Promise<string> {
-    const appid = this.configService.get('WECHAT_APPID');
-    const secret = this.configService.get('WECHAT_SECRET');
-    
-    if (!appid || !secret) {
-      throw new UnauthorizedException('微信配置未设置');
-    }
-    
-    const url = 'https://api.weixin.qq.com/sns/jscode2session';
-    const params = {
-      appid,
-      secret,
-      js_code: code,
-      grant_type: 'authorization_code',
-    };
 
-    try {
-      const response = await axios.get(url, { params });
-      const data = response.data;
-
-      if (data.errcode) {
-        throw new UnauthorizedException(`微信登录失败: ${data.errmsg}`);
-      }
-
-      return data.openid;
-    } catch (error) {
-      throw new UnauthorizedException('微信登录失败');
-    }
-  }
 } 

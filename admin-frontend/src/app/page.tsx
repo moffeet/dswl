@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button, Card, Space } from '@arco-design/web-react';
 import { Grid } from '@arco-design/web-react';
-import { IconUser, IconUserGroup, IconSettings, IconCalendar } from '@arco-design/web-react/icon';
+import { IconUser, IconUserGroup, IconSettings } from '@arco-design/web-react/icon';
 import { useRouter } from 'next/navigation';
 
 const { Row, Col } = Grid;
@@ -33,20 +33,7 @@ export default function Home() {
       path: '/roles',
       color: '#faad14',
     },
-    {
-      title: '司机管理',
-      description: '管理配送司机信息',
-      icon: <span style={{ fontSize: '32px', color: '#722ed1' }}>🚛</span>,
-      path: '/drivers',
-      color: '#722ed1',
-    },
-    {
-      title: '打卡记录',
-      description: '查看配送打卡记录和统计',
-      icon: <IconCalendar style={{ fontSize: '32px', color: '#f5222d' }} />,
-      path: '/checkin',
-      color: '#f5222d',
-    },
+
   ];
 
   return (

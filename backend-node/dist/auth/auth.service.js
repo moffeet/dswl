@@ -41,16 +41,12 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const users_service_1 = require("../users/users.service");
-const axios_1 = __importDefault(require("axios"));
 const bcrypt = __importStar(require("bcryptjs"));
 let AuthService = class AuthService {
     constructor(usersService, jwtService, configService) {
@@ -82,39 +78,6 @@ let AuthService = class AuthService {
                 roles: user.roles || [],
             },
         };
-    }
-    async wechatLogin(wechatLoginDto) {
-        try {
-            const openid = await this.getWechatOpenid(wechatLoginDto.code);
-            let user = await this.usersService.findByWechatOpenid(openid);
-            if (!user) {
-                user = await this.usersService.createWechatUser(openid);
-            }
-            if (user.status !== 'normal') {
-                throw new common_1.UnauthorizedException('用户账号已被禁用');
-            }
-            const payload = {
-                sub: user.id,
-                username: user.username,
-                nickname: user.nickname,
-                roles: user.roles || [],
-                userType: 'wechat',
-            };
-            const accessToken = this.jwtService.sign(payload);
-            return {
-                accessToken,
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    nickname: user.nickname,
-                    status: user.status,
-                    roles: user.roles || [],
-                },
-            };
-        }
-        catch (error) {
-            throw new common_1.UnauthorizedException('微信登录失败');
-        }
     }
     async logout(userId) {
         return { message: '登出成功' };
@@ -148,31 +111,6 @@ let AuthService = class AuthService {
         }
         catch (error) {
             console.error('更新登录信息失败:', error);
-        }
-    }
-    async getWechatOpenid(code) {
-        const appid = this.configService.get('WECHAT_APPID');
-        const secret = this.configService.get('WECHAT_SECRET');
-        if (!appid || !secret) {
-            throw new common_1.UnauthorizedException('微信配置未设置');
-        }
-        const url = 'https://api.weixin.qq.com/sns/jscode2session';
-        const params = {
-            appid,
-            secret,
-            js_code: code,
-            grant_type: 'authorization_code',
-        };
-        try {
-            const response = await axios_1.default.get(url, { params });
-            const data = response.data;
-            if (data.errcode) {
-                throw new common_1.UnauthorizedException(`微信登录失败: ${data.errmsg}`);
-            }
-            return data.openid;
-        }
-        catch (error) {
-            throw new common_1.UnauthorizedException('微信登录失败');
         }
     }
 };

@@ -6,7 +6,7 @@ import { Customer } from './entities/customer.entity';
 export declare class CustomersController {
     private readonly customersService;
     constructor(customersService: CustomersService);
-    findAll(page?: number, limit?: number): Promise<{
+    findAll(query: any): Promise<{
         code: number;
         message: string;
         data: Customer[];

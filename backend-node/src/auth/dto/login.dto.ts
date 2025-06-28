@@ -12,11 +12,7 @@ export class LoginDto {
   password: string;
 }
 
-export class WechatLoginDto {
-  @ApiProperty({ description: '微信小程序登录code' })
-  @IsString()
-  code: string;
-}
+
 
 export class ResetPasswordDto {
   @ApiProperty({ description: '邮箱地址' })

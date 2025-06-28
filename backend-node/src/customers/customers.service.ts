@@ -68,13 +68,20 @@ export class CustomersService {
       });
     }
 
-    const data = await queryBuilder
+    // 添加分页支持
+    const page = searchDto.page || 1;
+    const limit = searchDto.limit || 10;
+    
+    queryBuilder
       .orderBy('customer.createTime', 'DESC')
-      .getMany();
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
 
     return {
       data,
-      total: data.length,
+      total,
     };
   }
 

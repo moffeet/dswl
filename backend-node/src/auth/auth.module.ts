@@ -11,15 +11,11 @@ import { CaslAbilityFactory } from './casl/casl-ability.factory';
 @Module({
   imports: [
     PassportModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { 
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '30d' 
-        },
-      }),
-      inject: [ConfigService],
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'logistics-system-jwt-secret-2024',
+      signOptions: { 
+        expiresIn: process.env.JWT_EXPIRES_IN || '30d' 
+      },
     }),
     UsersModule,
   ],

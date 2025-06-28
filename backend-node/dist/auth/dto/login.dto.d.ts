@@ -2,9 +2,6 @@ export declare class LoginDto {
     username: string;
     password: string;
 }
-export declare class WechatLoginDto {
-    code: string;
-}
 export declare class ResetPasswordDto {
     email: string;
 }

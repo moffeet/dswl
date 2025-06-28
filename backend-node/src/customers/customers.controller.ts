@@ -47,21 +47,47 @@ export class CustomersController {
     }
   })
   @Get()
-  async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
+  async findAll(@Query() query: any) {
     try {
-      const result = await this.customersService.findAll(
-        parseInt(page.toString()),
-        parseInt(limit.toString())
-      );
+      // 检查是否有搜索条件
+      const hasSearchParams = query.customerNumber || query.customerName || query.customerAddress;
       
-      return {
-        code: 0,
-        message: '获取成功',
-        data: result.data,
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-      };
+      if (hasSearchParams) {
+        // 有搜索条件，使用搜索功能
+        const searchDto: SearchCustomerDto = {
+          customerNumber: query.customerNumber,
+          customerName: query.customerName,
+          customerAddress: query.customerAddress,
+          page: parseInt(query.page) || 1,
+          limit: parseInt(query.limit || query.pageSize) || 10,
+        };
+        
+        const result = await this.customersService.search(searchDto);
+        
+        return {
+          code: 0,
+          message: '搜索成功',
+          data: result.data,
+          total: result.total,
+          page: searchDto.page,
+          limit: searchDto.limit,
+        };
+      } else {
+        // 没有搜索条件，使用普通分页
+        const page = parseInt(query.page) || 1;
+        const limit = parseInt(query.limit || query.pageSize) || 10;
+        
+        const result = await this.customersService.findAll(page, limit);
+        
+        return {
+          code: 0,
+          message: '获取成功',
+          data: result.data,
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+        };
+      }
     } catch (error) {
       return {
         code: 500,

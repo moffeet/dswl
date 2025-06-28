@@ -218,22 +218,6 @@ let UsersService = class UsersService {
         }
         return null;
     }
-    async findByWechatOpenid(openid) {
-        return await this.userRepository.findOne({
-            where: { wechatOpenid: openid },
-            relations: ['roles']
-        });
-    }
-    async createWechatUser(openid) {
-        const user = this.userRepository.create({
-            username: `wx_${openid.slice(-8)}`,
-            password: '',
-            nickname: '微信用户',
-            wechatOpenid: openid,
-            status: 'normal'
-        });
-        return await this.userRepository.save(user);
-    }
     async updateLoginInfo(userId, updateData) {
         await this.userRepository.update(userId, updateData);
     }

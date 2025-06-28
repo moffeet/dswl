@@ -57,9 +57,21 @@ interface Role {
 }
 
 // API调用函数
-const fetchUsers = async (page: number = 1, size: number = 10): Promise<{list: User[], total: number}> => {
+const fetchUsers = async (page: number = 1, size: number = 10, searchParams?: any): Promise<{list: User[], total: number}> => {
   try {
-    const response = await fetch(`http://localhost:3000/users?page=${page}&size=${size}`, {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+    });
+    
+    // 添加搜索参数
+    if (searchParams?.username) params.append('username', searchParams.username);
+    if (searchParams?.nickname) params.append('nickname', searchParams.nickname);
+    if (searchParams?.phone) params.append('phone', searchParams.phone);
+    if (searchParams?.email) params.append('email', searchParams.email);
+    if (searchParams?.status) params.append('status', searchParams.status);
+    
+    const response = await fetch(`http://localhost:3000/users?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
@@ -173,8 +185,18 @@ export default function UsersPage() {
   const loadData = async () => {
       setLoading(true);
     try {
+      // 构造搜索参数
+      const searchParams: any = {};
+      if (searchKeyword) {
+        searchParams.username = searchKeyword;
+        searchParams.nickname = searchKeyword;
+        searchParams.phone = searchKeyword;
+        searchParams.email = searchKeyword;
+      }
+      if (selectedStatus) searchParams.status = selectedStatus;
+      
       const [usersData, rolesData] = await Promise.all([
-        fetchUsers(currentPage, pageSize),
+        fetchUsers(currentPage, pageSize, searchParams),
         fetchRoles()
       ]);
       setData(usersData.list);
@@ -189,7 +211,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, searchKeyword, selectedStatus]);
 
   // 统计数据
   const stats = {

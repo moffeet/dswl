@@ -18,8 +18,6 @@ export declare class UsersService {
     update(id: number, updateUserDto: UpdateUserDto): Promise<User>;
     remove(id: number): Promise<void>;
     validateUser(username: string, password: string): Promise<User | null>;
-    findByWechatOpenid(openid: string): Promise<User | null>;
-    createWechatUser(openid: string): Promise<User>;
     updateLoginInfo(userId: number, updateData: {
         lastLoginTime?: Date;
         lastLoginIp?: string;

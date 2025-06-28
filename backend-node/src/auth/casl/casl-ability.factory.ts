@@ -2,8 +2,6 @@ import { Ability, AbilityBuilder, AbilityClass, ExtractSubjectType, InferSubject
 import { Injectable } from '@nestjs/common';
 import { User } from '../../users/entities/user.entity';
 import { Customer } from '../../customers/entities/customer.entity';
-import { Driver } from '../../drivers/entities/driver.entity';
-import { CheckinRecord } from '../../checkin/entities/checkin-record.entity';
 
 // 定义操作类型
 export enum Action {
@@ -15,7 +13,7 @@ export enum Action {
 }
 
 // 定义主题类型
-type Subjects = InferSubjects<typeof User | typeof Customer | typeof Driver | typeof CheckinRecord> | 'all';
+type Subjects = InferSubjects<typeof User | typeof Customer> | 'all';
 
 // 定义能力类型
 export type AppAbility = Ability<[Action, Subjects]>;
