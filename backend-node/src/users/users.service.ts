@@ -117,7 +117,8 @@ export class UsersService {
 
   async findByUsername(username: string): Promise<User | null> {
     return await this.userRepository.findOne({
-      where: { username }
+      where: { username },
+      relations: ['roles']
     });
   }
 
@@ -214,9 +215,16 @@ export class UsersService {
   async updateLoginInfo(userId: number, updateData: { 
     lastLoginTime?: Date; 
     lastLoginIp?: string;
-    currentLoginIp?: string;
-    currentToken?: string;
+    currentLoginIp?: string | null;
+    currentToken?: string | null;
   }): Promise<void> {
-    await this.userRepository.update(userId, updateData);
+    // 过滤掉 undefined 值，但保留 null 值用于清空字段
+    const filteredData = Object.fromEntries(
+      Object.entries(updateData).filter(([_, value]) => value !== undefined)
+    );
+    
+    if (Object.keys(filteredData).length > 0) {
+      await this.userRepository.update(userId, filteredData);
+    }
   }
 } 

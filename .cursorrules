@@ -1,0 +1,127 @@
+# Node.js 后端开发和错误排查规则
+
+## 日志查看和错误排查优先级
+当遇到 500 错误或其他运行时错误时，必须按以下顺序进行排查：
+
+1. **立即查看实时日志**
+   - 优先使用 `run_terminal_cmd` 查看正在运行的服务日志
+   - 对于 Node.js/NestJS 项目，使用 `npm run start:dev` 获取详细错误信息
+   - 对于 PM2 管理的服务，使用 `pm2 logs [app-name] --lines 50`
+
+2. **日志查看工具使用顺序**
+   ```bash
+   # 开发环境 - 优先级1
+   npm run start:dev  # 查看实时启动日志
+   
+   # 如果服务已运行但有错误 - 优先级2  
+   ps aux | grep node  # 找到进程
+   kill -9 [pid]       # 停止服务
+   npm run start:dev   # 重新启动查看日志
+   
+   # 生产环境 - 优先级3
+   pm2 logs backend --lines 100
+   tail -f /var/log/app.log
+   journalctl -f -u service-name
+   ```
+
+3. **数据库错误专项排查**
+   - 看到数据库相关错误时，立即检查：
+     - 连接性：`mysql -u user -p -h host`
+     - 表结构：`DESCRIBE table_name;`
+     - 字段长度：`SHOW CREATE TABLE table_name;`
+   - 常见错误模式识别：
+     - `Unknown column` → 字段不存在
+     - `Data too long` → 字段长度不足  
+     - `Cannot connect` → 连接问题
+     - `Access denied` → 权限问题
+
+4. **强制获取错误详情**
+   - 当遇到 500 Internal Server Error 时，绝对不能满足于这个通用错误
+   - 必须通过以下方式获取具体错误：
+     ```bash
+     # 方法1：查看应用实时日志
+     cd backend-node && npm run start:dev
+     
+     # 方法2：启用详细日志模式
+     DEBUG=* npm run start:dev
+     
+     # 方法3：检查错误日志文件
+     find . -name "*.log" -type f -exec tail -20 {} +
+     ```
+
+5. **日志配置检查和优化**
+   - 确保 NestJS 应用有详细的日志配置：
+     ```typescript
+     // main.ts 中必须有
+     const app = await NestFactory.create(AppModule, {
+       logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+     });
+     ```
+   - 检查是否有日志文件输出配置
+   - 确保控制台能显示完整的错误堆栈
+
+## 实用调试工具命令集
+
+### Node.js/NestJS 专用命令
+```bash
+# 1. 强制重启并查看完整启动日志
+pkill -f "ts-node\|nodemon" && cd backend-node && npm run start:dev
+
+# 2. 查看所有Node.js相关进程和端口占用
+ps aux | grep -E "(node|npm|ts-node)" && lsof -i :3000
+
+# 3. 创建日志文件并实时监控
+mkdir -p logs && npm run start:dev > logs/app.log 2>&1 & tail -f logs/app.log
+
+# 4. 检查包管理和依赖问题
+npm list --depth=0 && npm audit
+
+# 5. 数据库连接测试
+mysql -u root -p123456 -e "SELECT 1 as test;" && echo "DB连接正常"
+```
+
+### 日志分析专用命令
+```bash
+# 1. 搜索特定错误类型
+grep -r "Error\|Exception\|Failed" logs/ --include="*.log" -n -A 3 -B 3
+
+# 2. 查看最近的错误日志（按时间排序）
+find . -name "*.log" -type f -printf '%T@ %p\n' | sort -n | tail -5 | cut -d' ' -f2- | xargs tail -20
+
+# 3. 实时监控多个日志文件
+tail -f logs/*.log 2>/dev/null | grep -E "(ERROR|WARN|Exception)"
+
+# 4. 统计错误类型和频率
+grep -h "Error" logs/*.log 2>/dev/null | sort | uniq -c | sort -rn
+```
+
+### 数据库专项调试
+```bash
+# 1. 快速检查表结构和数据
+mysql -u root -p123456 -e "USE logistics_db; SHOW TABLES; DESCRIBE t_users;" | head -20
+
+# 2. 检查字段长度和数据类型
+mysql -u root -p123456 -e "USE logistics_db; SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_NAME='t_users';"
+
+# 3. 检查最近的数据库操作日志
+sudo tail -f /var/log/mysql/error.log 2>/dev/null || echo "MySQL日志路径可能不同"
+```
+
+## 错误排查策略
+- **永远从日志开始**：500 错误只是表象，真正原因在日志中
+- **渐进式排查**：从最详细的日志开始，逐步缩小问题范围  
+- **环境对比**：本地能跑但服务器不能跑，对比环境差异
+- **数据库优先**：大部分后端 500 错误都是数据库相关
+
+## 强制执行规则
+- ❌ 禁止：看到 500 错误就尝试修改代码
+- ✅ 必须：先查看详细的错误日志，找到根本原因
+- ❌ 禁止：盲目重启服务
+- ✅ 必须：保存错误日志，分析后再采取行动
+
+## AI助手行为准则
+1. **遇到运行时错误时，第一个动作必须是执行日志查看命令**
+2. **必须等待获取到具体错误信息后，才能开始分析和解决问题**
+3. **如果一次没有获取到足够信息，继续尝试不同的日志查看方法**
+4. **始终向用户解释正在查看什么日志，为什么这样做**
+5. **将错误日志的关键信息提取出来，便于用户理解** 

@@ -19,7 +19,7 @@ CREATE TABLE t_users (
     last_login_time DATETIME COMMENT '最后登录时间',
     last_login_ip VARCHAR(50) COMMENT '最后登录IP',
     current_login_ip VARCHAR(50) COMMENT '当前登录IP',
-    current_token VARCHAR(500) COMMENT '当前登录token',
+    current_token VARCHAR(1000) COMMENT '当前登录token',
     create_by BIGINT COMMENT '创建人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'

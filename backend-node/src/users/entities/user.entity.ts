@@ -53,7 +53,7 @@ export class User {
   currentLoginIp?: string;
 
   @ApiProperty({ description: '当前登录token', required: false })
-  @Column({ name: 'current_token', length: 500, nullable: true, comment: '当前登录token' })
+  @Column({ name: 'current_token', length: 1000, nullable: true, comment: '当前登录token' })
   currentToken?: string;
 
 
