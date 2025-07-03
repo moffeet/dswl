@@ -28,16 +28,9 @@ export class AuthService {
     // 获取当前IP
     const currentIp = this.extractIpAddress(req);
     
-    // 检查IP登录冲突（除非强制登录）
-    if (!forceLogin) {
-      const conflict = await this.ipLimitService.checkLoginConflict(user.id, currentIp);
-      if (conflict.hasConflict) {
-        throw new UnauthorizedException(`账号已在其他位置登录 (${this.ipLimitService.getIpDisplay(conflict.conflictIp!)}), 如需继续登录请选择强制登录`);
-      }
-    } else {
-      // 强制登录时，踢出其他会话
-      await this.ipLimitService.forceLogoutOtherSessions(user.id);
-    }
+    // 自动踢出其他会话（正常的业务逻辑）
+    // 如果用户在其他地方有登录，自动使其失效
+    await this.ipLimitService.forceLogoutOtherSessions(user.id);
 
     const payload = {
       sub: user.id,
