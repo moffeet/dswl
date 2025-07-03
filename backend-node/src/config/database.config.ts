@@ -16,4 +16,9 @@ export const databaseConfig: TypeOrmModuleOptions = {
   logging: true,
   timezone: '+08:00',
   charset: 'utf8mb4',
+  extra: {
+    charset: 'utf8mb4',
+    collation: 'utf8mb4_unicode_ci',
+    connectionLimit: 10,
+  },
 }; 
