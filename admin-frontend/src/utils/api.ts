@@ -13,7 +13,9 @@ interface RequestConfig {
 class ApiClient {
   private baseURL: string;
 
-  constructor(baseURL: string = 'http://localhost:3000') {
+  constructor(baseURL: string = process.env.NODE_ENV === 'production' 
+    ? 'http://49.235.60.148:3000/api' 
+    : 'http://localhost:3000/api') {
     this.baseURL = baseURL;
   }
 

@@ -8,7 +8,7 @@ import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('客户管理 - Customer Management')
-@Controller('api/customers')
+@Controller('customers')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class CustomersController {

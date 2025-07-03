@@ -25,6 +25,9 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
+  // 设置全局API前缀
+  app.setGlobalPrefix('api');
+
   // 全局管道
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
