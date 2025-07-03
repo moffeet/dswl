@@ -35,6 +35,7 @@ import {
   IconMenuUnfold,
   IconCode
 } from '@arco-design/web-react/icon';
+import { API_ENDPOINTS } from '@/config/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -87,7 +88,7 @@ const fetchRoles = async (page: number = 1, size: number = 10, searchParams?: an
       params.append('miniAppLoginEnabled', searchParams.miniAppLoginEnabled.toString());
     }
     
-    const response = await fetch(`http://localhost:3000/roles?${params.toString()}`, {
+    const response = await fetch(`${API_ENDPOINTS.roles}?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
@@ -109,7 +110,7 @@ const fetchRoles = async (page: number = 1, size: number = 10, searchParams?: an
 
 const fetchMenuPermissions = async (): Promise<Permission[]> => {
   try {
-    const response = await fetch('http://localhost:3000/permissions/menu-tree', {
+    const response = await fetch(`${API_ENDPOINTS.permissions}/menu-tree`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
       },
@@ -124,7 +125,7 @@ const fetchMenuPermissions = async (): Promise<Permission[]> => {
 
 const fetchButtonPermissions = async (): Promise<Permission[]> => {
   try {
-    const response = await fetch('http://localhost:3000/permissions/button-tree', {
+    const response = await fetch(`${API_ENDPOINTS.permissions}/button-tree`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
       },
@@ -139,7 +140,7 @@ const fetchButtonPermissions = async (): Promise<Permission[]> => {
 
 const fetchCompletePermissions = async (): Promise<Permission[]> => {
   try {
-    const response = await fetch('http://localhost:3000/permissions/complete-tree', {
+    const response = await fetch(`${API_ENDPOINTS.permissions}/complete-tree`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
       },
@@ -154,7 +155,7 @@ const fetchCompletePermissions = async (): Promise<Permission[]> => {
 
 const createRole = async (data: any): Promise<boolean> => {
   try {
-    const response = await fetch('http://localhost:3000/roles', {
+    const response = await fetch(API_ENDPOINTS.roles, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -172,7 +173,7 @@ const createRole = async (data: any): Promise<boolean> => {
 
 const updateRole = async (id: number, data: any): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/roles/${id}`, {
+    const response = await fetch(`${API_ENDPOINTS.roles}/${id}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -190,7 +191,7 @@ const updateRole = async (id: number, data: any): Promise<boolean> => {
 
 const deleteRole = async (id: number): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/roles/${id}`, {
+    const response = await fetch(`${API_ENDPOINTS.roles}/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -207,7 +208,7 @@ const deleteRole = async (id: number): Promise<boolean> => {
 
 const assignPermissions = async (roleId: number, permissionIds: number[]): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/roles/${roleId}/permissions`, {
+    const response = await fetch(`${API_ENDPOINTS.roles}/${roleId}/permissions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -225,7 +226,7 @@ const assignPermissions = async (roleId: number, permissionIds: number[]): Promi
 
 const toggleMiniAppLogin = async (roleId: number, enabled: boolean): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/roles/${roleId}/mini-app-login`, {
+    const response = await fetch(`${API_ENDPOINTS.roles}/${roleId}/mini-app-login`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,

@@ -26,6 +26,7 @@ import {
   IconCheckCircle
 } from '@arco-design/web-react/icon';
 import type { ColumnProps } from '@arco-design/web-react/lib/Table';
+import { API_ENDPOINTS } from '@/config/api';
 
 const { Option } = Select;
 const { Row: GridRow, Col } = Grid;
@@ -61,7 +62,7 @@ const fetchMenuPermissions = async (page: number = 1, size: number = 10, searchP
     if (searchParams?.permissionType) params.append('permissionType', searchParams.permissionType);
     if (searchParams?.status) params.append('status', searchParams.status);
     
-    const response = await fetch(`http://localhost:3000/permissions?${params.toString()}`, {
+    const response = await fetch(`${API_ENDPOINTS.permissions}?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
@@ -83,7 +84,7 @@ const fetchMenuPermissions = async (page: number = 1, size: number = 10, searchP
 
 const createPermission = async (data: any): Promise<boolean> => {
   try {
-    const response = await fetch('http://localhost:3000/permissions', {
+    const response = await fetch(API_ENDPOINTS.permissions, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -101,7 +102,7 @@ const createPermission = async (data: any): Promise<boolean> => {
 
 const updatePermission = async (id: number, data: any): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/permissions/${id}`, {
+    const response = await fetch(`${API_ENDPOINTS.permissions}/${id}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -119,7 +120,7 @@ const updatePermission = async (id: number, data: any): Promise<boolean> => {
 
 const deletePermission = async (id: number): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/permissions/${id}`, {
+    const response = await fetch(`${API_ENDPOINTS.permissions}/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,

@@ -29,6 +29,7 @@ import {
   IconCheckCircle,
   IconUserGroup
 } from '@arco-design/web-react/icon';
+import { API_ENDPOINTS } from '@/config/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -71,7 +72,7 @@ const fetchUsers = async (page: number = 1, size: number = 10, searchParams?: an
     if (searchParams?.email) params.append('email', searchParams.email);
     if (searchParams?.status) params.append('status', searchParams.status);
     
-    const response = await fetch(`http://localhost:3000/users?${params.toString()}`, {
+    const response = await fetch(`${API_ENDPOINTS.users}?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
@@ -93,7 +94,7 @@ const fetchUsers = async (page: number = 1, size: number = 10, searchParams?: an
 
 const fetchRoles = async (): Promise<Role[]> => {
   try {
-    const response = await fetch('http://localhost:3000/roles', {
+    const response = await fetch(API_ENDPOINTS.roles, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ const fetchRoles = async (): Promise<Role[]> => {
 
 const createUser = async (data: any): Promise<boolean> => {
   try {
-    const response = await fetch('http://localhost:3000/users', {
+    const response = await fetch(API_ENDPOINTS.users, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -130,7 +131,7 @@ const createUser = async (data: any): Promise<boolean> => {
 
 const updateUser = async (id: number, data: any): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/users/${id}`, {
+    const response = await fetch(`${API_ENDPOINTS.users}/${id}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -148,7 +149,7 @@ const updateUser = async (id: number, data: any): Promise<boolean> => {
 
 const deleteUser = async (id: number): Promise<boolean> => {
   try {
-    const response = await fetch(`http://localhost:3000/users/${id}`, {
+    const response = await fetch(`${API_ENDPOINTS.users}/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,

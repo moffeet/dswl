@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Input, Space, Modal, Form, Message, Card, Typography, Grid, Tooltip } from '@arco-design/web-react';
 import { IconSearch, IconRefresh, IconPlus, IconEdit, IconDelete, IconEye, IconSettings } from '@arco-design/web-react/icon';
+import { API_ENDPOINTS } from '@/config/api';
+import api from '@/utils/api';
 
 const { Title } = Typography;
 const { Row, Col } = Grid;
@@ -49,6 +51,15 @@ export default function CustomersPage() {
   // 选中的行
   const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([]);
 
+  // 获取认证头
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': token ? `Bearer ${token}` : '',
+      'Content-Type': 'application/json',
+    };
+  };
+
   // 获取客户列表
   const fetchCustomers = async (params: any = {}) => {
     setLoading(true);
@@ -69,7 +80,10 @@ export default function CustomersPage() {
         ...(searchParams.customerAddress && { customerAddress: searchParams.customerAddress }),
       });
 
-      const response = await fetch(`http://localhost:3000/api/customers?${queryParams}`);
+      const response = await fetch(`${API_ENDPOINTS.customers}?${queryParams}`, {
+        headers: getAuthHeaders(),
+      });
+      
       if (response.ok) {
         const result = await response.json();
         if (result.code === 0 && Array.isArray(result.data)) {
@@ -93,6 +107,14 @@ export default function CustomersPage() {
           setData([]);
         }
       } else {
+        // 如果是401错误，可能是token过期
+        if (response.status === 401) {
+          Message.error('登录已过期，请重新登录');
+          // 跳转到登录页
+          window.location.href = '/login';
+          return;
+        }
+        
         Message.error(`获取客户数据失败: ${response.status} ${response.statusText}`);
         setData([]);
       }
@@ -165,14 +187,19 @@ export default function CustomersPage() {
     if (!deletingRecord) return;
     
     try {
-      const response = await fetch(`http://localhost:3000/api/customers/${deletingRecord.id}`, {
+      const response = await fetch(`${API_ENDPOINTS.customers}/${deletingRecord.id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
+      
       if (response.ok) {
         Message.success('删除成功');
         fetchCustomers();
         setDeleteModalVisible(false);
         setDeletingRecord(null);
+      } else if (response.status === 401) {
+        Message.error('登录已过期，请重新登录');
+        window.location.href = '/login';
       } else {
         Message.error('删除失败');
       }
@@ -194,8 +221,12 @@ export default function CustomersPage() {
   const confirmBatchDelete = async () => {
     try {
       const promises = selectedRowKeys.map(id => 
-        fetch(`http://localhost:3000/api/customers/${id}`, { method: 'DELETE' })
+        fetch(`${API_ENDPOINTS.customers}/${id}`, { 
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        })
       );
+      
       await Promise.all(promises);
       Message.success('批量删除成功');
       setSelectedRowKeys([]);
@@ -213,8 +244,8 @@ export default function CustomersPage() {
       setLoading(true);
 
       const url = editingRecord
-        ? `http://localhost:3000/api/customers/${editingRecord.id}`
-        : 'http://localhost:3000/api/customers';
+        ? `${API_ENDPOINTS.customers}/${editingRecord.id}`
+        : API_ENDPOINTS.customers;
 
       // 根据后端DTO结构构建请求数据
       const requestData = {
@@ -224,7 +255,7 @@ export default function CustomersPage() {
 
       const response = await fetch(url, {
         method: editingRecord ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(requestData),
       });
 
@@ -232,6 +263,9 @@ export default function CustomersPage() {
         Message.success(editingRecord ? '更新成功' : '创建成功');
         setModalVisible(false);
         fetchCustomers();
+      } else if (response.status === 401) {
+        Message.error('登录已过期，请重新登录');
+        window.location.href = '/login';
       } else {
         const error = await response.text();
         Message.error(`操作失败: ${error}`);
