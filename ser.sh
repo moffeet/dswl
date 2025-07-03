@@ -63,8 +63,11 @@ command_exists() {
 # 检查端口是否被占用
 check_port() {
     local port=$1
-    # 同时检测IPv4和IPv6
-    if lsof -i :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+    # 使用netstat检测端口（更可靠，支持IPv4和IPv6）
+    if netstat -tlnp 2>/dev/null | grep -q ":$port "; then
+        return 0  # 端口被占用
+    # 备用方法：使用lsof检测
+    elif lsof -i :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         return 0  # 端口被占用
     else
         return 1  # 端口可用
