@@ -18,7 +18,11 @@ async function bootstrap() {
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
       'http://127.0.0.1:3002',
-      'http://127.0.0.1:3004'
+      'http://127.0.0.1:3004',
+      'http://49.235.60.148:3000',
+      'http://49.235.60.148:3001',
+      'http://49.235.60.148:3002',
+      'http://49.235.60.148:3004'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
