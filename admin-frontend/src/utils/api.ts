@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '@/config/api';
+
 interface ApiResponse<T = any> {
   code: number;
   message: string;
@@ -13,9 +15,7 @@ interface RequestConfig {
 class ApiClient {
   private baseURL: string;
 
-  constructor(baseURL: string = process.env.NODE_ENV === 'production' 
-    ? 'http://49.235.60.148:3000/api' 
-    : 'http://localhost:3000/api') {
+  constructor(baseURL: string = `${API_BASE_URL}/api`) {
     this.baseURL = baseURL;
   }
 
