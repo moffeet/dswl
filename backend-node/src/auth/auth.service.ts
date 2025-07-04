@@ -19,7 +19,41 @@ export class AuthService {
   ) {}
 
   async login(loginDto: LoginDto, req?: any, forceLogin?: boolean): Promise<LoginResponseDto> {
-    const user = await this.validateUser(loginDto.username, loginDto.password);
+    let actualPassword: string;
+    
+    // 🔒 安全改进：检查是否为加密数据
+    if (loginDto._encrypted && loginDto.timestamp && loginDto.signature) {
+      console.log('检测到加密登录数据，开始解密处理');
+      
+      // 导入解密工具
+      const { decryptPassword, validateTimestamp, validateSignature } = await import('./utils/crypto.util');
+      
+      // 验证签名
+      if (!validateSignature(loginDto.username, loginDto.password, loginDto.timestamp, loginDto.signature)) {
+        throw new UnauthorizedException('数据签名验证失败');
+      }
+      
+      // 验证时间戳（防重放攻击）
+      if (!validateTimestamp(loginDto.timestamp)) {
+        throw new UnauthorizedException('请求已过期，请重新登录');
+      }
+      
+      try {
+        // 解密密码
+        const decryptedData = decryptPassword(loginDto.password);
+        actualPassword = decryptedData.password;
+        console.log('密码解密成功');
+      } catch (error) {
+        console.error('密码解密失败:', error);
+        throw new UnauthorizedException('密码解密失败');
+      }
+    } else {
+      // 兼容明文密码（向后兼容）
+      console.log('使用明文密码登录（建议升级到加密传输）');
+      actualPassword = loginDto.password;
+    }
+    
+    const user = await this.validateUser(loginDto.username, actualPassword);
     
     if (!user) {
       throw new UnauthorizedException('用户名或密码错误');
@@ -56,8 +90,6 @@ export class AuthService {
       },
     };
   }
-
-
 
   async logout(userId: number, token?: string): Promise<{ message: string }> {
     // 将token加入黑名单
@@ -121,6 +153,4 @@ export class AuthService {
       console.error('更新登录信息失败:', error);
     }
   }
-
-
 } 

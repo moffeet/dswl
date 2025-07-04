@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/auth';
 import api from '../../utils/api';
+import { createSecureLoginData } from '../../utils/crypto';
 
 interface LoginForm {
   username: string;
@@ -44,9 +45,26 @@ export default function LoginPage() {
     
     try {
       const endpoint = force ? '/auth/login/force' : '/auth/login';
-      const result = await api.post(endpoint, values);
+      
+      // 🔒 安全改进：加密密码后再发送
+      const secureData = createSecureLoginData(values.username, values.password);
+      
+      console.log('=== 密码加密传输 ===');
+      console.log('原始密码长度:', values.password.length);
+      console.log('加密后数据:', {
+        username: secureData.username,
+        passwordLength: secureData.password.length,
+        hasTimestamp: !!secureData.timestamp,
+        hasSignature: !!secureData.signature,
+        isEncrypted: secureData._encrypted
+      });
+      console.log('发送加密登录数据，密码已加密处理');
+      
+      const result = await api.post(endpoint, secureData);
 
       if (result.code === 200 && result.data.accessToken) {
+        console.log('✅ 登录成功 - 密码加密传输有效');
+        
         // 使用认证上下文的login方法，只传递token
         await login(result.data.accessToken);
         
@@ -68,7 +86,7 @@ export default function LoginPage() {
         setError(result.message || '登录失败，请检查用户名和密码');
       }
     } catch (error: any) {
-      console.error('登录错误:', error);
+      console.error('❌ 登录错误:', error);
       setError(error.message || '网络连接失败，请稍后重试');
     } finally {
       setLoading(false);
