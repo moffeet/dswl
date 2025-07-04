@@ -47,8 +47,8 @@ export default function LoginPage() {
       const result = await api.post(endpoint, values);
 
       if (result.code === 200 && result.data.accessToken) {
-        // 使用认证上下文的login方法
-        login(result.data.accessToken, result.data.user);
+        // 使用认证上下文的login方法，只传递token
+        await login(result.data.accessToken);
         
         Message.success(force ? '强制登录成功！' : '登录成功！');
         

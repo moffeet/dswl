@@ -79,9 +79,8 @@ class ApiClient {
    * 处理token过期
    */
   private handleTokenExpired() {
-    // 清除本地存储
+    // 只清除token，不再清除用户信息（因为用户信息存储在内存中）
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     
     // 跳转到登录页
     window.location.href = '/login';
