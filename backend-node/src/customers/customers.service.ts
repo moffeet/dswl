@@ -66,9 +66,15 @@ export class CustomersService {
       });
     }
 
-    if (searchDto.customerAddress) {
-      queryBuilder.andWhere('customer.storeAddress LIKE :customerAddress', {
-        customerAddress: `%${searchDto.customerAddress}%`,
+    if (searchDto.storeAddress) {
+      queryBuilder.andWhere('customer.storeAddress LIKE :storeAddress', {
+        storeAddress: `%${searchDto.storeAddress}%`,
+      });
+    }
+
+    if (searchDto.warehouseAddress) {
+      queryBuilder.andWhere('customer.warehouseAddress LIKE :warehouseAddress', {
+        warehouseAddress: `%${searchDto.warehouseAddress}%`,
       });
     }
 
@@ -308,7 +314,7 @@ export class CustomersService {
           const newCustomer = this.customerRepository.create({
             customerNumber: externalCustomer.customerNumber,
             customerName: externalCustomer.customerName,
-            storeAddress: externalCustomer.customerAddress || null,
+            storeAddress: null, // 地址信息需要后续手动维护
             lastSyncTime: new Date(),
             status: 'active',
             updateBy: '系统同步'

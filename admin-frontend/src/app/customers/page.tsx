@@ -610,18 +610,15 @@ export default function CustomersPage() {
       const externalCustomers = [
         {
           customerNumber: 'EXT001',
-          customerName: '外部系统客户1',
-          customerAddress: '广东省深圳市福田区中心区'
+          customerName: '外部系统客户1'
         },
         {
           customerNumber: 'EXT002',
-          customerName: '外部系统客户2',
-          customerAddress: '广东省广州市天河区珠江新城'
+          customerName: '外部系统客户2'
         },
         {
           customerNumber: 'C001', // 已存在的客户，只更新名称
-          customerName: '深圳科技有限公司（已更新）',
-          customerAddress: '深圳市南山区科技园南区'
+          customerName: '深圳科技有限公司（已更新）'
         }
       ];
 

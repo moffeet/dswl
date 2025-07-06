@@ -10,6 +10,7 @@ interface RequestConfig {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: Record<string, string>;
   body?: any;
+  responseType?: 'json' | 'blob';
 }
 
 class ApiClient {
@@ -23,7 +24,7 @@ class ApiClient {
    * 通用请求方法
    */
   async request<T = any>(url: string, config: RequestConfig = {}): Promise<ApiResponse<T>> {
-    const { method = 'GET', headers = {}, body } = config;
+    const { method = 'GET', headers = {}, body, responseType = 'json' } = config;
     
     // 获取token
     const token = localStorage.getItem('token');
@@ -67,8 +68,14 @@ class ApiClient {
         throw new Error(errorData.message || `HTTP Error: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data;
+      // 根据响应类型处理数据
+      if (responseType === 'blob') {
+        const blob = await response.blob();
+        return { data: blob } as any;
+      } else {
+        const data = await response.json();
+        return data;
+      }
     } catch (error) {
       console.error('API请求失败:', error);
       throw error;
@@ -89,10 +96,19 @@ class ApiClient {
   /**
    * GET请求
    */
-  async get<T = any>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+  async get<T = any>(url: string, params?: Record<string, any> | { responseType?: 'json' | 'blob' }): Promise<ApiResponse<T>> {
     let finalUrl = url;
-    
+    let responseType: 'json' | 'blob' = 'json';
+
     if (params) {
+      // 检查是否有responseType参数
+      if ('responseType' in params) {
+        responseType = params.responseType || 'json';
+        // 从params中移除responseType，因为它不应该作为查询参数
+        const { responseType: _, ...queryParams } = params;
+        params = queryParams;
+      }
+
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -104,8 +120,8 @@ class ApiClient {
         finalUrl += (url.includes('?') ? '&' : '?') + queryString;
       }
     }
-    
-    return this.request<T>(finalUrl, { method: 'GET' });
+
+    return this.request<T>(finalUrl, { method: 'GET', responseType });
   }
 
   /**

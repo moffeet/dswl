@@ -138,12 +138,5 @@ export class ExternalCustomerDto {
   @IsNotEmpty()
   customerName: string;
 
-  @ApiProperty({
-    description: '客户地址',
-    example: '深圳市南山区科技园南区',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  customerAddress?: string;
+
 }

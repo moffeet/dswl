@@ -26,14 +26,7 @@ export class SearchCustomerDto {
   @IsString()
   customerName?: string;
 
-  @ApiProperty({
-    description: '客户地址，支持模糊匹配',
-    example: '深圳',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  customerAddress?: string;
+
 
   @ApiProperty({
     description: '门店地址，支持模糊匹配',
@@ -115,11 +108,7 @@ export class CustomerSearchResultDto {
   })
   customerName: string;
 
-  @ApiProperty({
-    description: '客户地址',
-    example: '深圳市南山区科技园南区'
-  })
-  customerAddress: string;
+
 
   @ApiProperty({
     description: '门店地址',

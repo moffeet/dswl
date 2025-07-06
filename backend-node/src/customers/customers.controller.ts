@@ -38,7 +38,8 @@ export class CustomersController {
               id: { type: 'number', example: 1, description: '客户ID' },
               customerNumber: { type: 'string', example: 'C001', description: '客户编号，自动生成' },
               customerName: { type: 'string', example: '深圳科技有限公司', description: '客户名称' },
-              customerAddress: { type: 'string', example: '深圳市南山区科技园南区', description: '客户地址' },
+              storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座', description: '门店地址' },
+              warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座', description: '仓库地址' },
               updateBy: { type: 'string', example: '管理员', description: '更新人' },
               createTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '创建时间' },
               updateTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '更新时间' }
@@ -55,14 +56,16 @@ export class CustomersController {
   async findAll(@Query() query: any) {
     try {
       // 检查是否有搜索条件
-      const hasSearchParams = query.customerNumber || query.customerName || query.customerAddress;
+      const hasSearchParams = query.customerNumber || query.customerName || query.storeAddress || query.warehouseAddress;
       
       if (hasSearchParams) {
         // 有搜索条件，使用搜索功能
         const searchDto: SearchCustomerDto = {
           customerNumber: query.customerNumber,
           customerName: query.customerName,
-          customerAddress: query.customerAddress,
+          storeAddress: query.storeAddress,
+          warehouseAddress: query.warehouseAddress,
+          status: query.status,
           page: parseInt(query.page) || 1,
           limit: parseInt(query.limit || query.pageSize) || 10,
         };
@@ -109,7 +112,8 @@ export class CustomersController {
   })
   @ApiQuery({ name: 'customerNumber', required: false, description: '客户编号（模糊匹配）', example: 'C001' })
   @ApiQuery({ name: 'customerName', required: false, description: '客户名称（模糊匹配）', example: '科技' })
-  @ApiQuery({ name: 'customerAddress', required: false, description: '客户地址（模糊匹配）', example: '深圳' })
+  @ApiQuery({ name: 'storeAddress', required: false, description: '门店地址（模糊匹配）', example: '科技园' })
+  @ApiQuery({ name: 'warehouseAddress', required: false, description: '仓库地址（模糊匹配）', example: '物流园' })
   @ApiResponse({ 
     status: 200, 
     description: '搜索成功',
@@ -166,7 +170,8 @@ export class CustomersController {
             id: { type: 'number', example: 1, description: '客户ID' },
             customerNumber: { type: 'string', example: 'C001', description: '客户编号' },
             customerName: { type: 'string', example: '深圳科技有限公司', description: '客户名称' },
-            customerAddress: { type: 'string', example: '深圳市南山区科技园南区', description: '客户地址' },
+            storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座', description: '门店地址' },
+            warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座', description: '仓库地址' },
             updateBy: { type: 'string', example: '管理员', description: '更新人' },
             createTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '创建时间' },
             updateTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '更新时间' }
@@ -218,7 +223,8 @@ export class CustomersController {
         description: '只需要提供客户名称，地址可选',
         value: {
           customerName: '新客户公司',
-          customerAddress: '上海市浦东新区张江高科技园区'
+          storeAddress: '上海市浦东新区张江高科技园区A座',
+          warehouseAddress: '上海市浦东新区张江高科技园区B座'
         }
       },
       minimal: {
@@ -244,7 +250,8 @@ export class CustomersController {
             id: { type: 'number', example: 8, description: '客户ID' },
             customerNumber: { type: 'string', example: 'C008', description: '自动生成的客户编号' },
             customerName: { type: 'string', example: '新客户公司', description: '客户名称' },
-            customerAddress: { type: 'string', example: '上海市浦东新区张江高科技园区', description: '客户地址' },
+            storeAddress: { type: 'string', example: '上海市浦东新区张江高科技园区A座', description: '门店地址' },
+            warehouseAddress: { type: 'string', example: '上海市浦东新区张江高科技园区B座', description: '仓库地址' },
             updateBy: { type: 'string', example: '管理员', description: '创建人' },
             createTime: { type: 'string', example: '2025-06-27T08:16:28.000Z', description: '创建时间' },
             updateTime: { type: 'string', example: '2025-06-27T08:16:28.000Z', description: '更新时间' }
@@ -296,7 +303,8 @@ export class CustomersController {
         description: '更新所有字段',
         value: {
           customerName: '北京新科技有限公司',
-          customerAddress: '北京市海淀区中关村大街1号'
+          storeAddress: '北京市海淀区中关村大街1号A座',
+          warehouseAddress: '北京市海淀区中关村大街1号B座'
         }
       }
     }
@@ -315,7 +323,8 @@ export class CustomersController {
             id: { type: 'number', example: 1, description: '客户ID' },
             customerNumber: { type: 'string', example: 'C001', description: '客户编号' },
             customerName: { type: 'string', example: '北京新科技有限公司', description: '更新后的客户名称' },
-            customerAddress: { type: 'string', example: '北京市海淀区中关村大街1号', description: '更新后的客户地址' },
+            storeAddress: { type: 'string', example: '北京市海淀区中关村大街1号A座', description: '更新后的门店地址' },
+            warehouseAddress: { type: 'string', example: '北京市海淀区中关村大街1号B座', description: '更新后的仓库地址' },
             updateBy: { type: 'string', example: '管理员', description: '更新人' },
             createTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '创建时间' },
             updateTime: { type: 'string', example: '2025-06-27T08:30:28.000Z', description: '更新时间' }
@@ -641,8 +650,12 @@ export class CustomersController {
     try {
       let ids: number[] | undefined;
 
-      if (customerIds) {
+      if (customerIds && customerIds.trim()) {
         ids = customerIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+        // 如果解析后没有有效的ID，则设为undefined以导出全部
+        if (ids.length === 0) {
+          ids = undefined;
+        }
       }
 
       const excelBuffer = await this.customersService.exportToExcel(ids);
