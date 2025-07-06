@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Response } from 'express';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto } from './dto/search-customer.dto';
+import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -402,4 +404,262 @@ export class CustomersController {
       };
     }
   }
-} 
+
+  @ApiOperation({
+    summary: '同步客户数据',
+    description: '与另一个系统同步客户数据，地址信息以当前系统为准'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '同步成功',
+    schema: {
+      example: {
+        code: 0,
+        message: '客户数据同步成功',
+        data: {
+          message: '客户数据同步成功',
+          syncTime: '2025-06-27T08:16:28.000Z',
+          count: 5
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 500, description: '同步失败' })
+  @Post('sync')
+  async syncCustomers(@Body() syncCustomerDto: SyncCustomerDto) {
+    try {
+      const result = await this.customersService.syncCustomers(syncCustomerDto);
+
+      return {
+        code: 0,
+        message: '同步成功',
+        data: result,
+      };
+    } catch (error) {
+      return {
+        code: 500,
+        message: '同步失败',
+        data: null,
+        error: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({
+    summary: '批量删除客户',
+    description: '批量删除多个客户，支持多选删除'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '删除成功',
+    schema: {
+      example: {
+        code: 0,
+        message: '批量删除成功',
+        data: {
+          message: '批量删除成功',
+          deletedCount: 3
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: '未找到要删除的客户' })
+  @ApiResponse({ status: 500, description: '删除失败' })
+  @Delete('batch')
+  async batchDelete(@Body() batchDeleteDto: BatchDeleteCustomerDto) {
+    try {
+      const result = await this.customersService.batchDelete(batchDeleteDto);
+
+      return {
+        code: 0,
+        message: '批量删除成功',
+        data: result,
+      };
+    } catch (error) {
+      return {
+        code: error.status || 500,
+        message: error.message || '删除失败',
+        data: null,
+        error: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({
+    summary: '地理编码',
+    description: '将地址转换为经纬度坐标'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '编码成功',
+    schema: {
+      example: {
+        code: 0,
+        message: '地理编码成功',
+        data: {
+          address: '深圳市南山区科技园南区',
+          longitude: 113.9547,
+          latitude: 22.5431,
+          province: '广东省',
+          city: '深圳市',
+          district: '南山区'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: '地址格式不正确' })
+  @ApiResponse({ status: 500, description: '编码失败' })
+  @Post('geocode')
+  async geocodeAddress(@Body() geocodeDto: GeocodeRequestDto) {
+    try {
+      const result = await this.customersService.geocodeAddress(geocodeDto);
+
+      return {
+        code: 0,
+        message: '地理编码成功',
+        data: result,
+      };
+    } catch (error) {
+      return {
+        code: error.status || 500,
+        message: error.message || '编码失败',
+        data: null,
+        error: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({
+    summary: '逆地理编码',
+    description: '将经纬度坐标转换为地址'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '编码成功',
+    schema: {
+      example: {
+        code: 0,
+        message: '逆地理编码成功',
+        data: {
+          address: '深圳市南山区科技园南区',
+          longitude: 113.9547,
+          latitude: 22.5431,
+          province: '广东省',
+          city: '深圳市',
+          district: '南山区'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: '坐标格式不正确' })
+  @ApiResponse({ status: 500, description: '编码失败' })
+  @Post('reverse-geocode')
+  async reverseGeocodeLocation(@Body() reverseGeocodeDto: ReverseGeocodeRequestDto) {
+    try {
+      const result = await this.customersService.reverseGeocodeLocation(reverseGeocodeDto);
+
+      return {
+        code: 0,
+        message: '逆地理编码成功',
+        data: result,
+      };
+    } catch (error) {
+      return {
+        code: error.status || 500,
+        message: error.message || '编码失败',
+        data: null,
+        error: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({
+    summary: 'Excel导出',
+    description: '导出客户数据为Excel文件，支持选择性导出或全部导出'
+  })
+  @ApiQuery({
+    name: 'customerIds',
+    description: '要导出的客户ID列表，用逗号分隔，不提供则导出全部',
+    required: false,
+    example: '1,2,3'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '导出成功',
+    headers: {
+      'Content-Type': {
+        description: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      },
+      'Content-Disposition': {
+        description: 'attachment; filename="customers.xlsx"'
+      }
+    }
+  })
+  @ApiResponse({ status: 500, description: '导出失败' })
+  @Get('export')
+  async exportToExcel(@Query('customerIds') customerIds: string, @Res() res: Response) {
+    try {
+      let ids: number[] | undefined;
+
+      if (customerIds) {
+        ids = customerIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+      }
+
+      const excelBuffer = await this.customersService.exportToExcel(ids);
+
+      const filename = `customers_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', excelBuffer.length);
+
+      res.send(excelBuffer);
+    } catch (error) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        code: 500,
+        message: '导出失败',
+        data: null,
+        error: error.message,
+      });
+    }
+  }
+
+  @ApiOperation({
+    summary: '获取最后同步时间',
+    description: '获取客户数据的最后同步时间'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+    schema: {
+      example: {
+        code: 0,
+        message: '获取成功',
+        data: {
+          lastSyncTime: '2025-06-27T08:16:28.000Z'
+        }
+      }
+    }
+  })
+  @Get('last-sync-time')
+  async getLastSyncTime() {
+    try {
+      const lastSyncTime = await this.customersService.getLastSyncTime();
+
+      return {
+        code: 0,
+        message: '获取成功',
+        data: {
+          lastSyncTime
+        },
+      };
+    } catch (error) {
+      return {
+        code: 500,
+        message: '获取失败',
+        data: null,
+        error: error.message,
+      };
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -35,8 +35,12 @@ async function bootstrap() {
   // 全局管道
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
-    forbidNonWhitelisted: true,
+    forbidNonWhitelisted: false, // 临时设置为false以调试
     transform: true,
+    exceptionFactory: (errors) => {
+      console.log('Validation errors:', JSON.stringify(errors, null, 2));
+      return new BadRequestException(errors);
+    },
   }));
 
   // Swagger配置

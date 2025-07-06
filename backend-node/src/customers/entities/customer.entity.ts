@@ -33,8 +33,8 @@ export class Customer {
   @Column({ name: 'customerName', length: 100 })
   customerName: string;
 
-  @ApiProperty({ 
-    description: '客户地址，可选字段', 
+  @ApiProperty({
+    description: '客户地址（旧字段，保留兼容性）',
     example: '深圳市南山区科技园南区',
     maxLength: 255,
     required: false
@@ -42,8 +42,81 @@ export class Customer {
   @Column({ name: 'customerAddress', length: 255, nullable: true })
   customerAddress: string;
 
-  @ApiProperty({ 
-    description: '更新人，记录最后修改该客户信息的用户', 
+  @ApiProperty({
+    description: '门店地址',
+    example: '深圳市南山区科技园南区A座',
+    maxLength: 255,
+    required: false
+  })
+  @Column({ name: 'storeAddress', length: 255, nullable: true })
+  storeAddress: string;
+
+  @ApiProperty({
+    description: '仓库地址',
+    example: '深圳市南山区科技园南区B座',
+    maxLength: 255,
+    required: false
+  })
+  @Column({ name: 'warehouseAddress', length: 255, nullable: true })
+  warehouseAddress: string;
+
+  @ApiProperty({
+    description: '门店经度',
+    example: 113.9547,
+    type: 'number',
+    required: false
+  })
+  @Column({ name: 'storeLongitude', type: 'decimal', precision: 10, scale: 7, nullable: true })
+  storeLongitude: number;
+
+  @ApiProperty({
+    description: '门店纬度',
+    example: 22.5431,
+    type: 'number',
+    required: false
+  })
+  @Column({ name: 'storeLatitude', type: 'decimal', precision: 10, scale: 7, nullable: true })
+  storeLatitude: number;
+
+  @ApiProperty({
+    description: '仓库经度',
+    example: 113.9557,
+    type: 'number',
+    required: false
+  })
+  @Column({ name: 'warehouseLongitude', type: 'decimal', precision: 10, scale: 7, nullable: true })
+  warehouseLongitude: number;
+
+  @ApiProperty({
+    description: '仓库纬度',
+    example: 22.5441,
+    type: 'number',
+    required: false
+  })
+  @Column({ name: 'warehouseLatitude', type: 'decimal', precision: 10, scale: 7, nullable: true })
+  warehouseLatitude: number;
+
+  @ApiProperty({
+    description: '客户状态',
+    example: 'active',
+    enum: ['active', 'inactive'],
+    required: false
+  })
+  @Column({ name: 'status', type: 'enum', enum: ['active', 'inactive'], default: 'active' })
+  status: 'active' | 'inactive';
+
+  @ApiProperty({
+    description: '最后同步时间',
+    example: '2025-06-27T08:16:28.000Z',
+    type: 'string',
+    format: 'date-time',
+    required: false
+  })
+  @Column({ name: 'lastSyncTime', type: 'datetime', nullable: true })
+  lastSyncTime: Date;
+
+  @ApiProperty({
+    description: '更新人，记录最后修改该客户信息的用户',
     example: '管理员',
     maxLength: 50,
     required: false

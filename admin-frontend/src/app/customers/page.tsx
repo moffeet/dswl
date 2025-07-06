@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, Space, Modal, Form, Message, Card, Typography, Grid, Tooltip } from '@arco-design/web-react';
+import { Table, Button, Input, Space, Modal, Form, Message, Card, Typography, Grid, Tooltip, Select } from '@arco-design/web-react';
 import { IconSearch, IconRefresh, IconPlus, IconEdit, IconDelete, IconEye, IconSettings } from '@arco-design/web-react/icon';
 import { API_ENDPOINTS } from '@/config/api';
 import api from '@/utils/api';
@@ -9,14 +9,32 @@ import api from '@/utils/api';
 const { Title } = Typography;
 const { Row, Col } = Grid;
 
-// 客户数据类型 - 简化为图片中的字段
+// 客户数据类型 - 扩展为新的地址管理字段
 interface Customer {
   id: number;
-  customerCode: string;  // 客户编号
-  customerName: string;  // 客户名
-  customerAddress: string; // 客户地址
-  updateTime: string;    // 更新时间
-  updateBy: string;      // 更新人
+  customerNumber: string;  // 客户编号
+  customerName: string;    // 客户名
+  customerAddress?: string; // 客户地址（旧字段）
+  storeAddress?: string;   // 门店地址
+  warehouseAddress?: string; // 仓库地址
+  storeLongitude?: number; // 门店经度
+  storeLatitude?: number;  // 门店纬度
+  warehouseLongitude?: number; // 仓库经度
+  warehouseLatitude?: number;  // 仓库纬度
+  status: 'active' | 'inactive'; // 状态
+  lastSyncTime?: string;   // 最后同步时间
+  updateTime: string;      // 更新时间
+  updateBy: string;        // 更新人
+}
+
+// 地理编码响应类型
+interface GeocodeResponse {
+  address: string;
+  longitude: number;
+  latitude: number;
+  province: string;
+  city: string;
+  district: string;
 }
 
 export default function CustomersPage() {
@@ -32,24 +50,37 @@ export default function CustomersPage() {
     sizeCanChange: true,
   });
 
-  // 搜索状态 - 简化为图片中的搜索字段
+  // 搜索状态 - 扩展搜索字段
   const [searchForm] = Form.useForm();
   const [searchValues, setSearchValues] = useState({
-    customerCode: '',    // 客户编号
-    customerName: '',    // 客户名
-    customerAddress: '', // 客户地址
+    customerNumber: '',    // 客户编号
+    customerName: '',      // 客户名
+    storeAddress: '',      // 门店地址
+    warehouseAddress: '',  // 仓库地址
+    status: '',            // 状态
   });
 
   // 模态框状态
   const [modalVisible, setModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [batchDeleteModalVisible, setBatchDeleteModalVisible] = useState(false);
+  const [geocodeModalVisible, setGeocodeModalVisible] = useState(false);
+  const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Customer | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<Customer | null>(null);
   const [form] = Form.useForm();
+  const [geocodeForm] = Form.useForm();
 
-  // 选中的行
+  // 新增状态
   const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([]);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [geocodeLoading, setGeocodeLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // 经纬度编辑状态
+  const [storeCoordinatesEditable, setStoreCoordinatesEditable] = useState(false);
+  const [warehouseCoordinatesEditable, setWarehouseCoordinatesEditable] = useState(false);
 
   // 获取认证头
   const getAuthHeaders = () => {
@@ -130,20 +161,25 @@ export default function CustomersPage() {
   // 组件加载时获取数据
   useEffect(() => {
     fetchCustomers();
+    fetchLastSyncTime();
   }, []);
 
   // 搜索
   const handleSearch = () => {
     const values = searchForm.getFieldsValue();
     const searchParams = {
-      customerNumber: values.customerCode || '', // 前端字段customerCode映射为后端字段customerNumber
+      customerNumber: values.customerNumber || '',
       customerName: values.customerName || '',
-      customerAddress: values.customerAddress || '',
+      storeAddress: values.storeAddress || '',
+      warehouseAddress: values.warehouseAddress || '',
+      status: values.status || '',
     };
     setSearchValues({
-      customerCode: values.customerCode || '',
+      customerNumber: values.customerNumber || '',
       customerName: values.customerName || '',
-      customerAddress: values.customerAddress || '',
+      storeAddress: values.storeAddress || '',
+      warehouseAddress: values.warehouseAddress || '',
+      status: values.status || '',
     });
     setPagination(prev => ({ ...prev, current: 1 }));
     fetchCustomers({ ...searchParams, page: 1 });
@@ -152,17 +188,25 @@ export default function CustomersPage() {
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
-    const resetValues = { customerCode: '', customerName: '', customerAddress: '' };
+    const resetValues = {
+      customerNumber: '',
+      customerName: '',
+      storeAddress: '',
+      warehouseAddress: '',
+      status: ''
+    };
     setSearchValues(resetValues);
     setPagination(prev => ({ ...prev, current: 1 }));
-    const resetSearchParams = { customerNumber: '', customerName: '', customerAddress: '' };
-    fetchCustomers({ ...resetSearchParams, page: 1 });
+    fetchCustomers({ ...resetValues, page: 1 });
   };
 
   // 新增
   const handleAdd = () => {
     setEditingRecord(null);
     form.resetFields();
+    // 重置编辑状态
+    setStoreCoordinatesEditable(false);
+    setWarehouseCoordinatesEditable(false);
     setModalVisible(true);
   };
 
@@ -172,7 +216,17 @@ export default function CustomersPage() {
     form.setFieldsValue({
       customerName: record.customerName,
       customerAddress: record.customerAddress,
+      storeAddress: record.storeAddress,
+      warehouseAddress: record.warehouseAddress,
+      storeLongitude: record.storeLongitude,
+      storeLatitude: record.storeLatitude,
+      warehouseLongitude: record.warehouseLongitude,
+      warehouseLatitude: record.warehouseLatitude,
+      status: record.status,
     });
+    // 重置编辑状态
+    setStoreCoordinatesEditable(false);
+    setWarehouseCoordinatesEditable(false);
     setModalVisible(true);
   };
 
@@ -251,6 +305,12 @@ export default function CustomersPage() {
       const requestData = {
         customerName: values.customerName,
         customerAddress: values.customerAddress,
+        storeAddress: values.storeAddress,
+        warehouseAddress: values.warehouseAddress,
+        storeLongitude: values.storeLongitude,
+        storeLatitude: values.storeLatitude,
+        warehouseLongitude: values.warehouseLongitude,
+        warehouseLatitude: values.warehouseLatitude,
       };
 
       const response = await fetch(url, {
@@ -297,12 +357,370 @@ export default function CustomersPage() {
     });
   };
 
-  // 表格列定义 - 移除序号列，优化布局
+  // 地址管理
+  const handleAddressManage = (record: Customer) => {
+    setEditingRecord(record);
+    geocodeForm.setFieldsValue({
+      storeAddress: record.storeAddress || '',
+      warehouseAddress: record.warehouseAddress || '',
+      storeLongitude: record.storeLongitude || '',
+      storeLatitude: record.storeLatitude || '',
+      warehouseLongitude: record.warehouseLongitude || '',
+      warehouseLatitude: record.warehouseLatitude || '',
+    });
+    // 重置编辑状态
+    setStoreCoordinatesEditable(false);
+    setWarehouseCoordinatesEditable(false);
+    setGeocodeModalVisible(true);
+  };
+
+  // 地理编码：地址转经纬度（地址管理模态框中使用）
+  const handleGeocode = async (addressType: 'store' | 'warehouse') => {
+    try {
+      setGeocodeLoading(true);
+      const values = geocodeForm.getFieldsValue();
+      const address = addressType === 'store' ? values.storeAddress : values.warehouseAddress;
+
+      if (!address) {
+        Message.warning('请先输入地址');
+        return;
+      }
+
+      const response = await fetch(`${API_ENDPOINTS.customers}/geocode`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ address }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.code === 0) {
+          const { longitude, latitude } = result.data;
+          if (addressType === 'store') {
+            geocodeForm.setFieldsValue({
+              storeLongitude: longitude,
+              storeLatitude: latitude,
+            });
+          } else {
+            geocodeForm.setFieldsValue({
+              warehouseLongitude: longitude,
+              warehouseLatitude: latitude,
+            });
+          }
+          Message.success('获取经纬度成功');
+        } else {
+          Message.error(result.message || '获取经纬度失败');
+        }
+      } else {
+        Message.error(`获取经纬度失败: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('获取经纬度失败:', error);
+      Message.error('获取经纬度失败');
+    } finally {
+      setGeocodeLoading(false);
+    }
+  };
+
+  // 地理编码：地址转经纬度（新增/编辑模态框中使用）
+  const handleGeocodeInModal = async (addressType: 'store' | 'warehouse') => {
+    try {
+      setGeocodeLoading(true);
+      const values = form.getFieldsValue();
+      const address = addressType === 'store' ? values.storeAddress : values.warehouseAddress;
+      const addressField = addressType === 'store' ? 'storeAddress' : 'warehouseAddress';
+
+      // 清除之前的错误信息
+      form.setFields([{
+        name: addressField,
+        errors: []
+      }]);
+
+      if (!address) {
+        form.setFields([{
+          name: addressField,
+          errors: ['请先输入地址']
+        }]);
+        return;
+      }
+
+      const response = await fetch(`${API_ENDPOINTS.customers}/geocode`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ address }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.code === 0) {
+        const { longitude, latitude } = result.data;
+        if (addressType === 'store') {
+          form.setFieldsValue({
+            storeLongitude: longitude,
+            storeLatitude: latitude,
+          });
+        } else {
+          form.setFieldsValue({
+            warehouseLongitude: longitude,
+            warehouseLatitude: latitude,
+          });
+        }
+        Message.success('获取经纬度成功');
+      } else {
+        // 在地址字段下显示错误信息
+        const errorMessage = result.message || `获取经纬度失败: ${response.status} ${response.statusText}`;
+        form.setFields([{
+          name: addressField,
+          errors: [errorMessage]
+        }]);
+      }
+    } catch (error) {
+      console.error('获取经纬度失败:', error);
+      const addressField = addressType === 'store' ? 'storeAddress' : 'warehouseAddress';
+      form.setFields([{
+        name: addressField,
+        errors: ['网络错误，获取经纬度失败']
+      }]);
+    } finally {
+      setGeocodeLoading(false);
+    }
+  };
+
+  // 逆地理编码：经纬度转地址（地址管理模态框中使用）
+  const handleReverseGeocode = async (addressType: 'store' | 'warehouse') => {
+    try {
+      setGeocodeLoading(true);
+      const values = geocodeForm.getFieldsValue();
+      const longitude = addressType === 'store' ? values.storeLongitude : values.warehouseLongitude;
+      const latitude = addressType === 'store' ? values.storeLatitude : values.warehouseLatitude;
+
+      if (!longitude || !latitude) {
+        Message.warning('请先输入经纬度');
+        return;
+      }
+
+      const response = await fetch(`${API_ENDPOINTS.customers}/reverse-geocode`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ longitude, latitude }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.code === 0) {
+          const { address } = result.data;
+          if (addressType === 'store') {
+            geocodeForm.setFieldsValue({
+              storeAddress: address,
+            });
+          } else {
+            geocodeForm.setFieldsValue({
+              warehouseAddress: address,
+            });
+          }
+          Message.success('获取地址成功');
+        } else {
+          Message.error(result.message || '获取地址失败');
+        }
+      } else {
+        Message.error(`获取地址失败: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('获取地址失败:', error);
+      Message.error('获取地址失败');
+    } finally {
+      setGeocodeLoading(false);
+    }
+  };
+
+  // 逆地理编码：经纬度转地址（新增/编辑模态框中使用）
+  const handleReverseGeocodeInModal = async (addressType: 'store' | 'warehouse') => {
+    try {
+      setGeocodeLoading(true);
+      const values = form.getFieldsValue();
+      const longitude = addressType === 'store' ? values.storeLongitude : values.warehouseLongitude;
+      const latitude = addressType === 'store' ? values.storeLatitude : values.warehouseLatitude;
+      const longitudeField = addressType === 'store' ? 'storeLongitude' : 'warehouseLongitude';
+      const latitudeField = addressType === 'store' ? 'storeLatitude' : 'warehouseLatitude';
+
+      // 清除之前的错误信息
+      form.setFields([
+        { name: longitudeField, errors: [] },
+        { name: latitudeField, errors: [] }
+      ]);
+
+      if (!longitude || !latitude) {
+        const errorMessage = '请先输入经纬度';
+        form.setFields([
+          { name: longitudeField, errors: !longitude ? [errorMessage] : [] },
+          { name: latitudeField, errors: !latitude ? [errorMessage] : [] }
+        ]);
+        return;
+      }
+
+      const response = await fetch(`${API_ENDPOINTS.customers}/reverse-geocode`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ longitude, latitude }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.code === 0) {
+        const { address } = result.data;
+        if (addressType === 'store') {
+          form.setFieldsValue({
+            storeAddress: address,
+          });
+        } else {
+          form.setFieldsValue({
+            warehouseAddress: address,
+          });
+        }
+        Message.success('获取地址成功');
+      } else {
+        // 在经纬度字段下显示错误信息
+        const errorMessage = result.message || `获取地址失败: ${response.status} ${response.statusText}`;
+        form.setFields([
+          { name: longitudeField, errors: [errorMessage] }
+        ]);
+      }
+    } catch (error) {
+      console.error('获取地址失败:', error);
+      const longitudeField = addressType === 'store' ? 'storeLongitude' : 'warehouseLongitude';
+      form.setFields([
+        { name: longitudeField, errors: ['网络错误，获取地址失败'] }
+      ]);
+    } finally {
+      setGeocodeLoading(false);
+    }
+  };
+
+  // 保存地址信息
+  const handleSaveAddress = async () => {
+    try {
+      const values = await geocodeForm.validate();
+      setLoading(true);
+
+      const response = await fetch(`${API_ENDPOINTS.customers}/${editingRecord?.id}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(values),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.code === 0) {
+          Message.success('地址信息保存成功');
+          setGeocodeModalVisible(false);
+          fetchCustomers();
+        } else {
+          Message.error(result.message || '保存失败');
+        }
+      } else {
+        Message.error(`保存失败: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      Message.error('保存失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 同步客户数据
+  const handleSync = () => {
+    setSyncModalVisible(true);
+  };
+
+  const handleConfirmSync = async () => {
+    try {
+      setSyncLoading(true);
+      const response = await fetch(`${API_ENDPOINTS.customers}/sync`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({}),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.code === 0) {
+          Message.success(`同步成功，共同步 ${result.data.count} 个客户`);
+          setSyncModalVisible(false);
+          fetchCustomers();
+          // 更新同步时间
+          fetchLastSyncTime();
+        } else {
+          Message.error(result.message || '同步失败');
+        }
+      } else {
+        Message.error(`同步失败: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('同步失败:', error);
+      Message.error('同步失败');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  // 获取最后同步时间
+  const fetchLastSyncTime = async () => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.customers}/last-sync-time`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.code === 0) {
+          setLastSyncTime(result.data.lastSyncTime);
+        }
+      }
+    } catch (error) {
+      console.error('获取同步时间失败:', error);
+    }
+  };
+
+  // Excel导出
+  const handleExport = async (exportSelected = false) => {
+    try {
+      setExportLoading(true);
+      let url = '/api/customers/export';
+
+      if (exportSelected && selectedRowKeys.length > 0) {
+        url += `?customerIds=${selectedRowKeys.join(',')}`;
+      }
+
+      const response = await api.get(url, { responseType: 'blob' });
+
+      // 创建下载链接
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `customers_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      Message.success('导出成功');
+    } catch (error) {
+      Message.error('导出失败');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // 表格列定义 - 扩展为地址管理字段
   const columns = [
     {
       title: '客户编号',
-      dataIndex: 'customerCode',
-      width: 140,
+      dataIndex: 'customerNumber',
+      width: 120,
       render: (text: string) => (
         <span style={{ fontWeight: 600, color: '#1D2129', fontSize: '14px' }}>{text}</span>
       ),
@@ -310,38 +728,62 @@ export default function CustomersPage() {
     {
       title: '客户名',
       dataIndex: 'customerName',
-      width: 220,
+      width: 180,
       render: (text: string) => (
         <span style={{ color: '#1D2129', fontSize: '14px' }}>{text}</span>
       ),
     },
     {
-      title: '客户地址',
-      dataIndex: 'customerAddress',
-      flex: 1,
-      minWidth: 250,
+      title: '门店地址',
+      dataIndex: 'storeAddress',
+      width: 200,
       render: (text: string) => (
-        <Tooltip content={text}>
-          <div style={{ 
-            color: '#1D2129', 
+        <Tooltip content={text || '未设置'}>
+          <div style={{
+            color: text ? '#1D2129' : '#86909C',
             fontSize: '14px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             maxWidth: '100%'
           }}>
-            {text}
+            {text || '未设置'}
           </div>
         </Tooltip>
       ),
     },
     {
-      title: '更新时间',
-      dataIndex: 'updateTime',
-      width: 160,
-      align: 'center' as const,
+      title: '仓库地址',
+      dataIndex: 'warehouseAddress',
+      width: 200,
       render: (text: string) => (
-        <span style={{ color: '#86909C', fontSize: '13px' }}>{formatDateTime(text)}</span>
+        <Tooltip content={text || '未设置'}>
+          <div style={{
+            color: text ? '#1D2129' : '#86909C',
+            fontSize: '14px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '100%'
+          }}>
+            {text || '未设置'}
+          </div>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 80,
+      align: 'center' as const,
+      render: (status: string) => (
+        <span style={{
+          color: status === 'active' ? '#00B42A' : '#F53F3F',
+          fontSize: '13px',
+          fontWeight: 500
+        }}>
+          {status === 'active' ? '启用' : '禁用'}
+        </span>
       ),
     },
     {
@@ -354,9 +796,18 @@ export default function CustomersPage() {
       ),
     },
     {
+      title: '更新时间',
+      dataIndex: 'updateTime',
+      width: 140,
+      align: 'center' as const,
+      render: (text: string) => (
+        <span style={{ color: '#86909C', fontSize: '13px' }}>{formatDateTime(text)}</span>
+      ),
+    },
+    {
       title: '操作',
       key: 'action',
-      width: 140,
+      width: 150,
       align: 'center' as const,
       fixed: 'right' as const,
       render: (_: any, record: Customer) => (
@@ -406,44 +857,54 @@ export default function CustomersPage() {
         </div>
         <Form form={searchForm} layout="horizontal">
           <Row gutter={24}>
-            <Col span={6}>
-              <Form.Item label="客户编号" field="customerCode" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
-                <Input 
-                  placeholder="请输入客户编号" 
+            <Col span={5}>
+              <Form.Item label="客户编号" field="customerNumber" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+                <Input
+                  placeholder="请输入客户编号"
                   style={{ borderRadius: 6 }}
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Form.Item label="客户名" field="customerName" labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
-                <Input 
-                  placeholder="请输入客户名" 
+            <Col span={5}>
+              <Form.Item label="客户名" field="customerName" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
+                <Input
+                  placeholder="请输入客户名"
                   style={{ borderRadius: 6 }}
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Form.Item label="客户地址" field="customerAddress" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
-                <Input 
-                  placeholder="请输入客户地址" 
+            <Col span={5}>
+              <Form.Item label="门店地址" field="storeAddress" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+                <Input
+                  placeholder="请输入门店地址"
                   style={{ borderRadius: 6 }}
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Space size={12}>
-                <Button 
-                  type="primary" 
-                  icon={<IconSearch />} 
+            <Col span={5}>
+              <Form.Item label="仓库地址" field="warehouseAddress" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+                <Input
+                  placeholder="请输入仓库地址"
+                  style={{ borderRadius: 6 }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={4}>
+              <Space size={8}>
+                <Button
+                  type="primary"
+                  icon={<IconSearch />}
                   onClick={handleSearch}
                   style={{ borderRadius: 6 }}
+                  size="small"
                 >
                   搜索
                 </Button>
-                <Button 
-                  icon={<IconRefresh />} 
+                <Button
+                  icon={<IconRefresh />}
                   onClick={handleReset}
                   style={{ borderRadius: 6 }}
+                  size="small"
                 >
                   重置
                 </Button>
@@ -459,44 +920,71 @@ export default function CustomersPage() {
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
         border: 'none'
       }}>
-        <div style={{ 
-          marginBottom: 20, 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center' 
+        <div style={{
+          marginBottom: 20,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          <Title heading={6} style={{ margin: 0, color: '#1D2129', fontSize: '16px' }}>客户管理</Title>
+          <div>
+            <Title heading={6} style={{ margin: 0, color: '#1D2129', fontSize: '16px' }}>客户地址管理</Title>
+            {lastSyncTime && (
+              <div style={{ marginTop: 4, color: '#86909C', fontSize: '12px' }}>
+                上次同步时间：{formatDateTime(lastSyncTime)}
+              </div>
+            )}
+          </div>
           <Space size={12}>
-            <Button 
-              type="primary" 
-              icon={<IconPlus />} 
+            <Button
+              type="primary"
+              icon={<IconPlus />}
               onClick={handleAdd}
               style={{ borderRadius: 6 }}
             >
               新增
             </Button>
-            <Button 
-              type="primary" 
-              status="danger" 
-              icon={<IconDelete />} 
+            <Button
+              type="outline"
+              icon={<IconRefresh />}
+              onClick={handleSync}
+              loading={syncLoading}
+              style={{ borderRadius: 6 }}
+            >
+              同步
+            </Button>
+            <Button
+              type="primary"
+              status="danger"
+              icon={<IconDelete />}
               onClick={handleBatchDelete}
               disabled={selectedRowKeys.length === 0}
               style={{ borderRadius: 6 }}
             >
               批量删除
             </Button>
-            <Button 
-              icon={<IconRefresh />} 
+            <Button
+              type="outline"
+              onClick={() => handleExport(false)}
+              loading={exportLoading}
+              style={{ borderRadius: 6 }}
+            >
+              导出全部
+            </Button>
+            <Button
+              type="outline"
+              onClick={() => handleExport(true)}
+              disabled={selectedRowKeys.length === 0}
+              loading={exportLoading}
+              style={{ borderRadius: 6 }}
+            >
+              导出选中
+            </Button>
+            <Button
+              icon={<IconRefresh />}
               onClick={() => fetchCustomers()}
               style={{ borderRadius: 6 }}
             >
               刷新
-            </Button>
-            <Button 
-              icon={<IconSettings />}
-              style={{ borderRadius: 6 }}
-            >
-              列设置
             </Button>
           </Space>
         </div>
@@ -552,15 +1040,16 @@ export default function CustomersPage() {
         okText="确定"
         cancelText="取消"
         style={{ borderRadius: 8 }}
+        width={800}
       >
         <Form form={form} layout="vertical">
           {editingRecord && (
             <Form.Item label="客户编号" style={{ marginBottom: 20 }}>
-              <Input 
-                value={editingRecord.customerCode} 
-                disabled 
-                style={{ 
-                  backgroundColor: '#f7f8fa', 
+              <Input
+                value={editingRecord.customerNumber}
+                disabled
+                style={{
+                  backgroundColor: '#f7f8fa',
                   borderRadius: 6,
                   color: '#86909C'
                 }}
@@ -573,23 +1062,153 @@ export default function CustomersPage() {
             rules={[{ required: true, message: '请输入客户名' }]}
             style={{ marginBottom: 20 }}
           >
-            <Input 
-              placeholder="请输入客户名" 
+            <Input
+              placeholder="请输入客户名"
+              style={{ borderRadius: 6 }}
+            />
+          </Form.Item>
+
+          {/* 门店地址区域 */}
+          <div style={{ marginBottom: 24, padding: 16, backgroundColor: '#f7f8fa', borderRadius: 8 }}>
+            <h4 style={{ margin: '0 0 16px 0', color: '#1D2129', fontSize: '14px', fontWeight: 600 }}>门店地址</h4>
+            <Form.Item
+              label="门店地址"
+              field="storeAddress"
+              style={{ marginBottom: 16 }}
+            >
+              <Input.TextArea
+                placeholder="请输入门店地址（遵循省市区/城镇格式）"
+                rows={2}
+                autoSize={{ minRows: 2, maxRows: 4 }}
+                style={{ borderRadius: 6 }}
+              />
+            </Form.Item>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+              <Form.Item label="门店经度" field="storeLongitude" style={{ flex: 1, marginBottom: 0 }}>
+                <Input
+                  placeholder="经度（经度在前）"
+                  style={{ borderRadius: 6 }}
+                  readOnly={!storeCoordinatesEditable}
+                />
+              </Form.Item>
+              <Form.Item label="门店纬度" field="storeLatitude" style={{ flex: 1, marginBottom: 0 }}>
+                <Input
+                  placeholder="纬度（纬度在后）"
+                  style={{ borderRadius: 6 }}
+                  readOnly={!storeCoordinatesEditable}
+                />
+              </Form.Item>
+            </div>
+            <Space size={12}>
+              <Button
+                type="outline"
+                onClick={() => handleGeocodeInModal('store')}
+                loading={geocodeLoading}
+                style={{ borderRadius: 6 }}
+              >
+                获取经纬度
+              </Button>
+              <Button
+                type="outline"
+                onClick={() => handleReverseGeocodeInModal('store')}
+                loading={geocodeLoading}
+                style={{ borderRadius: 6 }}
+              >
+                获取地址
+              </Button>
+              <Button
+                type={storeCoordinatesEditable ? "primary" : "text"}
+                onClick={() => setStoreCoordinatesEditable(!storeCoordinatesEditable)}
+                style={{ borderRadius: 6 }}
+              >
+                {storeCoordinatesEditable ? '锁定经纬度' : '修正经纬度'}
+              </Button>
+            </Space>
+          </div>
+
+          {/* 仓库地址区域 */}
+          <div style={{ marginBottom: 24, padding: 16, backgroundColor: '#f7f8fa', borderRadius: 8 }}>
+            <h4 style={{ margin: '0 0 16px 0', color: '#1D2129', fontSize: '14px', fontWeight: 600 }}>仓库地址</h4>
+            <Form.Item
+              label="仓库地址"
+              field="warehouseAddress"
+              style={{ marginBottom: 16 }}
+            >
+              <Input.TextArea
+                placeholder="请输入仓库地址（遵循省市区/城镇格式）"
+                rows={2}
+                autoSize={{ minRows: 2, maxRows: 4 }}
+                style={{ borderRadius: 6 }}
+              />
+            </Form.Item>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+              <Form.Item label="仓库经度" field="warehouseLongitude" style={{ flex: 1, marginBottom: 0 }}>
+                <Input
+                  placeholder="经度（经度在前）"
+                  style={{ borderRadius: 6 }}
+                  readOnly={!warehouseCoordinatesEditable}
+                />
+              </Form.Item>
+              <Form.Item label="仓库纬度" field="warehouseLatitude" style={{ flex: 1, marginBottom: 0 }}>
+                <Input
+                  placeholder="纬度（纬度在后）"
+                  style={{ borderRadius: 6 }}
+                  readOnly={!warehouseCoordinatesEditable}
+                />
+              </Form.Item>
+            </div>
+            <Space size={12}>
+              <Button
+                type="outline"
+                onClick={() => handleGeocodeInModal('warehouse')}
+                loading={geocodeLoading}
+                style={{ borderRadius: 6 }}
+              >
+                获取经纬度
+              </Button>
+              <Button
+                type="outline"
+                onClick={() => handleReverseGeocodeInModal('warehouse')}
+                loading={geocodeLoading}
+                style={{ borderRadius: 6 }}
+              >
+                获取地址
+              </Button>
+              <Button
+                type={warehouseCoordinatesEditable ? "primary" : "text"}
+                onClick={() => setWarehouseCoordinatesEditable(!warehouseCoordinatesEditable)}
+                style={{ borderRadius: 6 }}
+              >
+                {warehouseCoordinatesEditable ? '锁定经纬度' : '修正经纬度'}
+              </Button>
+            </Space>
+          </div>
+
+          <Form.Item
+            label="客户地址（旧字段）"
+            field="customerAddress"
+            style={{ marginBottom: 20 }}
+          >
+            <Input.TextArea
+              placeholder="请输入客户地址"
+              rows={2}
+              autoSize={{ minRows: 2, maxRows: 4 }}
               style={{ borderRadius: 6 }}
             />
           </Form.Item>
           <Form.Item
-            label="客户地址"
-            field="customerAddress"
-            rules={[{ required: true, message: '请输入客户地址' }]}
+            label="状态"
+            field="status"
             style={{ marginBottom: 0 }}
           >
-            <Input.TextArea 
-              placeholder="请输入客户地址" 
-              rows={3}
-              autoSize={{ minRows: 3, maxRows: 6 }}
+            <Select
+              placeholder="请选择状态"
               style={{ borderRadius: 6 }}
-            />
+              defaultValue="active"
+            >
+              <Select.Option value="active">启用</Select.Option>
+              <Select.Option value="inactive">禁用</Select.Option>
+            </Select>
           </Form.Item>
         </Form>
       </Modal>
@@ -646,6 +1265,175 @@ export default function CustomersPage() {
             </p>
           </div>
         </Modal>
+
+        {/* 地址管理模态框 */}
+        <Modal
+          title={
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1D2129' }}>
+              地址管理 - {editingRecord?.customerName}
+            </div>
+          }
+          visible={geocodeModalVisible}
+          onOk={handleSaveAddress}
+          onCancel={() => setGeocodeModalVisible(false)}
+          confirmLoading={loading}
+          okText="保存"
+          cancelText="取消"
+          style={{ borderRadius: 8 }}
+          width={800}
+        >
+          <Form form={geocodeForm} layout="vertical">
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ margin: '0 0 16px 0', color: '#1D2129', fontSize: '14px', fontWeight: 600 }}>门店地址</h4>
+              <Form.Item label="门店地址" field="storeAddress" style={{ marginBottom: 16 }}>
+                <Input.TextArea
+                  placeholder="请输入门店地址（遵循省市区/城镇格式）"
+                  rows={2}
+                  style={{ borderRadius: 6 }}
+                />
+              </Form.Item>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <Form.Item label="门店经度" field="storeLongitude" style={{ flex: 1, marginBottom: 0 }}>
+                  <Input
+                    placeholder="经度（经度在前）"
+                    style={{ borderRadius: 6 }}
+                    readOnly={!storeCoordinatesEditable}
+                  />
+                </Form.Item>
+                <Form.Item label="门店纬度" field="storeLatitude" style={{ flex: 1, marginBottom: 0 }}>
+                  <Input
+                    placeholder="纬度（纬度在后）"
+                    style={{ borderRadius: 6 }}
+                    readOnly={!storeCoordinatesEditable}
+                  />
+                </Form.Item>
+              </div>
+              <Space size={12}>
+                <Button
+                  type="outline"
+                  onClick={() => handleGeocode('store')}
+                  loading={geocodeLoading}
+                  style={{ borderRadius: 6 }}
+                >
+                  获取经纬度
+                </Button>
+                <Button
+                  type="outline"
+                  onClick={() => handleReverseGeocode('store')}
+                  loading={geocodeLoading}
+                  style={{ borderRadius: 6 }}
+                >
+                  获取地址
+                </Button>
+                <Button
+                  type={storeCoordinatesEditable ? "primary" : "text"}
+                  onClick={() => {
+                    if (storeCoordinatesEditable) {
+                      // 如果当前是编辑状态，点击后保存并锁定
+                      setStoreCoordinatesEditable(false);
+                    } else {
+                      // 如果当前是锁定状态，点击后解锁编辑
+                      setStoreCoordinatesEditable(true);
+                    }
+                  }}
+                  style={{ borderRadius: 6 }}
+                >
+                  {storeCoordinatesEditable ? '锁定经纬度' : '修正经纬度'}
+                </Button>
+              </Space>
+            </div>
+
+            <div>
+              <h4 style={{ margin: '0 0 16px 0', color: '#1D2129', fontSize: '14px', fontWeight: 600 }}>仓库地址</h4>
+              <Form.Item label="仓库地址" field="warehouseAddress" style={{ marginBottom: 16 }}>
+                <Input.TextArea
+                  placeholder="请输入仓库地址（遵循省市区/城镇格式）"
+                  rows={2}
+                  style={{ borderRadius: 6 }}
+                />
+              </Form.Item>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <Form.Item label="仓库经度" field="warehouseLongitude" style={{ flex: 1, marginBottom: 0 }}>
+                  <Input
+                    placeholder="经度（经度在前）"
+                    style={{ borderRadius: 6 }}
+                    readOnly={!warehouseCoordinatesEditable}
+                  />
+                </Form.Item>
+                <Form.Item label="仓库纬度" field="warehouseLatitude" style={{ flex: 1, marginBottom: 0 }}>
+                  <Input
+                    placeholder="纬度（纬度在后）"
+                    style={{ borderRadius: 6 }}
+                    readOnly={!warehouseCoordinatesEditable}
+                  />
+                </Form.Item>
+              </div>
+              <Space size={12}>
+                <Button
+                  type="outline"
+                  onClick={() => handleGeocode('warehouse')}
+                  loading={geocodeLoading}
+                  style={{ borderRadius: 6 }}
+                >
+                  获取经纬度
+                </Button>
+                <Button
+                  type="outline"
+                  onClick={() => handleReverseGeocode('warehouse')}
+                  loading={geocodeLoading}
+                  style={{ borderRadius: 6 }}
+                >
+                  获取地址
+                </Button>
+                <Button
+                  type={warehouseCoordinatesEditable ? "primary" : "text"}
+                  onClick={() => {
+                    if (warehouseCoordinatesEditable) {
+                      // 如果当前是编辑状态，点击后保存并锁定
+                      setWarehouseCoordinatesEditable(false);
+                    } else {
+                      // 如果当前是锁定状态，点击后解锁编辑
+                      setWarehouseCoordinatesEditable(true);
+                    }
+                  }}
+                  style={{ borderRadius: 6 }}
+                >
+                  {warehouseCoordinatesEditable ? '锁定经纬度' : '修正经纬度'}
+                </Button>
+              </Space>
+            </div>
+          </Form>
+        </Modal>
+
+        {/* 同步确认模态框 */}
+        <Modal
+          title={
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1D2129' }}>
+              同步客户数据
+            </div>
+          }
+          visible={syncModalVisible}
+          onOk={handleConfirmSync}
+          onCancel={() => setSyncModalVisible(false)}
+          confirmLoading={syncLoading}
+          okText="确认同步"
+          cancelText="取消"
+          style={{ borderRadius: 8 }}
+        >
+          <div style={{ padding: '8px 0' }}>
+            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#1D2129' }}>
+              确定要同步客户数据吗？
+            </p>
+            <p style={{ color: '#86909C', fontSize: '12px', margin: '0 0 12px 0' }}>
+              将与另一个系统同步客户数据，地址信息以当前系统为准。
+            </p>
+            {lastSyncTime && (
+              <p style={{ color: '#86909C', fontSize: '12px', margin: 0 }}>
+                上次同步时间：{formatDateTime(lastSyncTime)}
+              </p>
+            )}
+          </div>
+        </Modal>
     </div>
   );
-} 
+}

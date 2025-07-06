@@ -26,14 +26,42 @@ export class SearchCustomerDto {
   @IsString()
   customerName?: string;
 
-  @ApiProperty({ 
-    description: '客户地址，支持模糊匹配', 
+  @ApiProperty({
+    description: '客户地址，支持模糊匹配',
     example: '深圳',
     required: false
   })
   @IsOptional()
   @IsString()
   customerAddress?: string;
+
+  @ApiProperty({
+    description: '门店地址，支持模糊匹配',
+    example: '科技园',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  storeAddress?: string;
+
+  @ApiProperty({
+    description: '仓库地址，支持模糊匹配',
+    example: '物流园',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  warehouseAddress?: string;
+
+  @ApiProperty({
+    description: '客户状态筛选',
+    example: 'active',
+    enum: ['active', 'inactive'],
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  status?: 'active' | 'inactive';
 
   @ApiProperty({ 
     description: '页码，从1开始', 
@@ -87,11 +115,59 @@ export class CustomerSearchResultDto {
   })
   customerName: string;
 
-  @ApiProperty({ 
-    description: '客户地址', 
+  @ApiProperty({
+    description: '客户地址',
     example: '深圳市南山区科技园南区'
   })
   customerAddress: string;
+
+  @ApiProperty({
+    description: '门店地址',
+    example: '深圳市南山区科技园南区A座'
+  })
+  storeAddress: string;
+
+  @ApiProperty({
+    description: '仓库地址',
+    example: '深圳市南山区科技园南区B座'
+  })
+  warehouseAddress: string;
+
+  @ApiProperty({
+    description: '门店经度',
+    example: 113.9547
+  })
+  storeLongitude: number;
+
+  @ApiProperty({
+    description: '门店纬度',
+    example: 22.5431
+  })
+  storeLatitude: number;
+
+  @ApiProperty({
+    description: '仓库经度',
+    example: 113.9557
+  })
+  warehouseLongitude: number;
+
+  @ApiProperty({
+    description: '仓库纬度',
+    example: 22.5441
+  })
+  warehouseLatitude: number;
+
+  @ApiProperty({
+    description: '客户状态',
+    example: 'active'
+  })
+  status: 'active' | 'inactive';
+
+  @ApiProperty({
+    description: '最后同步时间',
+    example: '2025-06-27T08:16:28.000Z'
+  })
+  lastSyncTime: Date;
 
   @ApiProperty({ 
     description: '更新人', 

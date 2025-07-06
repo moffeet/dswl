@@ -81,7 +81,15 @@ CREATE TABLE t_customers (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     customerNumber VARCHAR(50) NOT NULL UNIQUE,
     customerName VARCHAR(100) NOT NULL,
-    customerAddress VARCHAR(255) DEFAULT NULL,
+    customerAddress VARCHAR(255) DEFAULT NULL COMMENT '客户地址（旧字段，保留兼容性）',
+    storeAddress VARCHAR(255) DEFAULT NULL COMMENT '门店地址',
+    warehouseAddress VARCHAR(255) DEFAULT NULL COMMENT '仓库地址',
+    storeLongitude DECIMAL(10, 7) DEFAULT NULL COMMENT '门店经度',
+    storeLatitude DECIMAL(10, 7) DEFAULT NULL COMMENT '门店纬度',
+    warehouseLongitude DECIMAL(10, 7) DEFAULT NULL COMMENT '仓库经度',
+    warehouseLatitude DECIMAL(10, 7) DEFAULT NULL COMMENT '仓库纬度',
+    status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '客户状态',
+    lastSyncTime DATETIME DEFAULT NULL COMMENT '最后同步时间',
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updateBy VARCHAR(50) DEFAULT NULL
@@ -206,12 +214,12 @@ WHERE permission_code IN (
 );
 
 -- 插入客户测试数据
-INSERT INTO t_customers (customerNumber, customerName, customerAddress, updateBy) VALUES
-('C001', '深圳科技有限公司', '深圳市南山区科技园南区', '系统'),
-('C002', '广州贸易公司', '广州市天河区珠江新城', '管理员'),
-('C003', '东莞制造企业', '东莞市长安镇工业区', '管理员'),
-('C004', '佛山物流中心', '佛山市禅城区物流园', '系统'),
-('C005', '惠州电子厂', '惠州市惠城区工业园', '管理员');
+INSERT INTO t_customers (customerNumber, customerName, customerAddress, storeAddress, warehouseAddress, storeLongitude, storeLatitude, warehouseLongitude, warehouseLatitude, status, updateBy) VALUES
+('C001', '深圳科技有限公司', '深圳市南山区科技园南区', '深圳市南山区科技园南区A座', '深圳市南山区科技园南区B座', 113.9547, 22.5431, 113.9557, 22.5441, 'active', '系统'),
+('C002', '广州贸易公司', '广州市天河区珠江新城', '广州市天河区珠江新城东塔', '广州市天河区珠江新城西塔', 113.3221, 23.1167, 113.3231, 23.1177, 'active', '管理员'),
+('C003', '东莞制造企业', '东莞市长安镇工业区', '东莞市长安镇工业区1号', '东莞市长安镇工业区2号', 113.8059, 22.8169, 113.8069, 22.8179, 'active', '管理员'),
+('C004', '佛山物流中心', '佛山市禅城区物流园', '佛山市禅城区物流园A区', '佛山市禅城区物流园B区', 113.1221, 23.0167, 113.1231, 23.0177, 'active', '系统'),
+('C005', '惠州电子厂', '惠州市惠城区工业园', '惠州市惠城区工业园东区', '惠州市惠城区工业园西区', 114.4129, 23.0793, 114.4139, 23.0803, 'active', '管理员');
 
 -- ========================================
 -- 🎉 数据库初始化完成！
