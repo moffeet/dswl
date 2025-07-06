@@ -51,10 +51,19 @@ export function decryptPassword(encryptedData: string): {
  */
 export function validateTimestamp(timestamp: number, maxAgeMs: number = 5 * 60 * 1000): boolean {
   const now = Date.now();
-  const age = now - timestamp;
-  
-  // 检查时间戳是否在合理范围内（5分钟内）
-  return age >= 0 && age <= maxAgeMs;
+  const age = Math.abs(now - timestamp); // 使用绝对值，允许客户端时间稍微快一点
+
+  console.log('时间戳验证详情:', {
+    clientTimestamp: timestamp,
+    serverTimestamp: now,
+    timeDiff: now - timestamp,
+    absTimeDiff: age,
+    maxAllowed: maxAgeMs,
+    isValid: age <= maxAgeMs
+  });
+
+  // 检查时间戳是否在合理范围内（5分钟内，允许客户端时间稍微快一点）
+  return age <= maxAgeMs;
 }
 
 /**
