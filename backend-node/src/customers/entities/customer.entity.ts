@@ -34,15 +34,6 @@ export class Customer {
   customerName: string;
 
   @ApiProperty({
-    description: '客户地址（旧字段，保留兼容性）',
-    example: '深圳市南山区科技园南区',
-    maxLength: 255,
-    required: false
-  })
-  @Column({ name: 'customerAddress', length: 255, nullable: true })
-  customerAddress: string;
-
-  @ApiProperty({
     description: '门店地址',
     example: '深圳市南山区科技园南区A座',
     maxLength: 255,

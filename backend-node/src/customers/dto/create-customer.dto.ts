@@ -19,17 +19,6 @@ export class CreateCustomerDto {
   customerName: string;
 
   @ApiProperty({
-    description: '客户地址（旧字段，保留兼容性），可选字段，最大长度255字符',
-    example: '北京市朝阳区建国路88号现代城A座12层',
-    maxLength: 255,
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  customerAddress?: string;
-
-  @ApiProperty({
     description: '门店地址，可选字段，最大长度255字符',
     example: '北京市朝阳区建国路88号现代城A座12层',
     maxLength: 255,

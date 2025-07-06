@@ -5,7 +5,7 @@ import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto, CustomerSearchResultDto } from './dto/search-customer.dto';
-import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
+import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
 import { AmapService } from './services/amap.service';
 import * as XLSX from 'xlsx';
 
@@ -67,7 +67,7 @@ export class CustomersService {
     }
 
     if (searchDto.customerAddress) {
-      queryBuilder.andWhere('customer.customerAddress LIKE :customerAddress', {
+      queryBuilder.andWhere('customer.storeAddress LIKE :customerAddress', {
         customerAddress: `%${searchDto.customerAddress}%`,
       });
     }
@@ -121,9 +121,9 @@ export class CustomersService {
       throw new NotFoundException('未找到有效的客户地址');
     }
 
-    // 优先使用门店地址，其次使用客户地址
+    // 使用门店地址
     const addresses = customers.map(customer =>
-      customer.storeAddress || customer.customerAddress
+      customer.storeAddress
     ).filter(Boolean);
 
     if (addresses.length === 0) {
@@ -194,9 +194,6 @@ export class CustomersService {
    * @returns 经纬度信息
    */
   async geocodeAddress(geocodeDto: GeocodeRequestDto) {
-    // 临时移除地址格式验证，让高德地图API自己处理
-    console.log('地理编码请求地址:', geocodeDto.address);
-
     return await this.amapService.geocode(geocodeDto.address);
   }
 
@@ -232,7 +229,6 @@ export class CustomersService {
     const excelData = customers.map(customer => ({
       '客户编号': customer.customerNumber,
       '客户名称': customer.customerName,
-      '客户地址': customer.customerAddress || '',
       '门店地址': customer.storeAddress || '',
       '仓库地址': customer.warehouseAddress || '',
       '门店经度': customer.storeLongitude || '',
@@ -287,5 +283,52 @@ export class CustomersService {
       .getRawOne();
 
     return customer.lastSyncTime || null;
+  }
+
+  async syncExternalCustomers(externalCustomers: ExternalCustomerDto[]) {
+    let syncedCount = 0;
+    let updatedCount = 0;
+    let newCount = 0;
+
+    for (const externalCustomer of externalCustomers) {
+      try {
+        // 根据客户编号查找现有客户
+        let existingCustomer = await this.customerRepository.findOne({
+          where: { customerNumber: externalCustomer.customerNumber }
+        });
+
+        if (existingCustomer) {
+          // 客户已存在，只更新客户名称，地址信息以本系统为准
+          existingCustomer.customerName = externalCustomer.customerName;
+          existingCustomer.lastSyncTime = new Date();
+          await this.customerRepository.save(existingCustomer);
+          updatedCount++;
+        } else {
+          // 新客户，创建记录
+          const newCustomer = this.customerRepository.create({
+            customerNumber: externalCustomer.customerNumber,
+            customerName: externalCustomer.customerName,
+            storeAddress: externalCustomer.customerAddress || null,
+            lastSyncTime: new Date(),
+            status: 'active',
+            updateBy: '系统同步'
+          });
+          await this.customerRepository.save(newCustomer);
+          newCount++;
+        }
+        syncedCount++;
+      } catch (error) {
+        console.error(`同步客户 ${externalCustomer.customerNumber} 失败:`, error);
+        // 继续处理下一个客户
+      }
+    }
+
+    return {
+      message: '外部系统数据同步完成',
+      syncedCount,
+      updatedCount,
+      newCount,
+      syncTime: new Date()
+    };
   }
 }

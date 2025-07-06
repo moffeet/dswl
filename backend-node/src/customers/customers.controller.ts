@@ -1,16 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus, SetMetadata } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto } from './dto/search-customer.dto';
-import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
+import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-// 创建一个装饰器来标记公开的接口
-export const Public = () => SetMetadata('isPublic', true);
 
 @ApiTags('客户管理 - Customer Management')
 @Controller('customers')
@@ -409,6 +406,46 @@ export class CustomersController {
   }
 
   @ApiOperation({
+    summary: '同步外部系统客户数据',
+    description: '从外部系统同步客户数据，地址信息以本系统为准'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '同步成功',
+    schema: {
+      example: {
+        code: 0,
+        message: '同步成功',
+        data: {
+          message: '同步成功',
+          syncedCount: 5,
+          updatedCount: 3,
+          newCount: 2
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 500, description: '同步失败' })
+  @Post('sync-external')
+  async syncExternalCustomers(@Body() externalCustomers: ExternalCustomerDto[]) {
+    try {
+      const result = await this.customersService.syncExternalCustomers(externalCustomers);
+
+      return {
+        code: 0,
+        message: '同步成功',
+        data: result,
+      };
+    } catch (error) {
+      return {
+        code: error.status || 500,
+        message: error.message || '同步失败',
+        data: null,
+      };
+    }
+  }
+
+  @ApiOperation({
     summary: '同步客户数据',
     description: '与另一个系统同步客户数据，地址信息以当前系统为准'
   })
@@ -488,7 +525,6 @@ export class CustomersController {
     }
   }
 
-  @Public() // 临时移除JWT验证，用于调试
   @ApiOperation({
     summary: '地理编码',
     description: '将地址转换为经纬度坐标'
@@ -516,8 +552,6 @@ export class CustomersController {
   @Post('geocode')
   async geocodeAddress(@Body() geocodeDto: GeocodeRequestDto) {
     try {
-      console.log('控制器接收到的geocodeDto:', geocodeDto);
-      console.log('geocodeDto.address:', geocodeDto.address);
       const result = await this.customersService.geocodeAddress(geocodeDto);
 
       return {
@@ -535,7 +569,6 @@ export class CustomersController {
     }
   }
 
-  @Public() // 临时移除JWT验证，用于调试
   @ApiOperation({
     summary: '逆地理编码',
     description: '将经纬度坐标转换为地址'

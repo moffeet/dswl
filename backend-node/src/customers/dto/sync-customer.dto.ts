@@ -109,9 +109,41 @@ export class GeocodeResponseDto {
   })
   city: string;
 
-  @ApiProperty({ 
-    description: '区县', 
+  @ApiProperty({
+    description: '区县',
     example: '南山区'
   })
   district: string;
+}
+
+/**
+ * 外部系统客户数据DTO
+ */
+export class ExternalCustomerDto {
+  @ApiProperty({
+    description: '客户编码',
+    example: 'C001',
+    required: true
+  })
+  @IsString()
+  @IsNotEmpty()
+  customerNumber: string;
+
+  @ApiProperty({
+    description: '客户名称',
+    example: '深圳科技有限公司',
+    required: true
+  })
+  @IsString()
+  @IsNotEmpty()
+  customerName: string;
+
+  @ApiProperty({
+    description: '客户地址',
+    example: '深圳市南山区科技园南区',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  customerAddress?: string;
 }

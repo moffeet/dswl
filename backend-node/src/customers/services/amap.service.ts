@@ -18,12 +18,6 @@ export class AmapService {
    */
   async geocode(address: string): Promise<GeocodeResponseDto> {
     try {
-      console.log('高德地图API调用参数:', {
-        url: `${this.baseUrl}/geocode/geo`,
-        key: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'undefined',
-        address: address
-      });
-
       const response = await axios.get(`${this.baseUrl}/geocode/geo`, {
         params: {
           key: this.apiKey,
@@ -31,8 +25,6 @@ export class AmapService {
           output: 'json'
         }
       });
-
-      console.log('高德地图API响应:', response.data);
 
       if (response.data.status !== '1') {
         throw new HttpException(

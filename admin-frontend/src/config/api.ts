@@ -46,4 +46,14 @@ export const API_ENDPOINTS = {
   roles: `${API_BASE_URL}/api/roles`,
   permissions: `${API_BASE_URL}/api/permissions`,
   customers: `${API_BASE_URL}/api/customers`,
-}; 
+};
+
+// 高德地图API配置
+export const AMAP_CONFIG = {
+  key: '93c42594b5b8b8b8b8b8b8b8b8b8b8b8', // 这里应该使用实际的高德地图API密钥
+  baseUrl: 'https://restapi.amap.com/v3',
+  endpoints: {
+    geocode: '/geocode/geo', // 地理编码
+    reverseGeocode: '/geocode/regeo', // 逆地理编码
+  }
+};

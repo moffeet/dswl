@@ -5,6 +5,7 @@ import { Table, Button, Input, Space, Modal, Form, Message, Card, Typography, Gr
 import { IconSearch, IconRefresh, IconPlus, IconEdit, IconDelete, IconEye, IconSettings } from '@arco-design/web-react/icon';
 import { API_ENDPOINTS } from '@/config/api';
 import api from '@/utils/api';
+import { geocodeAddress, reverseGeocodeCoordinates } from '@/utils/amap';
 
 const { Title } = Typography;
 const { Row, Col } = Grid;
@@ -14,7 +15,7 @@ interface Customer {
   id: number;
   customerNumber: string;  // 客户编号
   customerName: string;    // 客户名
-  customerAddress?: string; // 客户地址（旧字段）
+
   storeAddress?: string;   // 门店地址
   warehouseAddress?: string; // 仓库地址
   storeLongitude?: number; // 门店经度
@@ -99,7 +100,6 @@ export default function CustomersPage() {
       const searchParams = {
         customerNumber: '', // 默认值
         customerName: '',
-        customerAddress: '',
         ...params, // 覆盖默认值
       };
 
@@ -108,7 +108,6 @@ export default function CustomersPage() {
         pageSize: pagination.pageSize.toString(),
         ...(searchParams.customerNumber && { customerNumber: searchParams.customerNumber }),
         ...(searchParams.customerName && { customerName: searchParams.customerName }),
-        ...(searchParams.customerAddress && { customerAddress: searchParams.customerAddress }),
       });
 
       const response = await fetch(`${API_ENDPOINTS.customers}?${queryParams}`, {
@@ -118,12 +117,19 @@ export default function CustomersPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.code === 0 && Array.isArray(result.data)) {
-          // 映射后端字段到简化的前端字段
+          // 映射后端字段到前端字段
           const mappedData = result.data.map((item: any) => ({
             id: item.id,
-            customerCode: item.customerNumber,
+            customerNumber: item.customerNumber,
             customerName: item.customerName,
-            customerAddress: item.customerAddress,
+            storeAddress: item.storeAddress,
+            warehouseAddress: item.warehouseAddress,
+            storeLongitude: item.storeLongitude,
+            storeLatitude: item.storeLatitude,
+            warehouseLongitude: item.warehouseLongitude,
+            warehouseLatitude: item.warehouseLatitude,
+            status: item.status,
+            lastSyncTime: item.lastSyncTime,
             updateTime: item.updateTime || item.createTime,
             updateBy: item.updateBy || '系统',
           }));
@@ -200,29 +206,18 @@ export default function CustomersPage() {
     fetchCustomers({ ...resetValues, page: 1 });
   };
 
-  // 新增
-  const handleAdd = () => {
-    setEditingRecord(null);
-    form.resetFields();
-    // 重置编辑状态
-    setStoreCoordinatesEditable(false);
-    setWarehouseCoordinatesEditable(false);
-    setModalVisible(true);
-  };
+
 
   // 编辑
   const handleEdit = (record: Customer) => {
     setEditingRecord(record);
     form.setFieldsValue({
-      customerName: record.customerName,
-      customerAddress: record.customerAddress,
       storeAddress: record.storeAddress,
       warehouseAddress: record.warehouseAddress,
       storeLongitude: record.storeLongitude,
       storeLatitude: record.storeLatitude,
       warehouseLongitude: record.warehouseLongitude,
       warehouseLatitude: record.warehouseLatitude,
-      status: record.status,
     });
     // 重置编辑状态
     setStoreCoordinatesEditable(false);
@@ -297,14 +292,15 @@ export default function CustomersPage() {
       const values = await form.validate();
       setLoading(true);
 
-      const url = editingRecord
-        ? `${API_ENDPOINTS.customers}/${editingRecord.id}`
-        : API_ENDPOINTS.customers;
+      if (!editingRecord) {
+        Message.error('无法保存：未选择要编辑的客户');
+        return;
+      }
 
-      // 根据后端DTO结构构建请求数据
+      const url = `${API_ENDPOINTS.customers}/${editingRecord.id}`;
+
+      // 只保存地址相关字段
       const requestData = {
-        customerName: values.customerName,
-        customerAddress: values.customerAddress,
         storeAddress: values.storeAddress,
         warehouseAddress: values.warehouseAddress,
         storeLongitude: values.storeLongitude,
@@ -314,7 +310,7 @@ export default function CustomersPage() {
       };
 
       const response = await fetch(url, {
-        method: editingRecord ? 'PATCH' : 'POST',
+        method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(requestData),
       });
@@ -444,42 +440,28 @@ export default function CustomersPage() {
         return;
       }
 
-      const response = await fetch(`${API_ENDPOINTS.customers}/geocode`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ address }),
-      });
+      // 直接调用高德地图API
+      const result = await geocodeAddress(address);
 
-      const result = await response.json();
-
-      if (response.ok && result.code === 0) {
-        const { longitude, latitude } = result.data;
-        if (addressType === 'store') {
-          form.setFieldsValue({
-            storeLongitude: longitude,
-            storeLatitude: latitude,
-          });
-        } else {
-          form.setFieldsValue({
-            warehouseLongitude: longitude,
-            warehouseLatitude: latitude,
-          });
-        }
-        Message.success('获取经纬度成功');
+      if (addressType === 'store') {
+        form.setFieldsValue({
+          storeLongitude: result.longitude,
+          storeLatitude: result.latitude,
+        });
       } else {
-        // 在地址字段下显示错误信息
-        const errorMessage = result.message || `获取经纬度失败: ${response.status} ${response.statusText}`;
-        form.setFields([{
-          name: addressField,
-          errors: [errorMessage]
-        }]);
+        form.setFieldsValue({
+          warehouseLongitude: result.longitude,
+          warehouseLatitude: result.latitude,
+        });
       }
+      Message.success('获取经纬度成功');
     } catch (error) {
       console.error('获取经纬度失败:', error);
       const addressField = addressType === 'store' ? 'storeAddress' : 'warehouseAddress';
+      const errorMessage = error instanceof Error ? error.message : '获取经纬度失败';
       form.setFields([{
         name: addressField,
-        errors: ['网络错误，获取经纬度失败']
+        errors: [errorMessage]
       }]);
     } finally {
       setGeocodeLoading(false);
@@ -558,38 +540,25 @@ export default function CustomersPage() {
         return;
       }
 
-      const response = await fetch(`${API_ENDPOINTS.customers}/reverse-geocode`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ longitude, latitude }),
-      });
+      // 直接调用高德地图API
+      const result = await reverseGeocodeCoordinates(longitude, latitude);
 
-      const result = await response.json();
-
-      if (response.ok && result.code === 0) {
-        const { address } = result.data;
-        if (addressType === 'store') {
-          form.setFieldsValue({
-            storeAddress: address,
-          });
-        } else {
-          form.setFieldsValue({
-            warehouseAddress: address,
-          });
-        }
-        Message.success('获取地址成功');
+      if (addressType === 'store') {
+        form.setFieldsValue({
+          storeAddress: result.address,
+        });
       } else {
-        // 在经纬度字段下显示错误信息
-        const errorMessage = result.message || `获取地址失败: ${response.status} ${response.statusText}`;
-        form.setFields([
-          { name: longitudeField, errors: [errorMessage] }
-        ]);
+        form.setFieldsValue({
+          warehouseAddress: result.address,
+        });
       }
+      Message.success('获取地址成功');
     } catch (error) {
       console.error('获取地址失败:', error);
       const longitudeField = addressType === 'store' ? 'storeLongitude' : 'warehouseLongitude';
+      const errorMessage = error instanceof Error ? error.message : '获取地址失败';
       form.setFields([
-        { name: longitudeField, errors: ['网络错误，获取地址失败'] }
+        { name: longitudeField, errors: [errorMessage] }
       ]);
     } finally {
       setGeocodeLoading(false);
@@ -636,16 +605,37 @@ export default function CustomersPage() {
   const handleConfirmSync = async () => {
     try {
       setSyncLoading(true);
-      const response = await fetch(`${API_ENDPOINTS.customers}/sync`, {
+
+      // 模拟外部系统数据（实际应用中这里应该调用外部系统API）
+      const externalCustomers = [
+        {
+          customerNumber: 'EXT001',
+          customerName: '外部系统客户1',
+          customerAddress: '广东省深圳市福田区中心区'
+        },
+        {
+          customerNumber: 'EXT002',
+          customerName: '外部系统客户2',
+          customerAddress: '广东省广州市天河区珠江新城'
+        },
+        {
+          customerNumber: 'C001', // 已存在的客户，只更新名称
+          customerName: '深圳科技有限公司（已更新）',
+          customerAddress: '深圳市南山区科技园南区'
+        }
+      ];
+
+      const response = await fetch(`${API_ENDPOINTS.customers}/sync-external`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({}),
+        body: JSON.stringify(externalCustomers),
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.code === 0) {
-          Message.success(`同步成功，共同步 ${result.data.count} 个客户`);
+          const { syncedCount, updatedCount, newCount } = result.data;
+          Message.success(`同步成功！共处理 ${syncedCount} 个客户，更新 ${updatedCount} 个，新增 ${newCount} 个`);
           setSyncModalVisible(false);
           fetchCustomers();
           // 更新同步时间
@@ -937,14 +927,6 @@ export default function CustomersPage() {
           <Space size={12}>
             <Button
               type="primary"
-              icon={<IconPlus />}
-              onClick={handleAdd}
-              style={{ borderRadius: 6 }}
-            >
-              新增
-            </Button>
-            <Button
-              type="outline"
               icon={<IconRefresh />}
               onClick={handleSync}
               loading={syncLoading}
@@ -1030,7 +1012,7 @@ export default function CustomersPage() {
       <Modal
         title={
           <div style={{ fontSize: '16px', fontWeight: 600, color: '#1D2129' }}>
-            {editingRecord ? '编辑客户' : '新增客户'}
+            编辑客户地址
           </div>
         }
         visible={modalVisible}
@@ -1056,15 +1038,15 @@ export default function CustomersPage() {
               />
             </Form.Item>
           )}
-          <Form.Item
-            label="客户名"
-            field="customerName"
-            rules={[{ required: true, message: '请输入客户名' }]}
-            style={{ marginBottom: 20 }}
-          >
+          <Form.Item label="客户名" style={{ marginBottom: 20 }}>
             <Input
-              placeholder="请输入客户名"
-              style={{ borderRadius: 6 }}
+              value={editingRecord?.customerName || ''}
+              disabled
+              style={{
+                backgroundColor: '#f7f8fa',
+                borderRadius: 6,
+                color: '#86909C'
+              }}
             />
           </Form.Item>
 
@@ -1184,31 +1166,16 @@ export default function CustomersPage() {
             </Space>
           </div>
 
-          <Form.Item
-            label="客户地址（旧字段）"
-            field="customerAddress"
-            style={{ marginBottom: 20 }}
-          >
-            <Input.TextArea
-              placeholder="请输入客户地址"
-              rows={2}
-              autoSize={{ minRows: 2, maxRows: 4 }}
-              style={{ borderRadius: 6 }}
+          <Form.Item label="状态" style={{ marginBottom: 0 }}>
+            <Input
+              value={editingRecord?.status === 'active' ? '启用' : '禁用'}
+              disabled
+              style={{
+                backgroundColor: '#f7f8fa',
+                borderRadius: 6,
+                color: '#86909C'
+              }}
             />
-          </Form.Item>
-          <Form.Item
-            label="状态"
-            field="status"
-            style={{ marginBottom: 0 }}
-          >
-            <Select
-              placeholder="请选择状态"
-              style={{ borderRadius: 6 }}
-              defaultValue="active"
-            >
-              <Select.Option value="active">启用</Select.Option>
-              <Select.Option value="inactive">禁用</Select.Option>
-            </Select>
           </Form.Item>
         </Form>
       </Modal>
