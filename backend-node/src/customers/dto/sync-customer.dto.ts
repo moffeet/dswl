@@ -1,4 +1,4 @@
-import { IsOptional, IsArray, IsNumber } from 'class-validator';
+import { IsOptional, IsArray, IsNumber, IsString, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -40,11 +40,13 @@ export class BatchDeleteCustomerDto {
  * 地理编码请求DTO
  */
 export class GeocodeRequestDto {
-  @ApiProperty({ 
-    description: '地址字符串', 
+  @ApiProperty({
+    description: '地址字符串',
     example: '深圳市南山区科技园南区',
     required: true
   })
+  @IsString()
+  @IsNotEmpty()
   address: string;
 }
 

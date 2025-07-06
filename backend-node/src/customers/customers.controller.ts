@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus, SetMetadata } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
@@ -8,6 +8,9 @@ import { SearchCustomerDto } from './dto/search-customer.dto';
 import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+// 创建一个装饰器来标记公开的接口
+export const Public = () => SetMetadata('isPublic', true);
 
 @ApiTags('客户管理 - Customer Management')
 @Controller('customers')
@@ -485,6 +488,7 @@ export class CustomersController {
     }
   }
 
+  @Public() // 临时移除JWT验证，用于调试
   @ApiOperation({
     summary: '地理编码',
     description: '将地址转换为经纬度坐标'
@@ -512,6 +516,8 @@ export class CustomersController {
   @Post('geocode')
   async geocodeAddress(@Body() geocodeDto: GeocodeRequestDto) {
     try {
+      console.log('控制器接收到的geocodeDto:', geocodeDto);
+      console.log('geocodeDto.address:', geocodeDto.address);
       const result = await this.customersService.geocodeAddress(geocodeDto);
 
       return {
@@ -529,6 +535,7 @@ export class CustomersController {
     }
   }
 
+  @Public() // 临时移除JWT验证，用于调试
   @ApiOperation({
     summary: '逆地理编码',
     description: '将经纬度坐标转换为地址'
