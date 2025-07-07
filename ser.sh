@@ -5,7 +5,7 @@
 # 使用方法: ./manage-services.sh <action> <service>
 # 
 # action: start|stop|restart|status
-# service: backend|admin|frontend|all
+# service: backend|admin|all
 #
 # 示例:
 #   ./manage-services.sh start all        # 启动所有服务
@@ -26,8 +26,7 @@ NC='\033[0m' # No Color
 
 # 配置
 export BACKEND_PORT=3000
-export ADMIN_PORT=3001  
-export FRONTEND_PORT=3002
+export ADMIN_PORT=3001
 PID_DIR="pids"
 LOG_DIR="logs"
 
@@ -126,7 +125,6 @@ install_dependencies() {
     case $service in
         "backend") dir="backend-node" ;;
         "admin") dir="admin-frontend" ;;
-        "frontend") dir="frontend" ;;
         *) return 1 ;;
     esac
     
@@ -188,7 +186,6 @@ check_service_status() {
     case $service in
         "backend") port=3000 ;;
         "admin") port=3001 ;;
-        "frontend") port=3002 ;;
         *) return 1 ;;
     esac
     
@@ -253,26 +250,7 @@ cleanup_service_processes() {
                 done
             fi
             ;;
-        "frontend")
-            # 更精确地清理frontend相关的next进程
-            pkill -f "frontend.*next.*3002" 2>/dev/null || true
-            # 清理监听3002端口但不是当前PID的进程
-            local current_frontend_pid=$(get_service_pid "frontend" 2>/dev/null)
-            local frontend_pids=$(lsof -ti :3002 2>/dev/null)
-            if [ -n "$frontend_pids" ]; then
-                for pid in $frontend_pids; do
-                    if [ "$pid" != "$current_frontend_pid" ]; then
-                        kill -TERM "$pid" 2>/dev/null || true
-                    fi
-                done
-                sleep 1
-                for pid in $frontend_pids; do
-                    if [ "$pid" != "$current_frontend_pid" ] && kill -0 "$pid" 2>/dev/null; then
-                        kill -9 "$pid" 2>/dev/null || true
-                    fi
-                done
-            fi
-            ;;
+
     esac
     sleep 1
 }
@@ -414,69 +392,7 @@ start_admin() {
     return 1
 }
 
-# 启动小程序前端
-start_frontend() {
-    log_service "启动小程序前端..."
-    
-    # 确保端口变量正确设置
-    local FRONTEND_PORT=3002
-    
-    # 清理残留进程
-    cleanup_service_processes "frontend"
-    
-    if ! install_dependencies "frontend"; then
-        return 1
-    fi
-    
-    if check_port $FRONTEND_PORT; then
-        log_warning "端口 $FRONTEND_PORT 已被占用，尝试清理..."
-        kill_port $FRONTEND_PORT
-    fi
-    
-    cd frontend
-    
-    # 清理可能的环境变量干扰
-    unset PORT
-    unset BACKEND_PORT
-    unset ADMIN_PORT
-    
-    log_info "启动命令: npm run dev -- --port $FRONTEND_PORT"
-    PORT=$FRONTEND_PORT nohup npm run dev -- --port $FRONTEND_PORT > "../$LOG_DIR/frontend.log" 2>&1 &
-    local pid=$!
-    echo $pid > "../$PID_DIR/frontend.pid"
-    
-    log_info "等待小程序前端启动... (PID: $pid)"
-    cd ..
-    
-    # 等待启动并检查多次
-    local retry_count=0
-    local max_retries=20
-    
-    while [ $retry_count -lt $max_retries ]; do
-        sleep 1
-        
-        # 检查进程是否还活着
-        if ! kill -0 $pid 2>/dev/null; then
-            log_error "小程序前端进程 $pid 已停止"
-            rm -f "$PID_DIR/frontend.pid"
-            return 1
-        fi
-        
-        # 检查端口是否被占用
-        if check_port $FRONTEND_PORT; then
-            log_success "小程序前端启动成功 (PID: $pid, 端口: $FRONTEND_PORT)"
-            return 0
-        fi
-        
-        retry_count=$((retry_count + 1))
-        log_info "等待端口 $FRONTEND_PORT 启动... ($retry_count/$max_retries)"
-    done
-    
-    log_error "小程序前端启动失败：超时"
-    kill $pid 2>/dev/null || true
-    rm -f "$PID_DIR/frontend.pid"
-    return 1
-}
+
 
 # 停止服务
 stop_service() {
@@ -486,8 +402,7 @@ stop_service() {
     case $service in
         "backend") port=3000 ;;
         "admin") port=3001 ;;
-        "frontend") port=3002 ;;
-        *) 
+        *)
             log_error "未知服务: $service"
             return 1
             ;;
@@ -537,7 +452,6 @@ show_usage() {
     echo -e "${YELLOW}服务名称 (service):${NC}"
     echo "  backend   - 后端服务 (NestJS, 端口 $BACKEND_PORT)"
     echo "  admin     - 管理后台 (Next.js, 端口 $ADMIN_PORT)"
-    echo "  frontend  - 小程序前端 (Next.js, 端口 $FRONTEND_PORT)"
     echo "  all       - 所有服务 (默认)"
     echo
     echo -e "${YELLOW}示例:${NC}"
@@ -550,7 +464,6 @@ show_usage() {
     echo "  后端API:     http://localhost:$BACKEND_PORT"
     echo "  API文档:     http://localhost:$BACKEND_PORT/api"
     echo "  管理后台:    http://localhost:$ADMIN_PORT"
-    echo "  小程序前端:  http://localhost:$FRONTEND_PORT"
     echo
 }
 
@@ -562,13 +475,12 @@ show_status() {
     
     echo -e "${YELLOW}后端服务 (NestJS):${NC}     $(check_service_status "backend")"
     echo -e "${YELLOW}管理后台 (Next.js):${NC}   $(check_service_status "admin")"
-    echo -e "${YELLOW}小程序前端 (Next.js):${NC} $(check_service_status "frontend")"
     
     echo
     echo -e "${CYAN}=== 端口占用 ===${NC}"
     echo
     
-    for port in 3000 3001 3002; do
+    for port in 3000 3001; do
         if check_port "$port"; then
             local pids=$(lsof -Pi :$port -sTCP:LISTEN -t 2>/dev/null)
             echo -e "端口 ${YELLOW}$port${NC}: ${GREEN}已占用${NC} (PID: $pids)"
@@ -603,7 +515,7 @@ main() {
     
     # 验证服务名称
     case $service in
-        "backend"|"admin"|"frontend"|"all") ;;
+        "backend"|"admin"|"all") ;;
         *)
             log_error "未知服务: $service"
             show_usage
@@ -630,19 +542,17 @@ main() {
         "start")
             case $service in
                 "all")
-                    start_backend && start_admin && start_frontend
+                    start_backend && start_admin
                     echo
                     show_status
                     ;;
                 "backend") start_backend ;;
                 "admin") start_admin ;;
-                "frontend") start_frontend ;;
             esac
             ;;
         "stop")
             case $service in
                 "all")
-                    stop_service "frontend"
                     stop_service "admin"
                     stop_service "backend"
                     echo
@@ -655,28 +565,22 @@ main() {
             case $service in
                 "all")
                     log_info "重启所有服务..."
-                    stop_service "frontend"
                     stop_service "admin"
                     stop_service "backend"
                     sleep 3
-                    
+
                     # 顺序启动服务，确保每个都完全启动成功后再启动下一个
                     if start_backend; then
                         sleep 2
-                        if start_admin; then
-                            sleep 2
-                            start_frontend
-                        else
-                            log_error "管理后台启动失败，跳过小程序前端启动"
-                        fi
+                        start_admin
                     else
                         log_error "后端服务启动失败，跳过其他服务启动"
                     fi
-                    
+
                     # 等待所有服务完全启动稳定
                     log_info "等待所有服务完全启动..."
                     sleep 5
-                    
+
                     echo
                     show_status
                     ;;
@@ -687,7 +591,6 @@ main() {
                     case $service in
                         "backend") start_backend ;;
                         "admin") start_admin ;;
-                        "frontend") start_frontend ;;
                     esac
                     ;;
             esac
