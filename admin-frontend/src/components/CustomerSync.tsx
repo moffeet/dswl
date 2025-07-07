@@ -1,22 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Button, 
-  Modal, 
-  Message, 
-  Card, 
-  Descriptions, 
-  Space, 
-  Typography, 
+import React, { useState } from 'react';
+import {
+  Button,
+  Modal,
+  Message,
+  Card,
+  Descriptions,
+  Space,
   Spin,
   Alert,
   Progress
 } from '@arco-design/web-react';
-import { IconSync, IconInfoCircle, IconCheckCircle, IconCloseCircle } from '@arco-design/web-react/icon';
+import { IconSync } from '@arco-design/web-react/icon';
 import { API_ENDPOINTS, getAuthHeaders } from '@/config/api';
-
-const { Title, Text } = Typography;
 
 interface SyncResult {
   success: boolean;
@@ -25,7 +22,7 @@ interface SyncResult {
   createdCount: number;
   updatedCount: number;
   skippedCount: number;
-  lastSyncTime: string;
+  syncTime: string; // 修正字段名
 }
 
 interface SyncMetadata {
@@ -46,6 +43,17 @@ export default function CustomerSync({ onSyncComplete }: CustomerSyncProps) {
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [syncMetadata, setSyncMetadata] = useState<SyncMetadata | null>(null);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [resultModalVisible, setResultModalVisible] = useState(false); // 新增结果弹窗状态
+
+  // 处理结果弹窗确定按钮
+  const handleResultModalOk = async () => {
+    console.log('用户点击确定，开始刷新数据'); // 添加调试日志
+    setResultModalVisible(false);
+    await fetchSyncMetadata();
+    if (onSyncComplete) {
+      onSyncComplete();
+    }
+  };
 
   // 获取同步元数据
   const fetchSyncMetadata = async () => {
@@ -72,52 +80,45 @@ export default function CustomerSync({ onSyncComplete }: CustomerSyncProps) {
   const handleSync = async () => {
     setSyncing(true);
     setSyncResult(null);
-    
+
     try {
       const response = await fetch(`${API_ENDPOINTS.customers}/sync`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
-      
+
       if (response.ok) {
         const result = await response.json();
+        console.log('同步响应结果:', result); // 添加调试日志
+
         if (result.code === 200) {
           setSyncResult(result.data);
+          const { createdCount, updatedCount, syncedCount, skippedCount } = result.data;
 
-          // 显示同步结果弹窗
-          const { createdCount, updatedCount, syncedCount } = result.data;
-          Modal.success({
-            title: '同步完成',
-            content: (
-              <div>
-                <p>本次同步处理了 <strong>{syncedCount}</strong> 个客户：</p>
-                <ul style={{ marginLeft: 20, marginTop: 8 }}>
-                  <li>新增客户：<strong style={{ color: '#00B42A' }}>{createdCount}</strong> 个</li>
-                  <li>更新客户：<strong style={{ color: '#1890FF' }}>{updatedCount}</strong> 个</li>
-                </ul>
-              </div>
-            ),
-            okText: '确定'
-          });
+          console.log('准备显示同步结果弹窗:', { createdCount, updatedCount, syncedCount, skippedCount }); // 添加调试日志
 
-          // 刷新元数据
-          await fetchSyncMetadata();
+          // 1. 先关闭同步信息弹窗和重置同步状态
+          setSyncModalVisible(false);
+          setSyncing(false);
 
-          // 通知父组件刷新数据
-          if (onSyncComplete) {
-            onSyncComplete();
-          }
+          // 2. 先显示成功消息
+          Message.success(`同步完成：处理 ${syncedCount} 个客户，创建 ${createdCount} 个，更新 ${updatedCount} 个，跳过 ${skippedCount} 个`);
+
+          // 3. 显示结果弹窗（使用状态控制而不是Modal.success）
+          console.log('准备显示结果弹窗'); // 添加调试日志
+          setResultModalVisible(true);
         } else {
+          setSyncing(false);
           Message.error(`同步失败: ${result.message}`);
         }
       } else {
+        setSyncing(false);
         Message.error(`同步失败: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('同步失败:', error);
-      Message.error('同步失败，请检查网络连接');
-    } finally {
       setSyncing(false);
+      Message.error('同步失败，请检查网络连接');
     }
   };
 
@@ -247,68 +248,40 @@ export default function CustomerSync({ onSyncComplete }: CustomerSyncProps) {
             </Card>
           )}
 
-          {/* 同步结果 */}
-          {syncResult && (
-            <Card 
-              title={
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {syncResult.success ? (
-                    <IconCheckCircle style={{ color: '#00B42A' }} />
-                  ) : (
-                    <IconCloseCircle style={{ color: '#F53F3F' }} />
-                  )}
-                  <span>同步结果</span>
+
+        </div>
+      </Modal>
+
+      {/* 同步结果弹窗 */}
+      <Modal
+        title="同步结果"
+        visible={resultModalVisible}
+        onCancel={() => setResultModalVisible(false)}
+        footer={
+          <Button type="primary" onClick={handleResultModalOk}>
+            确定
+          </Button>
+        }
+        style={{ width: 500 }}
+      >
+        {syncResult && (
+          <div style={{ padding: '16px 0' }}>
+            <Alert
+              type="success"
+              content={
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>同步完成！</div>
+                  <div style={{ fontSize: '14px' }}>
+                    处理 <strong>{syncResult.syncedCount}</strong> 个客户，
+                    创建 <strong style={{ color: '#00B42A' }}>{syncResult.createdCount}</strong> 个，
+                    更新 <strong style={{ color: '#1890FF' }}>{syncResult.updatedCount}</strong> 个，
+                    跳过 <strong>{syncResult.skippedCount}</strong> 个
+                  </div>
                 </div>
               }
-            >
-              <Alert
-                type={syncResult.success ? 'success' : 'error'}
-                content={syncResult.message}
-                style={{ marginBottom: 16 }}
-              />
-              
-              {syncResult.success && (
-                <Descriptions
-                  column={2}
-                  data={[
-                    {
-                      label: '处理总数',
-                      value: `${syncResult.syncedCount} 个客户`
-                    },
-                    {
-                      label: '新增客户',
-                      value: (
-                        <Text type={syncResult.createdCount > 0 ? 'success' : 'secondary'}>
-                          {syncResult.createdCount} 个
-                        </Text>
-                      )
-                    },
-                    {
-                      label: '更新客户',
-                      value: (
-                        <Text type={syncResult.updatedCount > 0 ? 'warning' : 'secondary'}>
-                          {syncResult.updatedCount} 个
-                        </Text>
-                      )
-                    },
-                    {
-                      label: '跳过客户',
-                      value: (
-                        <Text type="secondary">
-                          {syncResult.skippedCount} 个
-                        </Text>
-                      )
-                    },
-                    {
-                      label: '同步时间',
-                      value: formatDateTime(syncResult.lastSyncTime)
-                    }
-                  ]}
-                />
-              )}
-            </Card>
-          )}
-        </div>
+            />
+          </div>
+        )}
       </Modal>
     </>
   );

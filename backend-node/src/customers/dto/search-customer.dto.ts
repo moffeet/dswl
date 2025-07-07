@@ -94,6 +94,38 @@ export class CustomerSearchResultDto {
   warehouseAddress?: string;
 
   @ApiProperty({
+    description: '门店经度',
+    example: 113.9547,
+    type: 'number',
+    required: false
+  })
+  storeLongitude?: number;
+
+  @ApiProperty({
+    description: '门店纬度',
+    example: 22.5431,
+    type: 'number',
+    required: false
+  })
+  storeLatitude?: number;
+
+  @ApiProperty({
+    description: '仓库经度',
+    example: 113.9557,
+    type: 'number',
+    required: false
+  })
+  warehouseLongitude?: number;
+
+  @ApiProperty({
+    description: '仓库纬度',
+    example: 22.5441,
+    type: 'number',
+    required: false
+  })
+  warehouseLatitude?: number;
+
+  @ApiProperty({
     description: '更新人',
     example: '管理员',
     required: false

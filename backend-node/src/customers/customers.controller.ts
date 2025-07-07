@@ -6,7 +6,7 @@ import { CustomerSyncService } from './sync.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto, CustomerListQueryDto } from './dto/search-customer.dto';
-import { BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
+import { BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
@@ -558,47 +558,7 @@ export class CustomersController {
     }
   }
 
-  @ApiOperation({
-    summary: '同步外部系统客户数据',
-    description: '从外部系统同步客户数据，地址信息以本系统为准'
-  })
-  @ApiResponse({
-    status: 200,
-    description: '同步成功',
-    schema: {
-      example: {
-        code: RESPONSE_CODES.SUCCESS,
-        message: '同步成功',
-        data: {
-          message: '同步成功',
-          syncedCount: 5,
-          updatedCount: 3,
-          newCount: 2
-        }
-      }
-    }
-  })
-  @ApiResponse({ status: 500, description: '同步失败' })
-  @Post('sync-external')
-  async syncExternalCustomers(@Body() externalCustomers: ExternalCustomerDto[]) {
-    try {
-      const result = await this.customersService.syncExternalCustomers(externalCustomers);
 
-      return {
-        code: RESPONSE_CODES.SUCCESS,
-        message: '同步成功',
-        data: result,
-      };
-    } catch (error) {
-      return {
-        code: RESPONSE_CODES.SERVER_ERROR,
-        message: error.message || '同步失败',
-        data: null,
-      };
-    }
-  }
-
-  // 删除了重复的同步端点，使用下面的外部系统同步端点
 
   @ApiOperation({
     summary: '批量删除客户',

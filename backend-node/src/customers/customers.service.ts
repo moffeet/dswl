@@ -6,7 +6,7 @@ import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto } from './dto/search-customer.dto';
-import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
+import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
 import { AmapService } from './services/amap.service';
 import * as XLSX from 'xlsx';
 
@@ -138,6 +138,10 @@ export class CustomersService {
       customerName: customer.customerName,
       storeAddress: customer.storeAddress,
       warehouseAddress: customer.warehouseAddress,
+      storeLongitude: customer.storeLongitude,
+      storeLatitude: customer.storeLatitude,
+      warehouseLongitude: customer.warehouseLongitude,
+      warehouseLatitude: customer.warehouseLatitude,
       updateBy: customer.updateBy,
       updatedAt: customer.updatedAt,
     };
@@ -389,50 +393,5 @@ export class CustomersService {
     return customer.lastSyncTime || null;
   }
 
-  async syncExternalCustomers(externalCustomers: ExternalCustomerDto[]) {
-    let syncedCount = 0;
-    let updatedCount = 0;
-    let newCount = 0;
 
-    for (const externalCustomer of externalCustomers) {
-      try {
-        // 根据客户编号查找现有客户
-        let existingCustomer = await this.customerRepository.findOne({
-          where: { customerNumber: externalCustomer.customerNumber }
-        });
-
-        if (existingCustomer) {
-          // 客户已存在，只更新客户名称，地址信息以本系统为准
-          existingCustomer.customerName = externalCustomer.customerName;
-          existingCustomer.lastSyncTime = new Date();
-          await this.customerRepository.save(existingCustomer);
-          updatedCount++;
-        } else {
-          // 新客户，创建记录
-          const newCustomer = this.customerRepository.create({
-            customerNumber: externalCustomer.customerNumber,
-            customerName: externalCustomer.customerName,
-            storeAddress: null, // 地址信息需要后续手动维护
-            lastSyncTime: new Date(),
-            status: 'active',
-            updateBy: '系统同步'
-          });
-          await this.customerRepository.save(newCustomer);
-          newCount++;
-        }
-        syncedCount++;
-      } catch (error) {
-        console.error(`同步客户 ${externalCustomer.customerNumber} 失败:`, error);
-        // 继续处理下一个客户
-      }
-    }
-
-    return {
-      message: '外部系统数据同步完成',
-      syncedCount,
-      updatedCount,
-      newCount,
-      syncTime: new Date()
-    };
-  }
 }

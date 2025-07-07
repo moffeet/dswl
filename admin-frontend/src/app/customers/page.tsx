@@ -67,7 +67,7 @@ export default function CustomersPage() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [batchDeleteModalVisible, setBatchDeleteModalVisible] = useState(false);
   const [geocodeModalVisible, setGeocodeModalVisible] = useState(false);
-  const [syncModalVisible, setSyncModalVisible] = useState(false);
+
   const [editingRecord, setEditingRecord] = useState<Customer | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<Customer | null>(null);
   const [form] = Form.useForm();
@@ -77,7 +77,7 @@ export default function CustomersPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<(string | number)[]>([]);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [geocodeLoading, setGeocodeLoading] = useState(false);
-  const [syncLoading, setSyncLoading] = useState(false);
+
   const [exportLoading, setExportLoading] = useState(false);
 
   // 经纬度编辑状态
@@ -596,59 +596,7 @@ export default function CustomersPage() {
     }
   };
 
-  // 同步客户数据
-  const handleSync = () => {
-    setSyncModalVisible(true);
-  };
 
-  const handleConfirmSync = async () => {
-    try {
-      setSyncLoading(true);
-
-      // 模拟外部系统数据（实际应用中这里应该调用外部系统API）
-      const externalCustomers = [
-        {
-          customerNumber: 'EXT001',
-          customerName: '外部系统客户1'
-        },
-        {
-          customerNumber: 'EXT002',
-          customerName: '外部系统客户2'
-        },
-        {
-          customerNumber: 'C001', // 已存在的客户，只更新名称
-          customerName: '深圳科技有限公司（已更新）'
-        }
-      ];
-
-      const response = await fetch(`${API_ENDPOINTS.customers}/sync-external`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(externalCustomers),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.code === 200) {
-          const { syncedCount, updatedCount, newCount } = result.data;
-          Message.success(`同步成功！共处理 ${syncedCount} 个客户，更新 ${updatedCount} 个，新增 ${newCount} 个`);
-          setSyncModalVisible(false);
-          fetchCustomers();
-          // 更新同步时间
-          fetchLastSyncTime();
-        } else {
-          Message.error(result.message || '同步失败');
-        }
-      } else {
-        Message.error(`同步失败: ${response.status} ${response.statusText}`);
-      }
-    } catch (error) {
-      console.error('同步失败:', error);
-      Message.error('同步失败');
-    } finally {
-      setSyncLoading(false);
-    }
-  };
 
   // 获取最后同步时间
   const fetchLastSyncTime = async () => {
@@ -1344,35 +1292,7 @@ export default function CustomersPage() {
           </Form>
         </Modal>
 
-        {/* 同步确认模态框 */}
-        <Modal
-          title={
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1D2129' }}>
-              同步客户数据
-            </div>
-          }
-          visible={syncModalVisible}
-          onOk={handleConfirmSync}
-          onCancel={() => setSyncModalVisible(false)}
-          confirmLoading={syncLoading}
-          okText="确认同步"
-          cancelText="取消"
-          style={{ borderRadius: 8 }}
-        >
-          <div style={{ padding: '8px 0' }}>
-            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#1D2129' }}>
-              确定要同步客户数据吗？
-            </p>
-            <p style={{ color: '#86909C', fontSize: '12px', margin: '0 0 12px 0' }}>
-              将与另一个系统同步客户数据，地址信息以当前系统为准。
-            </p>
-            {lastSyncTime && (
-              <p style={{ color: '#86909C', fontSize: '12px', margin: 0 }}>
-                上次同步时间：{formatDateTime(lastSyncTime)}
-              </p>
-            )}
-          </div>
-        </Modal>
+
     </div>
   );
 }
