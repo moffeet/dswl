@@ -3,6 +3,10 @@ import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { CustomLogger } from './config/logger.config';
+import * as dotenv from 'dotenv';
+
+// 显式加载环境变量
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
