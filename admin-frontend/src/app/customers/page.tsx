@@ -673,7 +673,7 @@ export default function CustomersPage() {
   const handleExport = async (exportSelected = false) => {
     try {
       setExportLoading(true);
-      let url = '/api/customers/export';
+      let url = '/customers/export';
 
       if (exportSelected && selectedRowKeys.length > 0) {
         url += `?customerIds=${selectedRowKeys.join(',')}`;

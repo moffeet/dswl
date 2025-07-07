@@ -650,11 +650,21 @@ export class CustomersController {
     try {
       let ids: number[] | undefined;
 
+      console.log('控制器 - 接收到的customerIds参数:', customerIds);
+
       if (customerIds && customerIds.trim()) {
-        ids = customerIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+        // 解析并验证ID
+        const parsedIds = customerIds.split(',')
+          .map(id => parseInt(id.trim()))
+          .filter(id => !isNaN(id) && id > 0 && Number.isInteger(id) && Number.isFinite(id));
+
+        console.log('控制器 - 解析后的有效IDs:', parsedIds);
+
         // 如果解析后没有有效的ID，则设为undefined以导出全部
-        if (ids.length === 0) {
+        if (parsedIds.length === 0) {
           ids = undefined;
+        } else {
+          ids = parsedIds;
         }
       }
 

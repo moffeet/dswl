@@ -115,21 +115,21 @@ export class Customer {
   @Column({ name: 'updateBy', length: 50, nullable: true })
   updateBy: string;
 
-  @ApiProperty({ 
-    description: '创建时间，记录自动生成', 
+  @ApiProperty({
+    description: '创建时间，记录自动生成',
     example: '2025-06-27T06:16:28.000Z',
     type: 'string',
     format: 'date-time'
   })
   @CreateDateColumn({ name: 'createdAt' })
-  createTime: Date;
+  createdAt: Date;
 
-  @ApiProperty({ 
-    description: '更新时间，每次修改时自动更新', 
+  @ApiProperty({
+    description: '更新时间，每次修改时自动更新',
     example: '2025-06-27T08:16:28.000Z',
     type: 'string',
     format: 'date-time'
   })
   @UpdateDateColumn({ name: 'updatedAt' })
-  updateTime: Date;
+  updatedAt: Date;
 } 

@@ -40,7 +40,7 @@ export class CustomersService {
     const [data, total] = await this.customerRepository.findAndCount({
       skip: (page - 1) * limit,
       take: limit,
-      order: { createTime: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
 
     return {
@@ -223,11 +223,28 @@ export class CustomersService {
   async exportToExcel(customerIds?: number[]): Promise<Buffer> {
     let customers: Customer[];
 
+    console.log('导出Excel - 接收到的customerIds:', customerIds);
+
     if (customerIds && customerIds.length > 0) {
-      customers = await this.customerRepository.find({
-        where: { id: In(customerIds) }
-      });
+      // 验证所有ID都是有效的数字
+      const validIds = customerIds.filter(id =>
+        !isNaN(id) &&
+        id > 0 &&
+        Number.isInteger(id) &&
+        Number.isFinite(id)
+      );
+      console.log('导出Excel - 有效的customerIds:', validIds);
+
+      if (validIds.length > 0) {
+        customers = await this.customerRepository.find({
+          where: { id: In(validIds) }
+        });
+      } else {
+        // 如果没有有效ID，导出全部
+        customers = await this.customerRepository.find();
+      }
     } else {
+      // 导出全部客户
       customers = await this.customerRepository.find();
     }
 
@@ -243,8 +260,8 @@ export class CustomersService {
       '仓库纬度': customer.warehouseLatitude || '',
       '状态': customer.status === 'active' ? '启用' : '禁用',
       '更新人': customer.updateBy || '',
-      '创建时间': customer.createTime ? customer.createTime.toLocaleString('zh-CN') : '',
-      '更新时间': customer.updateTime ? customer.updateTime.toLocaleString('zh-CN') : '',
+      '创建时间': customer.createdAt ? customer.createdAt.toLocaleString('zh-CN') : '',
+      '更新时间': customer.updatedAt ? customer.updatedAt.toLocaleString('zh-CN') : '',
       '同步时间': customer.lastSyncTime ? customer.lastSyncTime.toLocaleString('zh-CN') : ''
     }));
 
