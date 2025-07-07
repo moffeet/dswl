@@ -1,26 +1,21 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { Permission } from '../permissions/entities/permission.entity';
 import { RoleQueryDto } from '../common/dto/pagination.dto';
+import { PROTECTED_ROLES, DEFAULT_ROLE, isProtectedRole } from '../common/constants/permissions';
 
 export interface CreateRoleDto {
   roleName: string;
   roleCode: string;
   description?: string;
-  status?: '启用' | '禁用';
-  miniAppLoginEnabled?: boolean;
-  permissionIds?: number[];
+  permissionCodes?: string[]; // 改为权限代码数组，简化权限配置
 }
 
 export interface UpdateRoleDto {
-  roleName?: string;
-  roleCode?: string;
-  description?: string;
-  status?: '启用' | '禁用';
-  miniAppLoginEnabled?: boolean;
-  permissionIds?: number[];
+  description?: string; // 只允许修改描述
+  permissionCodes?: string[]; // 改为权限代码数组
 }
 
 
@@ -43,19 +38,32 @@ export class RolesService {
       throw new ConflictException('角色编码已存在');
     }
 
+    // 检查角色名是否已存在
+    const existingRoleName = await this.roleRepository.findOne({
+      where: { roleName: createRoleDto.roleName }
+    });
+    if (existingRoleName) {
+      throw new ConflictException('角色名称已存在');
+    }
+
+    // 检查角色数量限制（最多100个）
+    const roleCount = await this.roleRepository.count();
+    if (roleCount >= 100) {
+      throw new BadRequestException('角色数量已达到上限（100个）');
+    }
+
     const role = this.roleRepository.create({
       roleName: createRoleDto.roleName,
       roleCode: createRoleDto.roleCode,
       description: createRoleDto.description,
-      status: createRoleDto.status || '启用',
-      miniAppLoginEnabled: createRoleDto.miniAppLoginEnabled
+      status: 'enabled' // 固定为启用状态
     });
 
     const savedRole = await this.roleRepository.save(role);
 
-    // 如果提供了权限ID，分配权限
-    if (createRoleDto.permissionIds && createRoleDto.permissionIds.length > 0) {
-      await this.assignPermissions(savedRole.id, createRoleDto.permissionIds);
+    // 如果提供了权限代码，分配权限
+    if (createRoleDto.permissionCodes && createRoleDto.permissionCodes.length > 0) {
+      await this.assignPermissionsByCodes(savedRole.id, createRoleDto.permissionCodes);
     }
 
     return await this.findOne(savedRole.id);
@@ -121,27 +129,24 @@ export class RolesService {
   async update(id: number, updateRoleDto: UpdateRoleDto): Promise<Role> {
     const role = await this.findOne(id);
 
-    // 检查角色编码是否已存在（排除当前角色）
-    if (updateRoleDto.roleCode && updateRoleDto.roleCode !== role.roleCode) {
-      const existingRole = await this.roleRepository.findOne({
-        where: { roleCode: updateRoleDto.roleCode }
-      });
-      if (existingRole) {
-        throw new ConflictException('角色编码已存在');
-      }
+    // 检查是否为系统保护角色
+    if (isProtectedRole(role.roleCode)) {
+      throw new BadRequestException('系统角色不允许修改');
     }
 
-    await this.roleRepository.update(id, {
-      roleName: updateRoleDto.roleName,
-      roleCode: updateRoleDto.roleCode,
-      description: updateRoleDto.description,
-      status: updateRoleDto.status,
-      miniAppLoginEnabled: updateRoleDto.miniAppLoginEnabled
-    });
+    // 只允许修改描述
+    const updateData: any = {};
+    if (updateRoleDto.description !== undefined) {
+      updateData.description = updateRoleDto.description;
+    }
 
-    // 如果提供了权限ID，更新权限分配
-    if (updateRoleDto.permissionIds !== undefined) {
-      await this.assignPermissions(id, updateRoleDto.permissionIds);
+    if (Object.keys(updateData).length > 0) {
+      await this.roleRepository.update(id, updateData);
+    }
+
+    // 如果提供了权限代码，更新权限分配
+    if (updateRoleDto.permissionCodes !== undefined) {
+      await this.assignPermissionsByCodes(id, updateRoleDto.permissionCodes);
     }
 
     return await this.findOne(id);
@@ -149,6 +154,44 @@ export class RolesService {
 
   async remove(id: number): Promise<void> {
     const role = await this.findOne(id);
+
+    // 检查是否为系统保护角色
+    if (isProtectedRole(role.roleCode)) {
+      throw new BadRequestException('系统角色不允许删除');
+    }
+
+    // 查找使用该角色的用户，将其角色改为普通用户
+    const usersWithRole = await this.roleRepository.manager.query(
+      'SELECT user_id FROM t_user_roles WHERE role_id = ?',
+      [id]
+    );
+
+    if (usersWithRole.length > 0) {
+      // 获取普通用户角色
+      const defaultRole = await this.roleRepository.findOne({
+        where: { roleCode: DEFAULT_ROLE }
+      });
+
+      if (defaultRole) {
+        // 将所有使用该角色的用户改为普通用户角色
+        const userIds = usersWithRole.map((u: any) => u.user_id);
+
+        // 先删除原有角色关联
+        await this.roleRepository.manager.query(
+          'DELETE FROM t_user_roles WHERE role_id = ?',
+          [id]
+        );
+
+        // 添加新的角色关联
+        for (const userId of userIds) {
+          await this.roleRepository.manager.query(
+            'INSERT INTO t_user_roles (user_id, role_id) VALUES (?, ?)',
+            [userId, defaultRole.id]
+          );
+        }
+      }
+    }
+
     await this.roleRepository.remove(role);
   }
 
@@ -165,6 +208,29 @@ export class RolesService {
     if (permissionIds.length > 0) {
       const permissions = await this.permissionRepository.find({
         where: { id: In(permissionIds) }
+      });
+      role.permissions = permissions;
+    } else {
+      role.permissions = [];
+    }
+
+    await this.roleRepository.save(role);
+  }
+
+  // 新增：通过权限代码分配权限
+  async assignPermissionsByCodes(roleId: number, permissionCodes: string[]): Promise<void> {
+    const role = await this.roleRepository.findOne({
+      where: { id: roleId },
+      relations: ['permissions']
+    });
+    if (!role) {
+      throw new NotFoundException('角色不存在');
+    }
+
+    // 根据权限代码查找权限
+    if (permissionCodes.length > 0) {
+      const permissions = await this.permissionRepository.find({
+        where: { permissionCode: In(permissionCodes) }
       });
       role.permissions = permissions;
     } else {

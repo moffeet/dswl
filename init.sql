@@ -39,7 +39,6 @@ CREATE TABLE t_roles (
     role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码',
     description TEXT COMMENT '角色描述',
     status ENUM('enabled', 'disabled') DEFAULT 'enabled' COMMENT '角色状态',
-    mini_app_login_enabled BOOLEAN DEFAULT FALSE COMMENT '是否允许小程序登录',
     create_by BIGINT COMMENT '创建人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
@@ -160,14 +159,15 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 ('客户查看', 'btn.customer.view', 'button', @menu_customers_id, 304),
 ('客户导出', 'btn.customer.export', 'button', @menu_customers_id, 305);
 
--- 插入角色数据（包含小程序登录权限）
-INSERT INTO t_roles (role_name, role_code, description, status, mini_app_login_enabled, create_by) VALUES
-('超级管理员', 'admin', '系统超级管理员，拥有所有权限', 'enabled', FALSE, 1),
-('管理员', 'manager', '管理员，拥有系统管理和部分业务权限', 'enabled', FALSE, 1),
-('司机', 'driver', '司机角色，主要负责配送业务', 'enabled', TRUE, 1),
-('销售', 'sales', '销售角色，主要负责客户和订单管理', 'enabled', TRUE, 1),
-('客服', 'service', '客服角色，主要负责客户服务', 'enabled', TRUE, 1),
-('普通用户', 'normal', '普通用户角色，基础权限', 'enabled', FALSE, 1);
+-- 插入角色数据
+INSERT INTO t_roles (role_name, role_code, description, status, create_by) VALUES
+('超级管理员', 'admin', '系统超级管理员，拥有所有权限', 'enabled', 1),
+('普通用户', 'normal', '普通用户角色，基础权限', 'enabled', 1),
+('管理员', 'manager', '管理员，拥有系统管理和部分业务权限', 'enabled', 1),
+('司机', 'driver', '司机角色，主要负责配送业务，可使用小程序', 'enabled', 1),
+('销售', 'sales', '销售角色，主要负责客户和订单管理，可使用小程序', 'enabled', 1),
+('客服', 'service', '客服角色，主要负责客户服务，可使用小程序', 'enabled', 1),
+('小程序用户', 'miniapp', '小程序专用角色，用于小程序登录用户', 'enabled', 1);
 
 -- 插入用户数据（密码均为：123456）
 INSERT INTO t_users (username, password, nickname, phone, email, gender, create_by) VALUES
@@ -179,9 +179,9 @@ INSERT INTO t_users (username, password, nickname, phone, email, gender, create_
 -- 分配用户角色
 INSERT INTO t_user_roles (user_id, role_id) VALUES
 (1, 1), -- admin 分配超级管理员角色
-(2, 2), -- manager001 分配管理员角色
-(3, 3), -- driver001 分配司机角色
-(4, 4); -- sales001 分配销售角色
+(2, 3), -- manager001 分配管理员角色
+(3, 4), -- driver001 分配司机角色
+(4, 5); -- sales001 分配销售角色
 
 -- 分配角色权限
 
@@ -189,9 +189,17 @@ INSERT INTO t_user_roles (user_id, role_id) VALUES
 INSERT INTO t_role_permissions (role_id, permission_id) 
 SELECT 1, id FROM t_permissions;
 
--- 2. 管理员角色权限（系统管理 + 部分业务管理）
-INSERT INTO t_role_permissions (role_id, permission_id) 
-SELECT 2, id FROM t_permissions 
+-- 2. 普通用户角色权限（基础权限）
+INSERT INTO t_role_permissions (role_id, permission_id)
+SELECT 2, id FROM t_permissions
+WHERE permission_code IN (
+    -- 菜单权限
+    'menu.dashboard'
+);
+
+-- 3. 管理员角色权限（系统管理 + 部分业务管理）
+INSERT INTO t_role_permissions (role_id, permission_id)
+SELECT 3, id FROM t_permissions
 WHERE permission_code IN (
     -- 菜单权限
     'menu.dashboard', 'menu.system', 'menu.system.users', 'menu.system.roles', 'menu.system.permissions',
@@ -200,9 +208,9 @@ WHERE permission_code IN (
     'btn.role.add', 'btn.role.edit', 'btn.role.delete', 'btn.role.view', 'btn.role.assign_permission'
 );
 
--- 3. 司机角色权限（主要是查看类权限）
-INSERT INTO t_role_permissions (role_id, permission_id) 
-SELECT 3, id FROM t_permissions 
+-- 4. 司机角色权限（主要是查看类权限，可使用小程序）
+INSERT INTO t_role_permissions (role_id, permission_id)
+SELECT 4, id FROM t_permissions
 WHERE permission_code IN (
     -- 菜单权限
     'menu.dashboard', 'menu.business', 'menu.business.customers',
@@ -210,14 +218,34 @@ WHERE permission_code IN (
     'btn.customer.view'
 );
 
--- 4. 销售角色权限（客户和订单管理）
-INSERT INTO t_role_permissions (role_id, permission_id) 
-SELECT 4, id FROM t_permissions 
+-- 5. 销售角色权限（客户和订单管理，可使用小程序）
+INSERT INTO t_role_permissions (role_id, permission_id)
+SELECT 5, id FROM t_permissions
 WHERE permission_code IN (
     -- 菜单权限
     'menu.dashboard', 'menu.business', 'menu.business.customers',
     -- 按钮权限
     'btn.customer.add', 'btn.customer.edit', 'btn.customer.view', 'btn.customer.export'
+);
+
+-- 6. 客服角色权限（客户服务相关，可使用小程序）
+INSERT INTO t_role_permissions (role_id, permission_id)
+SELECT 6, id FROM t_permissions
+WHERE permission_code IN (
+    -- 菜单权限
+    'menu.dashboard', 'menu.business', 'menu.business.customers',
+    -- 按钮权限
+    'btn.customer.view', 'btn.customer.edit'
+);
+
+-- 7. 小程序用户角色权限（小程序专用基础权限）
+INSERT INTO t_role_permissions (role_id, permission_id)
+SELECT 7, id FROM t_permissions
+WHERE permission_code IN (
+    -- 菜单权限
+    'menu.dashboard', 'menu.business', 'menu.business.customers',
+    -- 按钮权限
+    'btn.customer.view'
 );
 
 -- 插入客户测试数据

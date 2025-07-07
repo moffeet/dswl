@@ -44,29 +44,24 @@ export class RolesController {
       properties: {
         roleName: {
           type: 'string',
-          description: '角色名称',
-          example: '系统管理员'
+          description: '角色名称（必填，唯一）',
+          example: '销售经理'
         },
         roleCode: {
           type: 'string',
-          description: '角色编码，建议使用英文，系统内唯一',
-          example: 'SYSTEM_ADMIN'
+          description: '角色编码，系统内唯一标识（必填，唯一）',
+          example: 'sales_manager'
         },
         description: {
           type: 'string',
           description: '角色描述',
-          example: '拥有系统所有权限的管理员角色'
+          example: '负责销售业务管理的角色'
         },
-        status: {
-          type: 'string',
-          enum: ['normal', 'disabled'],
-          description: '角色状态',
-          example: 'normal'
-        },
-        sortOrder: {
-          type: 'number',
-          description: '排序值，数字越小越靠前',
-          example: 1
+        permissionCodes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '权限代码数组，分配给角色的权限列表',
+          example: ['menu.users', 'btn.users.add', 'btn.users.edit', 'menu.customer', 'btn.customer.export']
         }
       }
     }
@@ -175,19 +170,19 @@ export class RolesController {
     description: '权限分配数据',
     schema: {
       type: 'object',
-      required: ['permissionIds'],
+      required: ['permissionCodes'],
       properties: {
-        permissionIds: {
+        permissionCodes: {
           type: 'array',
-          items: { type: 'number' },
-          description: '权限ID数组，包含菜单权限和按钮权限的ID',
-          example: [1, 2, 3, 101, 102, 103]
+          items: { type: 'string' },
+          description: '权限代码数组，包含菜单权限和按钮权限的代码',
+          example: ['menu.users', 'btn.users.add', 'btn.users.edit', 'menu.customer', 'btn.customer.export']
         }
       }
     }
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: '权限分配成功',
     schema: {
       type: 'object',
@@ -198,75 +193,17 @@ export class RolesController {
     }
   })
   @ApiResponse({ status: 404, description: '角色不存在' })
-  @ApiResponse({ status: 400, description: '权限ID无效' })
+  @ApiResponse({ status: 400, description: '权限代码无效' })
   async assignPermissions(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { permissionIds: number[] },
+    @Body() body: { permissionCodes: string[] },
   ) {
-    await this.rolesService.assignPermissions(id, body.permissionIds);
+    await this.rolesService.assignPermissionsByCodes(id, body.permissionCodes);
     return {
       code: RESPONSE_CODES.SUCCESS,
       message: '权限分配成功'
     };
   }
 
-  @Patch(':id/mini-app-login')
-  @ApiOperation({ 
-    summary: '更新角色小程序登录权限',
-    description: '控制指定角色的用户是否可以通过小程序登录系统。管理员角色通常建议关闭，业务角色如司机、销售等建议开启。'
-  })
-  @ApiParam({ 
-    name: 'id', 
-    description: '角色ID', 
-    example: 1 
-  })
-  @ApiBody({
-    description: '小程序登录权限设置',
-    schema: {
-      type: 'object',
-      required: ['miniAppLoginEnabled'],
-      properties: {
-        miniAppLoginEnabled: {
-          type: 'boolean',
-          description: '是否允许小程序登录',
-          example: true
-        }
-      }
-    }
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: '更新成功',
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'number', example: 200 },
-        message: { type: 'string', example: '小程序登录权限更新成功' },
-        data: {
-          type: 'object',
-          properties: {
-            id: { type: 'number', example: 1 },
-            miniAppLoginEnabled: { type: 'boolean', example: true }
-          }
-        }
-      }
-    }
-  })
-  @ApiResponse({ status: 404, description: '角色不存在' })
-  async updateMiniAppLogin(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: { miniAppLoginEnabled: boolean },
-  ) {
-    const role = await this.rolesService.update(id, { 
-      miniAppLoginEnabled: body.miniAppLoginEnabled 
-    });
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '小程序登录权限更新成功',
-      data: {
-        id: role.id,
-        miniAppLoginEnabled: role.miniAppLoginEnabled
-      }
-    };
-  }
+
 } 

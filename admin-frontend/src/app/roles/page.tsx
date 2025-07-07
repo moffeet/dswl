@@ -153,6 +153,22 @@ const fetchCompletePermissions = async (): Promise<Permission[]> => {
   }
 };
 
+// 新增：获取静态权限树
+const fetchStaticPermissionTree = async (): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.permissions}/static/tree`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+      },
+    });
+    const result = await response.json();
+    return result.code === 200 ? result.data : [];
+  } catch (error) {
+    console.error('获取静态权限树失败:', error);
+    return [];
+  }
+};
+
 const createRole = async (data: any): Promise<boolean> => {
   try {
     const response = await fetch(API_ENDPOINTS.roles, {
@@ -206,7 +222,7 @@ const deleteRole = async (id: number): Promise<boolean> => {
   }
 };
 
-const assignPermissions = async (roleId: number, permissionIds: number[]): Promise<boolean> => {
+const assignPermissions = async (roleId: number, permissionCodes: string[]): Promise<boolean> => {
   try {
     const response = await fetch(`${API_ENDPOINTS.roles}/${roleId}/permissions`, {
       method: 'POST',
@@ -214,7 +230,7 @@ const assignPermissions = async (roleId: number, permissionIds: number[]): Promi
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ permissionIds }),
+      body: JSON.stringify({ permissionCodes }),
     });
     const result = await response.json();
     return result.code === 200;
@@ -224,44 +240,31 @@ const assignPermissions = async (roleId: number, permissionIds: number[]): Promi
   }
 };
 
-const toggleMiniAppLogin = async (roleId: number, enabled: boolean): Promise<boolean> => {
-  try {
-    const response = await fetch(`${API_ENDPOINTS.roles}/${roleId}/mini-app-login`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ enabled }),
-    });
-    const result = await response.json();
-    return result.code === 200;
-  } catch (error) {
-    console.error('切换小程序登录权限失败:', error);
-    return false;
-  }
-};
+
+
+// 系统保护角色（不可删除和修改）
+const PROTECTED_ROLES = ['admin', 'normal'];
 
 export default function RolesPage() {
   const [data, setData] = useState<Role[]>([]);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [staticPermissionTree, setStaticPermissionTree] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [form] = Form.useForm();
-  
+
   // 搜索和筛选状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedMiniApp, setSelectedMiniApp] = useState('');
-  
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
-  // 权限选择状态
-  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
+  // 权限选择状态 - 改为权限代码数组
+  const [selectedPermissionCodes, setSelectedPermissionCodes] = useState<string[]>([]);
 
   // 加载数据
   const loadData = async () => {
@@ -274,17 +277,16 @@ export default function RolesPage() {
         searchParams.roleCode = searchKeyword;
       }
       if (selectedStatus) searchParams.status = selectedStatus;
-      if (selectedMiniApp) {
-        searchParams.miniAppLoginEnabled = selectedMiniApp === 'true';
-      }
-      
-      const [rolesData, permissionsData] = await Promise.all([
+
+      const [rolesData, permissionsData, staticTreeData] = await Promise.all([
         fetchRoles(currentPage, pageSize, searchParams),
-        fetchCompletePermissions()
+        fetchCompletePermissions(),
+        fetchStaticPermissionTree()
       ]);
       setData(rolesData.list);
       setTotal(rolesData.total);
       setAllPermissions(permissionsData);
+      setStaticPermissionTree(staticTreeData);
     } catch (error) {
       Message.error('加载数据失败');
     } finally {
@@ -294,7 +296,7 @@ export default function RolesPage() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize, searchKeyword, selectedStatus, selectedMiniApp]);
+  }, [currentPage, pageSize, searchKeyword, selectedStatus]);
 
   // 统计数据
   const stats = {
@@ -340,6 +342,29 @@ export default function RolesPage() {
         children: permission.children ? buildTreeData(permission.children) : undefined
       };
     });
+  };
+
+  // 构建静态权限树数据
+  const buildStaticTreeData = (staticTree: any[]): any[] => {
+    return staticTree.map(menu => ({
+      key: menu.code,
+      title: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <IconMenuUnfold style={{ color: '#3b82f6', fontSize: '14px' }} />
+          <span style={{ color: '#374151', fontWeight: '500' }}>{menu.name}</span>
+          <span style={{ color: '#94a3b8', fontSize: '12px' }}>({menu.path})</span>
+        </div>
+      ),
+      children: menu.children ? menu.children.map((btn: any) => ({
+        key: btn.code,
+        title: (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <IconCode style={{ color: '#10b981', fontSize: '14px' }} />
+            <span style={{ color: '#10b981', fontWeight: '400' }}>{btn.name}</span>
+          </div>
+        )
+      })) : []
+    }));
   };
 
   // 递归获取所有权限ID（包括子权限）
@@ -434,19 +459,6 @@ export default function RolesPage() {
       ),
     },
     {
-      title: '小程序登录',
-      dataIndex: 'miniAppLoginEnabled',
-      width: 120,
-      align: 'center',
-      render: (enabled: boolean, record) => (
-        <Switch
-          checked={enabled}
-          onChange={(checked) => handleMiniAppToggle(record.id, checked)}
-          size="small"
-        />
-      ),
-    },
-    {
       title: '状态',
       dataIndex: 'status',
       width: 100,
@@ -474,30 +486,39 @@ export default function RolesPage() {
       fixed: 'right' as const,
       width: 120,
       align: 'center' as const,
-      render: (_, record) => (
-        <div className="flex gap-2 justify-center">
-          <Button
-            type="text"
-            size="small"
-            icon={<IconEdit />}
-            onClick={() => handleEdit(record)}
-            className="text-blue-600 hover:text-blue-800"
-          />
-          <Popconfirm
-            title="确认删除此角色？"
-            onOk={() => handleDelete(record.id)}
-            okText="确认"
-            cancelText="取消"
-          >
+      render: (_, record) => {
+        const isProtected = PROTECTED_ROLES.includes(record.roleCode);
+
+        return (
+          <div className="flex gap-2 justify-center">
             <Button
               type="text"
               size="small"
-              icon={<IconDelete />}
-              className="text-red-600 hover:text-red-800"
+              icon={<IconEdit />}
+              onClick={() => handleEdit(record)}
+              className="text-blue-600 hover:text-blue-800"
+              disabled={isProtected}
+              title={isProtected ? '系统角色不允许编辑' : '编辑角色'}
             />
-          </Popconfirm>
-        </div>
-      ),
+            <Popconfirm
+              title={isProtected ? "系统角色不允许删除" : "确认删除此角色？"}
+              onOk={() => !isProtected && handleDelete(record.id)}
+              okText="确认"
+              cancelText="取消"
+              disabled={isProtected}
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={<IconDelete />}
+                className={isProtected ? "text-gray-400" : "text-red-600 hover:text-red-800"}
+                disabled={isProtected}
+                title={isProtected ? '系统角色不允许删除' : '删除角色'}
+              />
+            </Popconfirm>
+          </div>
+        );
+      },
     },
   ];
 
@@ -511,13 +532,12 @@ export default function RolesPage() {
   const handleReset = () => {
     setSearchKeyword('');
     setSelectedStatus('');
-    setSelectedMiniApp('');
   };
 
   const handleAdd = () => {
     setEditingRole(null);
     form.resetFields();
-    setSelectedPermissions([]);
+    setSelectedPermissionCodes([]);
     setVisible(true);
   };
 
@@ -526,17 +546,17 @@ export default function RolesPage() {
     form.setFieldsValue({
       roleName: role.roleName,
       roleCode: role.roleCode,
-      description: role.description,
-      status: role.status,
-      miniAppLoginEnabled: role.miniAppLoginEnabled
+      description: role.description
     });
-    
-    // 设置已选择的权限
+
+    // 设置已选择的权限代码
     if (role.permissions) {
-      const permissionIds = role.permissions.map(p => p.id);
-      setSelectedPermissions(permissionIds);
+      const permissionCodes = role.permissions.map(p => p.permissionCode);
+      setSelectedPermissionCodes(permissionCodes);
+    } else {
+      setSelectedPermissionCodes([]);
     }
-    
+
     setVisible(true);
   };
 
@@ -554,37 +574,33 @@ export default function RolesPage() {
     }
   };
 
-  const handleMiniAppToggle = async (roleId: number, enabled: boolean) => {
-    try {
-      const success = await toggleMiniAppLogin(roleId, enabled);
-      if (success) {
-        Message.success('设置成功');
-        loadData();
-      } else {
-        Message.error('设置失败');
-      }
-    } catch (error) {
-      Message.error('设置失败');
-    }
-  };
+
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
       const roleData = {
-            ...values,
-        permissionIds: selectedPermissions
+        ...values,
+        permissionCodes: selectedPermissionCodes
       };
 
-      const success = editingRole
-        ? await updateRole(editingRole.id, roleData)
-        : await createRole(roleData);
-      
+      let success = false;
+      if (editingRole) {
+        // 编辑模式：先更新角色基本信息，再分配权限
+        success = await updateRole(editingRole.id, roleData);
+        if (success && selectedPermissionCodes.length >= 0) {
+          success = await assignPermissions(editingRole.id, selectedPermissionCodes);
+        }
+      } else {
+        // 新增模式：创建角色
+        success = await createRole(roleData);
+      }
+
       if (success) {
         Message.success(editingRole ? '更新成功' : '创建成功');
-      setVisible(false);
-      form.resetFields();
-        setSelectedPermissions([]);
+        setVisible(false);
+        form.resetFields();
+        setSelectedPermissionCodes([]);
         loadData();
       } else {
         Message.error(editingRole ? '更新失败' : '创建失败');
@@ -733,19 +749,7 @@ export default function RolesPage() {
               <Option value="inactive">禁用</Option>
               </Select>
 
-              <Select
-              placeholder="小程序登录"
-              value={selectedMiniApp}
-              onChange={(value) => setSelectedMiniApp(value)}
-                style={{ 
-                width: '150px',
-                borderRadius: '8px'
-              }}
-              allowClear
-            >
-              <Option value="true">允许</Option>
-              <Option value="false">禁止</Option>
-              </Select>
+
             
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button 
@@ -865,7 +869,7 @@ export default function RolesPage() {
         onCancel={() => {
           setVisible(false);
           form.resetFields();
-          setSelectedPermissions([]);
+          setSelectedPermissionCodes([]);
         }}
         confirmLoading={loading}
         style={{
@@ -896,11 +900,25 @@ export default function RolesPage() {
               <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色名称</span>}
                 field="roleName"
-                rules={[{ required: true, message: '请输入角色名称' }]}
+                rules={[
+                  { required: true, message: '请输入角色名称' },
+                  {
+                    validator: (value, callback) => {
+                      if (value && data.some(role =>
+                        role.roleName === value &&
+                        (!editingRole || role.id !== editingRole.id)
+                      )) {
+                        callback('角色名称已存在');
+                      } else {
+                        callback();
+                      }
+                    }
+                  }
+                ]}
               >
-                <Input 
-                  placeholder="请输入角色名称" 
-                  style={{ 
+                <Input
+                  placeholder="请输入角色名称（必须唯一）"
+                  style={{
                     borderRadius: '6px',
                     height: '36px'
                   }}
@@ -911,10 +929,25 @@ export default function RolesPage() {
               <Form.Item
                 label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色编码</span>}
                 field="roleCode"
-                rules={[{ required: true, message: '请输入角色编码' }]}
+                rules={[
+                  { required: true, message: '请输入角色编码' },
+                  {
+                    validator: (value, callback) => {
+                      if (value && data.some(role =>
+                        role.roleCode === value &&
+                        (!editingRole || role.id !== editingRole.id)
+                      )) {
+                        callback('角色编码已存在');
+                      } else {
+                        callback();
+                      }
+                    }
+                  }
+                ]}
+                disabled={!!editingRole} // 编辑时不允许修改角色编码
               >
-                <Input 
-                  placeholder="请输入角色编码" 
+                <Input
+                  placeholder="请输入角色编码（必须唯一）"
                   style={{ 
                     borderRadius: '6px',
                     height: '36px'
@@ -937,49 +970,14 @@ export default function RolesPage() {
             />
           </Form.Item>
 
-          <GridRow gutter={16}>
-            <Col span={12}>
-          <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>状态</span>}
-                field="status"
-                initialValue="active"
-          >
-            <Select
-                  style={{ 
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
-                >
-                  <Option value="active">启用</Option>
-                  <Option value="inactive">禁用</Option>
-            </Select>
-          </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>小程序登录</span>}
-                field="miniAppLoginEnabled"
-                initialValue={false}
-              >
-                <Select 
-                  style={{ 
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
-                >
-                  <Option value="true">允许</Option>
-                  <Option value="false">禁止</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </GridRow>
+
 
           {/* 权限分配 */}
           <Form.Item
             label={<span style={{ fontSize: '14px', fontWeight: '500' }}>权限分配</span>}
           >
             <div style={{ marginTop: '8px' }}>
-              <div style={{ 
+              <div style={{
                 marginBottom: '12px',
                 padding: '8px 12px',
                 background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
@@ -998,8 +996,8 @@ export default function RolesPage() {
                   </div>
                 </div>
               </div>
-              <div style={{ 
-                maxHeight: '400px', 
+              <div style={{
+                maxHeight: '400px',
                 overflow: 'auto',
                 border: '1px solid #e2e8f0',
                 borderRadius: '6px',
@@ -1007,11 +1005,11 @@ export default function RolesPage() {
               }}>
                 <Tree
                   checkable
-                  checkedKeys={selectedPermissions.map(id => id.toString())}
+                  checkedKeys={selectedPermissionCodes}
                   onCheck={(checkedKeys) => {
-                    setSelectedPermissions((checkedKeys as string[]).map(key => parseInt(key)));
+                    setSelectedPermissionCodes(checkedKeys as string[]);
                   }}
-                  treeData={buildTreeData(allPermissions)}
+                  treeData={buildStaticTreeData(staticPermissionTree)}
                   fieldNames={{
                     key: 'key',
                     title: 'title',

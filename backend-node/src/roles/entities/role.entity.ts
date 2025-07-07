@@ -15,11 +15,8 @@ export class Role {
   @Column({ type: 'text', nullable: true, comment: '角色描述' })
   description?: string;
 
-  @Column({ type: 'varchar', length: 10, default: '启用', comment: '角色状态' })
+  @Column({ type: 'varchar', length: 10, default: 'enabled', comment: '角色状态' })
   status: string;
-
-  @Column({ name: 'mini_app_login_enabled', type: 'boolean', default: false, comment: '是否允许小程序登录' })
-  miniAppLoginEnabled: boolean;
 
   @Column({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' })
   createBy?: number;

@@ -22,6 +22,7 @@ import {
   CreatePermissionDto,
   UpdatePermissionDto
 } from './permissions.service';
+import { StaticPermissionsService } from './static-permissions.service';
 import { PermissionQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -31,7 +32,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class PermissionsController {
-  constructor(private readonly permissionsService: PermissionsService) {}
+  constructor(
+    private readonly permissionsService: PermissionsService,
+    private readonly staticPermissionsService: StaticPermissionsService
+  ) {}
 
   @Post()
   @ApiOperation({ 
@@ -444,4 +448,70 @@ export class PermissionsController {
       message: '删除成功'
     };
   }
-} 
+
+  @Get('static/tree')
+  @ApiOperation({
+    summary: '获取静态权限树',
+    description: '获取基于常量定义的权限树结构，用于角色权限配置。包含菜单权限和对应的按钮权限。'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '获取成功' },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: '用户管理' },
+              code: { type: 'string', example: 'menu.users' },
+              type: { type: 'string', example: 'menu' },
+              path: { type: 'string', example: '/users' },
+              icon: { type: 'string', example: 'IconUser' },
+              sortOrder: { type: 'number', example: 1 },
+              children: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', example: '用户管理-新增' },
+                    code: { type: 'string', example: 'btn.users.add' },
+                    type: { type: 'string', example: 'button' },
+                    sortOrder: { type: 'number', example: 101 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+  async getStaticPermissionTree() {
+    const tree = this.staticPermissionsService.getPermissionTree();
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '获取成功',
+      data: tree
+    };
+  }
+
+  @Get('static/all')
+  @ApiOperation({
+    summary: '获取所有静态权限',
+    description: '获取所有基于常量定义的权限列表，包含菜单权限和按钮权限。'
+  })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getAllStaticPermissions() {
+    const permissions = this.staticPermissionsService.getAllPermissions();
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '获取成功',
+      data: permissions
+    };
+  }
+}
