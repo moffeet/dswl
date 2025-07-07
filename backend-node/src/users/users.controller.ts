@@ -10,19 +10,19 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
   ApiBody
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { SearchUserDto } from './dto/search-user.dto';
+import { UserQueryDto } from '../common/dto/pagination.dto';
+import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('👤 用户管理')
@@ -123,7 +123,7 @@ export class UsersController {
     // 移除密码字段
     const { password, ...result } = user;
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '创建成功',
       data: result
     };
@@ -134,14 +134,7 @@ export class UsersController {
     summary: '获取用户列表',
     description: '分页查询用户列表，支持按用户名、昵称、手机号、邮箱、性别、状态进行筛选。返回数据不包含密码字段。'
   })
-  @ApiQuery({ name: 'page', required: false, description: '页码', example: 1 })
-  @ApiQuery({ name: 'size', required: false, description: '每页数量', example: 10 })
-  @ApiQuery({ name: 'username', required: false, description: '用户名（模糊匹配）', example: 'admin' })
-  @ApiQuery({ name: 'nickname', required: false, description: '昵称（模糊匹配）', example: '管理员' })
-  @ApiQuery({ name: 'phone', required: false, description: '手机号（模糊匹配）', example: '138' })
-  @ApiQuery({ name: 'email', required: false, description: '邮箱（模糊匹配）', example: 'admin' })
-  @ApiQuery({ name: 'gender', required: false, description: '性别', enum: ['male', 'female'] })
-  @ApiQuery({ name: 'status', required: false, description: '用户状态', enum: ['normal', 'disabled'] })
+
   @ApiResponse({ 
     status: 200, 
     description: '获取成功',
@@ -178,7 +171,7 @@ export class UsersController {
       }
     }
   })
-  async findAll(@Query() searchDto: SearchUserDto) {
+  async findAll(@Query() searchDto: UserQueryDto) {
     const { users, total } = await this.usersService.findAll(searchDto);
     // 移除密码字段
     const safeUsers = users.map(user => {
@@ -187,13 +180,13 @@ export class UsersController {
     });
     
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: {
         list: safeUsers,
         total,
         page: searchDto.page || 1,
-        size: searchDto.size || 10
+        size: searchDto.limit || 10
       }
     };
   }
@@ -206,7 +199,7 @@ export class UsersController {
     // 移除密码字段
     const { password, ...result } = user;
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: result
     };
@@ -223,7 +216,7 @@ export class UsersController {
     // 移除密码字段
     const { password, ...result } = user;
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '更新成功',
       data: result
     };
@@ -235,7 +228,7 @@ export class UsersController {
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.usersService.remove(id);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '删除成功'
     };
   }

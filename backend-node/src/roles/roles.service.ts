@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { Permission } from '../permissions/entities/permission.entity';
+import { RoleQueryDto } from '../common/dto/pagination.dto';
 
 export interface CreateRoleDto {
   roleName: string;
@@ -22,14 +23,7 @@ export interface UpdateRoleDto {
   permissionIds?: number[];
 }
 
-export interface SearchRoleDto {
-  roleName?: string;
-  roleCode?: string;
-  status?: '启用' | '禁用';
-  miniAppLoginEnabled?: boolean;
-  page?: number;
-  size?: number;
-}
+
 
 @Injectable()
 export class RolesService {
@@ -67,8 +61,8 @@ export class RolesService {
     return await this.findOne(savedRole.id);
   }
 
-  async findAll(searchDto: SearchRoleDto): Promise<{ roles: Role[], total: number }> {
-    const { page = 1, size = 10, ...filters } = searchDto;
+  async findAll(searchDto: RoleQueryDto): Promise<{ roles: Role[], total: number }> {
+    const { page = 1, limit = 10, ...filters } = searchDto;
     const where: any = {};
 
     if (filters.roleName) {
@@ -87,8 +81,8 @@ export class RolesService {
     const [roles, total] = await this.roleRepository.findAndCount({
       where,
       relations: ['permissions'], // 启用权限关系
-      skip: (page - 1) * size,
-      take: size,
+      skip: (page - 1) * limit,
+      take: limit,
       order: { createTime: 'DESC' }
     });
 

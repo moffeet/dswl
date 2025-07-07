@@ -10,21 +10,20 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
-  ApiBearerAuth, 
-  ApiParam,
-  ApiQuery,
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
   ApiBody
 } from '@nestjs/swagger';
-import { 
-  PermissionsService, 
-  CreatePermissionDto, 
-  UpdatePermissionDto, 
-  SearchPermissionDto 
+import {
+  PermissionsService,
+  CreatePermissionDto,
+  UpdatePermissionDto
 } from './permissions.service';
+import { PermissionQueryDto } from '../common/dto/pagination.dto';
+import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('🔐 权限管理')
@@ -128,7 +127,7 @@ export class PermissionsController {
   async create(@Body() createPermissionDto: CreatePermissionDto) {
     const permission = await this.permissionsService.create(createPermissionDto);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '创建成功',
       data: permission
     };
@@ -139,12 +138,7 @@ export class PermissionsController {
     summary: '获取权限列表',
     description: '分页查询权限列表，支持按权限名称、编码、类型、状态进行筛选'
   })
-  @ApiQuery({ name: 'page', required: false, description: '页码', example: 1 })
-  @ApiQuery({ name: 'size', required: false, description: '每页数量', example: 10 })
-  @ApiQuery({ name: 'permissionName', required: false, description: '权限名称（模糊匹配）', example: '用户' })
-  @ApiQuery({ name: 'permissionCode', required: false, description: '权限编码（模糊匹配）', example: 'menu.system' })
-  @ApiQuery({ name: 'permissionType', required: false, description: '权限类型', enum: ['menu', 'button'] })
-  @ApiQuery({ name: 'status', required: false, description: '权限状态', enum: ['normal', 'disabled'] })
+
   @ApiResponse({ 
     status: 200, 
     description: '获取成功',
@@ -180,16 +174,16 @@ export class PermissionsController {
       }
     }
   })
-  async findAll(@Query() searchDto: SearchPermissionDto) {
+  async findAll(@Query() searchDto: PermissionQueryDto) {
     const { permissions, total } = await this.permissionsService.findAll(searchDto);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: {
         list: permissions,
         total,
         page: searchDto.page || 1,
-        size: searchDto.size || 10
+        size: searchDto.limit || 10
       }
     };
   }
@@ -245,7 +239,7 @@ export class PermissionsController {
   async findMenuTree() {
     const menuTree = await this.permissionsService.findMenuTree();
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: menuTree
     };
@@ -285,7 +279,7 @@ export class PermissionsController {
   async findButtonPermissions() {
     const buttons = await this.permissionsService.findButtonPermissions();
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: buttons
     };
@@ -339,7 +333,7 @@ export class PermissionsController {
   async findButtonTree() {
     const buttonTree = await this.permissionsService.findButtonTree();
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: buttonTree
     };
@@ -407,7 +401,7 @@ export class PermissionsController {
   async findCompleteTree() {
     const completeTree = await this.permissionsService.findCompletePermissionTree();
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: completeTree
     };
@@ -419,7 +413,7 @@ export class PermissionsController {
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const permission = await this.permissionsService.findOne(id);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: permission
     };
@@ -434,7 +428,7 @@ export class PermissionsController {
   ) {
     const permission = await this.permissionsService.update(id, updatePermissionDto);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '更新成功',
       data: permission
     };
@@ -446,7 +440,7 @@ export class PermissionsController {
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.permissionsService.remove(id);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '删除成功'
     };
   }

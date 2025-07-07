@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nes
 import { AuthService } from './auth.service';
 import { LoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 
 @ApiTags('认证管理')
 @Controller('auth')
@@ -69,7 +70,7 @@ export class AuthController {
     description: '✅ 登录成功', 
     type: LoginResponseDto,
     example: {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '登录成功',
       data: {
         accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
@@ -150,7 +151,7 @@ export class AuthController {
     status: 500, 
     description: '❌ 服务器内部错误',
     example: {
-      code: 500,
+      code: RESPONSE_CODES.SERVER_ERROR,
       message: '服务器内部错误，请稍后重试',
       data: null
     }
@@ -160,7 +161,7 @@ export class AuthController {
     try {
       const result = await this.authService.login(loginDto, req);
       return {
-        code: 200,
+        code: RESPONSE_CODES.SUCCESS,
         message: '登录成功',
         data: result
       };
@@ -206,7 +207,7 @@ export class AuthController {
     status: 200, 
     description: '✅ 强制登录成功', 
     example: {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '强制登录成功',
       data: {
         accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
@@ -224,7 +225,7 @@ export class AuthController {
   async forceLogin(@Body() loginDto: LoginDto, @Request() req) {
     const result = await this.authService.login(loginDto, req, true);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '强制登录成功',
       data: result
     };
@@ -256,7 +257,7 @@ export class AuthController {
     description: '✅ 登出成功', 
     type: LogoutResponseDto,
     example: {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '登出成功',
       data: null
     }
@@ -280,7 +281,7 @@ export class AuthController {
     
     const result = await this.authService.logout(req.user.id, token);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: result.message,
       data: null
     };
@@ -312,7 +313,7 @@ export class AuthController {
     status: 200, 
     description: '✅ 获取成功',
     example: {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: {
         id: 1,
@@ -342,7 +343,7 @@ export class AuthController {
   @Get('profile')
   async getProfile(@Request() req) {
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: {
         id: req.user.id,

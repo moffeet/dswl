@@ -1,11 +1,11 @@
-import { IsOptional, IsString, IsNumber, Min, Max, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
 /**
  * 搜索客户DTO
  * 用于客户搜索和筛选功能
- * 支持按客户编号、名称进行模糊匹配，支持排序和分页
+ * 支持按客户编号、名称进行模糊匹配，默认按更新时间倒序排列
  */
 export class SearchCustomerDto {
   @ApiProperty({
@@ -25,49 +25,6 @@ export class SearchCustomerDto {
   @IsOptional()
   @IsString()
   customerName?: string;
-
-  @ApiProperty({
-    description: '更新人筛选，支持模糊匹配',
-    example: '管理员',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  updateBy?: string;
-
-  @ApiProperty({
-    description: '客户状态筛选（仅超级管理员可见）',
-    example: 'active',
-    enum: ['active', 'inactive'],
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  status?: 'active' | 'inactive';
-
-  @ApiProperty({
-    description: '排序字段',
-    example: 'updatedAt',
-    enum: ['updatedAt', 'createdAt', 'customerNumber', 'customerName'],
-    default: 'updatedAt',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  @IsIn(['updatedAt', 'createdAt', 'customerNumber', 'customerName'])
-  sortBy?: string = 'updatedAt';
-
-  @ApiProperty({
-    description: '排序方向',
-    example: 'DESC',
-    enum: ['ASC', 'DESC'],
-    default: 'DESC',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  @IsIn(['ASC', 'DESC'])
-  sortOrder?: 'ASC' | 'DESC' = 'DESC';
 
   @ApiProperty({
     description: '页码，从1开始',
@@ -155,6 +112,58 @@ export class CustomerSearchResultDto {
     example: '2025-06-27T08:16:28.000Z'
   })
   updatedAt: Date;
+}
+
+/**
+ * 客户列表查询DTO
+ * 用于客户列表接口的查询参数
+ */
+export class CustomerListQueryDto {
+  @ApiProperty({
+    description: '客户编号，支持模糊匹配',
+    example: 'C001',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  customerNumber?: string;
+
+  @ApiProperty({
+    description: '客户名称，支持模糊匹配',
+    example: '科技',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  customerName?: string;
+
+  @ApiProperty({
+    description: '页码，从1开始',
+    example: 1,
+    minimum: 1,
+    default: 1,
+    required: false
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Transform(({ value }) => parseInt(value))
+  page?: number = 1;
+
+  @ApiProperty({
+    description: '每页数量，范围1-100',
+    example: 10,
+    minimum: 1,
+    maximum: 100,
+    default: 10,
+    required: false
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  @Transform(({ value }) => parseInt(value))
+  limit?: number = 10;
 }
 
 /**

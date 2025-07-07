@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException, ConflictException, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 import { CustomLogger } from '../config/logger.config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, In } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { SearchCustomerDto, CustomerSearchResultDto } from './dto/search-customer.dto';
+import { SearchCustomerDto } from './dto/search-customer.dto';
 import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
 import { AmapService } from './services/amap.service';
 import * as XLSX from 'xlsx';
@@ -84,35 +84,8 @@ export class CustomersService {
       });
     }
 
-    // 搜索条件：更新人
-    if (searchDto.updateBy) {
-      queryBuilder.andWhere('customer.updateBy LIKE :updateBy', {
-        updateBy: `%${searchDto.updateBy}%`,
-      });
-    }
-
-    // 状态筛选（仅超级管理员可见）
-    const isSuperAdmin = this.checkIsSuperAdmin(currentUser);
-    if (searchDto.status && isSuperAdmin) {
-      queryBuilder.andWhere('customer.status = :status', {
-        status: searchDto.status,
-      });
-    }
-
-    // 排序
-    const sortBy = searchDto.sortBy || 'updatedAt';
-    const sortOrder = searchDto.sortOrder || 'DESC';
-
-    // 映射排序字段到数据库字段
-    const sortFieldMap = {
-      'updatedAt': 'customer.updatedAt',
-      'createdAt': 'customer.createdAt',
-      'customerNumber': 'customer.customerNumber',
-      'customerName': 'customer.customerName'
-    };
-
-    const dbSortField = sortFieldMap[sortBy] || 'customer.updatedAt';
-    queryBuilder.orderBy(dbSortField, sortOrder);
+    // 默认按更新时间倒序排列
+    queryBuilder.orderBy('customer.updatedAt', 'DESC');
 
     // 分页
     const page = searchDto.page || 1;
@@ -125,6 +98,7 @@ export class CustomersService {
     const [data, total] = await queryBuilder.getManyAndCount();
 
     // 根据用户权限过滤返回字段
+    const isSuperAdmin = this.checkIsSuperAdmin(currentUser);
     const filteredData = data.map(customer => this.filterCustomerFields(customer, isSuperAdmin));
 
     const totalPages = Math.ceil(total / limit);

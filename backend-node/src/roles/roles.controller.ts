@@ -19,7 +19,9 @@ import {
   ApiQuery,
   ApiBody
 } from '@nestjs/swagger';
-import { RolesService, CreateRoleDto, UpdateRoleDto, SearchRoleDto } from './roles.service';
+import { RolesService, CreateRoleDto, UpdateRoleDto } from './roles.service';
+import { RoleQueryDto } from '../common/dto/pagination.dto';
+import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('👥 角色管理')
@@ -98,7 +100,7 @@ export class RolesController {
   async create(@Body() createRoleDto: CreateRoleDto) {
     const role = await this.rolesService.create(createRoleDto);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '创建成功',
       data: role
     };
@@ -107,16 +109,16 @@ export class RolesController {
   @Get()
   @ApiOperation({ summary: '获取角色列表' })
   @ApiResponse({ status: 200, description: '获取成功' })
-  async findAll(@Query() searchDto: SearchRoleDto) {
+  async findAll(@Query() searchDto: RoleQueryDto) {
     const { roles, total } = await this.rolesService.findAll(searchDto);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: {
         list: roles,
         total,
         page: searchDto.page || 1,
-        size: searchDto.size || 10
+        size: searchDto.limit || 10
       }
     };
   }
@@ -127,7 +129,7 @@ export class RolesController {
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const role = await this.rolesService.findOne(id);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
       data: role
     };
@@ -142,7 +144,7 @@ export class RolesController {
   ) {
     const role = await this.rolesService.update(id, updateRoleDto);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '更新成功',
       data: role
     };
@@ -154,7 +156,7 @@ export class RolesController {
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.rolesService.remove(id);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '删除成功'
     };
   }
@@ -203,7 +205,7 @@ export class RolesController {
   ) {
     await this.rolesService.assignPermissions(id, body.permissionIds);
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '权限分配成功'
     };
   }
@@ -259,7 +261,7 @@ export class RolesController {
       miniAppLoginEnabled: body.miniAppLoginEnabled 
     });
     return {
-      code: 200,
+      code: RESPONSE_CODES.SUCCESS,
       message: '小程序登录权限更新成功',
       data: {
         id: role.id,

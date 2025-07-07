@@ -1,13 +1,14 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { SearchCustomerDto } from './dto/search-customer.dto';
+import { SearchCustomerDto, CustomerListQueryDto } from './dto/search-customer.dto';
 import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 
 @ApiTags('客户管理 - Customer Management')
@@ -21,41 +22,16 @@ export class CustomersController {
 
   @ApiOperation({
     summary: '获取客户列表',
-    description: `
-获取客户列表，支持搜索、排序和分页功能。
-
-**查询字段：**
-- 客户编号、客户名、门店地址、仓库地址、更新人、状态(仅超级管理员可见)、更新时间（同步时间）
-
-**搜索功能：**
-- 客户编号：支持模糊匹配
-- 客户名：支持模糊匹配
-- 更新人：支持模糊匹配
-
-**排序功能：**
-- 默认按更新时间倒序排列
-- 支持按更新时间、创建时间、客户编号、客户名排序
-
-**权限说明：**
-- 普通用户：无法查看和筛选客户状态
-- 超级管理员：可以查看和筛选客户状态
-    `
+    description: `获取客户列表，支持搜索、排序和分页功能。`
   })
-  @ApiQuery({ name: 'page', description: '页码', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', description: '每页数量', required: false, example: 10 })
-  @ApiQuery({ name: 'customerNumber', description: '客户编号搜索（模糊匹配）', required: false, example: 'C001' })
-  @ApiQuery({ name: 'customerName', description: '客户名称搜索（模糊匹配）', required: false, example: '科技' })
-  @ApiQuery({ name: 'updateBy', description: '更新人搜索（模糊匹配）', required: false, example: '管理员' })
-  @ApiQuery({ name: 'status', description: '状态筛选（仅超级管理员可见）', required: false, enum: ['active', 'inactive'] })
-  @ApiQuery({ name: 'sortBy', description: '排序字段', required: false, enum: ['updatedAt', 'createdAt', 'customerNumber', 'customerName'], example: 'updatedAt' })
-  @ApiQuery({ name: 'sortOrder', description: '排序方向', required: false, enum: ['ASC', 'DESC'], example: 'DESC' })
+
   @ApiResponse({
     status: 200,
     description: '获取成功',
     schema: {
       type: 'object',
       properties: {
-        code: { type: 'number', example: 0 },
+        code: { type: 'number', example: 200 },
         message: { type: 'string', example: '获取成功' },
         data: {
           type: 'array',
@@ -82,24 +58,20 @@ export class CustomersController {
   })
   @ApiResponse({ status: 500, description: '获取失败' })
   @Get()
-  async findAll(@Query() query: any, @Request() req) {
+  async findAll(@Query() query: CustomerListQueryDto, @Request() req) {
     try {
       const currentUser = req.user; // 从JWT中获取当前用户信息
 
       // 检查是否有搜索条件
-      const hasSearchParams = query.customerNumber || query.customerName || query.updateBy || query.status;
+      const hasSearchParams = query.customerNumber || query.customerName;
 
-      if (hasSearchParams || query.sortBy || query.sortOrder) {
-        // 有搜索条件或排序要求，使用搜索功能
+      if (hasSearchParams) {
+        // 有搜索条件，使用搜索功能
         const searchDto: SearchCustomerDto = {
           customerNumber: query.customerNumber,
           customerName: query.customerName,
-          updateBy: query.updateBy,
-          status: query.status,
-          sortBy: query.sortBy || 'updatedAt',
-          sortOrder: query.sortOrder || 'DESC',
-          page: parseInt(query.page) || 1,
-          limit: parseInt(query.limit) || 10,
+          page: query.page || 1,
+          limit: query.limit || 10,
         };
 
         this.logger.log(`客户搜索请求 - 用户: ${currentUser?.username}, 参数: ${JSON.stringify(searchDto)}`);
@@ -107,8 +79,8 @@ export class CustomersController {
         const result = await this.customersService.search(searchDto, currentUser);
 
         return {
-          code: 0,
-          message: '搜索成功',
+          code: RESPONSE_CODES.SUCCESS,
+          message: RESPONSE_MESSAGES.SEARCH_SUCCESS,
           data: result.data,
           total: result.total,
           page: result.page,
@@ -117,16 +89,16 @@ export class CustomersController {
         };
       } else {
         // 没有搜索条件，使用普通分页（默认按更新时间排序）
-        const page = parseInt(query.page) || 1;
-        const limit = parseInt(query.limit) || 10;
+        const page = query.page || 1;
+        const limit = query.limit || 10;
 
         this.logger.log(`客户列表请求 - 用户: ${currentUser?.username}, 页码: ${page}, 每页: ${limit}`);
 
         const result = await this.customersService.findAll(page, limit, currentUser);
 
         return {
-          code: 0,
-          message: '获取成功',
+          code: RESPONSE_CODES.SUCCESS,
+          message: RESPONSE_MESSAGES.GET_SUCCESS,
           data: result.data,
           total: result.total,
           page: result.page,
@@ -137,7 +109,7 @@ export class CustomersController {
     } catch (error) {
       this.logger.error(`获取客户列表失败: ${error.message}`, error.stack);
       return {
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '获取失败',
         data: null,
         error: error.message,
@@ -149,17 +121,14 @@ export class CustomersController {
     summary: '搜索客户',
     description: '根据客户编号、名称、地址等条件搜索客户'
   })
-  @ApiQuery({ name: 'customerNumber', required: false, description: '客户编号（模糊匹配）', example: 'C001' })
-  @ApiQuery({ name: 'customerName', required: false, description: '客户名称（模糊匹配）', example: '科技' })
-  @ApiQuery({ name: 'storeAddress', required: false, description: '门店地址（模糊匹配）', example: '科技园' })
-  @ApiQuery({ name: 'warehouseAddress', required: false, description: '仓库地址（模糊匹配）', example: '物流园' })
+
   @ApiResponse({ 
     status: 200, 
     description: '搜索成功',
     schema: {
       type: 'object',
       properties: {
-        code: { type: 'number', example: 0 },
+        code: { type: 'number', example: 200 },
         message: { type: 'string', example: '搜索成功' },
         data: {
           type: 'array',
@@ -175,14 +144,14 @@ export class CustomersController {
       const result = await this.customersService.search(query);
       
       return {
-        code: 0,
-        message: '搜索成功',
+        code: RESPONSE_CODES.SUCCESS,
+        message: RESPONSE_MESSAGES.SEARCH_SUCCESS,
         data: result.data,
         total: result.total,
       };
     } catch (error) {
       return {
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '搜索失败',
         data: null,
         error: error.message,
@@ -194,12 +163,7 @@ export class CustomersController {
     summary: 'Excel导出',
     description: '导出客户数据为Excel文件，支持选择性导出或全部导出'
   })
-  @ApiQuery({
-    name: 'customerIds',
-    description: '要导出的客户ID列表，用逗号分隔，不提供则导出全部',
-    required: false,
-    example: '1,2,3'
-  })
+
   @ApiResponse({
     status: 200,
     description: '导出成功',
@@ -249,7 +213,7 @@ export class CustomersController {
     } catch (error) {
       this.logger.error(`Excel导出失败: ${error.message}`, error.stack);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '导出失败',
         data: null,
         error: error.message,
@@ -266,7 +230,7 @@ export class CustomersController {
     description: '获取成功',
     schema: {
       example: {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '获取成功',
         data: {
           lastSyncTime: '2025-06-27T08:16:28.000Z'
@@ -280,7 +244,7 @@ export class CustomersController {
       const lastSyncTime = await this.customersService.getLastSyncTime();
 
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '获取成功',
         data: {
           lastSyncTime
@@ -289,7 +253,7 @@ export class CustomersController {
     } catch (error) {
       this.logger.error(`获取最后同步时间失败: ${error.message}`, error.stack);
       return {
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '获取失败',
         data: null,
         error: error.message,
@@ -308,7 +272,7 @@ export class CustomersController {
     schema: {
       type: 'object',
       properties: {
-        code: { type: 'number', example: 0 },
+        code: { type: 'number', example: 200 },
         message: { type: 'string', example: '获取成功' },
         data: {
           type: 'object',
@@ -338,7 +302,7 @@ export class CustomersController {
       if (!customer) {
         this.logger.warn(`客户不存在 - ID: ${id}`);
         return res.status(HttpStatus.NOT_FOUND).json({
-          code: 404,
+          code: 403,
           message: '客户不存在',
           data: null,
         });
@@ -346,14 +310,14 @@ export class CustomersController {
 
       this.logger.log(`获取客户详情成功 - ID: ${id}, 客户名称: ${customer.customerName}`);
       return res.status(HttpStatus.OK).json({
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '获取成功',
         data: customer,
       });
     } catch (error) {
       this.logger.error(`获取客户详情失败 - ID: ${id}, 错误: ${error.message}`, error.stack);
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '获取失败',
         data: null,
         error: error.message,
@@ -393,7 +357,7 @@ export class CustomersController {
     schema: {
       type: 'object',
       properties: {
-        code: { type: 'number', example: 0 },
+        code: { type: 'number', example: 200 },
         message: { type: 'string', example: '创建成功' },
         data: {
           type: 'object',
@@ -419,13 +383,13 @@ export class CustomersController {
       const customer = await this.customersService.create(createCustomerDto);
       
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '创建成功',
         data: customer,
       };
     } catch (error) {
       return {
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '创建失败',
         data: null,
         error: error.message,
@@ -466,7 +430,7 @@ export class CustomersController {
     schema: {
       type: 'object',
       properties: {
-        code: { type: 'number', example: 0 },
+        code: { type: 'number', example: 200 },
         message: { type: 'string', example: '更新成功' },
         data: {
           type: 'object',
@@ -494,20 +458,20 @@ export class CustomersController {
       
       if (!customer) {
         return {
-          code: 404,
+          code: 403,
           message: '客户不存在',
           data: null,
         };
       }
       
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '更新成功',
         data: customer,
       };
     } catch (error) {
       return {
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '更新失败',
         data: null,
         error: error.message,
@@ -525,7 +489,7 @@ export class CustomersController {
     description: '删除成功',
     schema: {
       example: {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '删除成功',
         data: {
           id: 1,
@@ -544,20 +508,20 @@ export class CustomersController {
       
       if (!customer) {
         return {
-          code: 404,
+          code: 403,
           message: '客户不存在',
           data: null,
         };
       }
       
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '删除成功',
         data: customer,
       };
     } catch (error) {
       return {
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '删除失败',
         data: null,
         error: error.message,
@@ -574,7 +538,7 @@ export class CustomersController {
     description: '同步成功',
     schema: {
       example: {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '同步成功',
         data: {
           message: '同步成功',
@@ -592,13 +556,13 @@ export class CustomersController {
       const result = await this.customersService.syncExternalCustomers(externalCustomers);
 
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '同步成功',
         data: result,
       };
     } catch (error) {
       return {
-        code: error.status || 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: error.message || '同步失败',
         data: null,
       };
@@ -614,7 +578,7 @@ export class CustomersController {
     description: '同步成功',
     schema: {
       example: {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '客户数据同步成功',
         data: {
           message: '客户数据同步成功',
@@ -631,13 +595,13 @@ export class CustomersController {
       const result = await this.customersService.syncCustomers(syncCustomerDto);
 
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '同步成功',
         data: result,
       };
     } catch (error) {
       return {
-        code: 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: '同步失败',
         data: null,
         error: error.message,
@@ -654,7 +618,7 @@ export class CustomersController {
     description: '删除成功',
     schema: {
       example: {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '批量删除成功',
         data: {
           message: '批量删除成功',
@@ -671,13 +635,13 @@ export class CustomersController {
       const result = await this.customersService.batchDelete(batchDeleteDto);
 
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '批量删除成功',
         data: result,
       };
     } catch (error) {
       return {
-        code: error.status || 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: error.message || '删除失败',
         data: null,
         error: error.message,
@@ -694,7 +658,7 @@ export class CustomersController {
     description: '编码成功',
     schema: {
       example: {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '地理编码成功',
         data: {
           address: '深圳市南山区科技园南区',
@@ -715,13 +679,13 @@ export class CustomersController {
       const result = await this.customersService.geocodeAddress(geocodeDto);
 
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '地理编码成功',
         data: result,
       };
     } catch (error) {
       return {
-        code: error.status || 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: error.message || '编码失败',
         data: null,
         error: error.message,
@@ -738,7 +702,7 @@ export class CustomersController {
     description: '编码成功',
     schema: {
       example: {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '逆地理编码成功',
         data: {
           address: '深圳市南山区科技园南区',
@@ -759,13 +723,13 @@ export class CustomersController {
       const result = await this.customersService.reverseGeocodeLocation(reverseGeocodeDto);
 
       return {
-        code: 0,
+        code: RESPONSE_CODES.SUCCESS,
         message: '逆地理编码成功',
         data: result,
       };
     } catch (error) {
       return {
-        code: error.status || 500,
+        code: RESPONSE_CODES.SERVER_ERROR,
         message: error.message || '编码失败',
         data: null,
         error: error.message,

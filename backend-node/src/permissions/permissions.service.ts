@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Permission } from './entities/permission.entity';
+import { PermissionQueryDto } from '../common/dto/pagination.dto';
 
 export interface CreatePermissionDto {
   permissionName: string;
@@ -62,8 +63,8 @@ export class PermissionsService {
     return await this.permissionRepository.save(permission);
   }
 
-  async findAll(searchDto: SearchPermissionDto): Promise<{ permissions: Permission[], total: number }> {
-    const { page = 1, size = 10, ...filters } = searchDto;
+  async findAll(searchDto: PermissionQueryDto): Promise<{ permissions: Permission[], total: number }> {
+    const { page = 1, limit = 10, ...filters } = searchDto;
     const where: any = {};
 
     if (filters.permissionName) {
@@ -81,8 +82,8 @@ export class PermissionsService {
 
     const [permissions, total] = await this.permissionRepository.findAndCount({
       where,
-      skip: (page - 1) * size,
-      take: size,
+      skip: (page - 1) * limit,
+      take: limit,
       order: { sortOrder: 'ASC', createTime: 'DESC' }
     });
 

@@ -5,7 +5,7 @@ import { User } from './entities/user.entity';
 import { Role } from '../roles/entities/role.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { SearchUserDto } from './dto/search-user.dto';
+import { UserQueryDto } from '../common/dto/pagination.dto';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -70,8 +70,8 @@ export class UsersService {
     return await this.findOne(savedUser.id);
   }
 
-  async findAll(searchDto: SearchUserDto): Promise<{ users: User[], total: number }> {
-    const { page = 1, size = 10, ...filters } = searchDto;
+  async findAll(searchDto: UserQueryDto): Promise<{ users: User[], total: number }> {
+    const { page = 1, limit = 10, ...filters } = searchDto;
     const where: any = {};
 
     if (filters.username) {
@@ -96,8 +96,8 @@ export class UsersService {
     const [users, total] = await this.userRepository.findAndCount({
       where,
       relations: ['roles'],
-      skip: (page - 1) * size,
-      take: size,
+      skip: (page - 1) * limit,
+      take: limit,
       order: { createTime: 'DESC' }
     });
 
