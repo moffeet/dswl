@@ -233,8 +233,8 @@ export function generatePermissionTree(): PermissionTreeNode[] {
   return tree;
 }
 
-// 系统保护角色（不可删除和修改）
-export const PROTECTED_ROLES = ['admin', 'normal', 'miniapp'];
+// 系统保护角色（不可删除和修改基本信息，但可以分配权限）
+export const PROTECTED_ROLES = ['admin', 'normal'];
 
 // 默认角色（删除其他角色时用户会被分配到此角色）
 export const DEFAULT_ROLE = 'normal';

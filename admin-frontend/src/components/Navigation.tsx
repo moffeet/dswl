@@ -15,8 +15,6 @@ export default function Navigation({}: NavigationProps) {
     { href: '/customers', icon: '👤', label: '客户管理' },
     { href: '/users', icon: '👥', label: '用户管理' },
     { href: '/roles', icon: '🔐', label: '角色权限' },
-    { href: '/menus', icon: '📋', label: '菜单管理' },
-
   ];
 
   const userMenuItems = [

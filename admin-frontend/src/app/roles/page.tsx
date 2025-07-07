@@ -550,7 +550,7 @@ export default function RolesPage() {
     });
 
     // 设置已选择的权限代码
-    if (role.permissions) {
+    if (role.permissions && role.permissions.length > 0) {
       const permissionCodes = role.permissions.map(p => p.permissionCode);
       setSelectedPermissionCodes(permissionCodes);
     } else {
@@ -577,6 +577,8 @@ export default function RolesPage() {
 
 
   const handleSubmit = async (values: any) => {
+    if (loading) return; // 防止重复提交
+
     setLoading(true);
     try {
       const roleData = {
@@ -586,11 +588,8 @@ export default function RolesPage() {
 
       let success = false;
       if (editingRole) {
-        // 编辑模式：先更新角色基本信息，再分配权限
+        // 编辑模式：调用更新角色接口，同时处理角色信息和权限
         success = await updateRole(editingRole.id, roleData);
-        if (success && selectedPermissionCodes.length >= 0) {
-          success = await assignPermissions(editingRole.id, selectedPermissionCodes);
-        }
       } else {
         // 新增模式：创建角色
         success = await createRole(roleData);
@@ -856,8 +855,8 @@ export default function RolesPage() {
       {/* 新建/编辑角色弹窗 */}
       <Modal
         title={
-          <div style={{ 
-            fontSize: '16px', 
+          <div style={{
+            fontSize: '16px',
             fontWeight: '600',
             color: '#1e293b'
           }}>
@@ -865,7 +864,13 @@ export default function RolesPage() {
           </div>
         }
         visible={visible}
-        onOk={form.submit}
+        onOk={() => {
+          form.validate().then((values) => {
+            handleSubmit(values);
+          }).catch((error) => {
+            console.log('表单验证失败:', error);
+          });
+        }}
         onCancel={() => {
           setVisible(false);
           form.resetFields();
