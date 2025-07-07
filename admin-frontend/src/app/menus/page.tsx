@@ -49,11 +49,11 @@ interface MenuPermission {
 }
 
 // API调用函数
-const fetchMenuPermissions = async (page: number = 1, size: number = 10, searchParams?: any): Promise<{list: MenuPermission[], total: number}> => {
+const fetchMenuPermissions = async (page: number = 1, limit: number = 10, searchParams?: any): Promise<{list: MenuPermission[], total: number}> => {
   try {
     const params = new URLSearchParams({
       page: page.toString(),
-      size: size.toString(),
+      limit: limit.toString(),
     });
     
     // 添加搜索参数

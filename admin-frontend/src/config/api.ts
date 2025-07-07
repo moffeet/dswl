@@ -57,3 +57,12 @@ export const AMAP_CONFIG = {
     reverseGeocode: '/geocode/regeo', // 逆地理编码
   }
 };
+
+// 获取认证头的工具函数
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Authorization': token ? `Bearer ${token}` : '',
+    'Content-Type': 'application/json',
+  };
+};

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Re
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
+import { CustomerSyncService } from './sync.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto, CustomerListQueryDto } from './dto/search-customer.dto';
@@ -18,7 +19,10 @@ import { CustomLogger } from '../config/logger.config';
 export class CustomersController {
   private readonly logger = new CustomLogger('CustomersController');
 
-  constructor(private readonly customersService: CustomersService) {}
+  constructor(
+    private readonly customersService: CustomersService,
+    private readonly customerSyncService: CustomerSyncService,
+  ) {}
 
   @ApiOperation({
     summary: '获取客户列表',
@@ -737,7 +741,79 @@ export class CustomersController {
     }
   }
 
+  // 同步相关接口
+  @Post('sync')
+  @ApiOperation({
+    summary: '同步外部系统客户数据',
+    description: '从外部系统同步客户数据，以客户ID为基准，同步客户名称和门店地址，保留仓库地址不变'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '同步成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '同步完成' },
+        data: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            syncedCount: { type: 'number', example: 5 },
+            createdCount: { type: 'number', example: 2 },
+            updatedCount: { type: 'number', example: 3 },
+            skippedCount: { type: 'number', example: 0 },
+            lastSyncTime: { type: 'string', format: 'date-time' }
+          }
+        }
+      }
+    }
+  })
+  async syncFromExternal() {
+    try {
+      this.logger.log('开始同步外部系统客户数据');
+
+      const result = await this.customerSyncService.syncFromExternalSystem();
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: result.message,
+        data: result
+      };
+    } catch (error) {
+      this.logger.error(`同步外部系统数据失败: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: `同步失败: ${error.message}`,
+        data: null
+      };
+    }
+  }
 
 
 
+  @Get('sync-metadata')
+  @ApiOperation({
+    summary: '获取同步元数据',
+    description: '获取外部系统同步的元数据信息，包括最后同步时间等'
+  })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getSyncMetadata() {
+    try {
+      const metadata = await this.customerSyncService.getSyncMetadata();
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: RESPONSE_MESSAGES.GET_SUCCESS,
+        data: metadata
+      };
+    } catch (error) {
+      this.logger.error(`获取同步元数据失败: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: `获取失败: ${error.message}`,
+        data: null
+      };
+    }
+  }
 }

@@ -73,11 +73,11 @@ interface Permission {
 }
 
 // API调用函数
-const fetchRoles = async (page: number = 1, size: number = 10, searchParams?: any): Promise<{list: Role[], total: number}> => {
+const fetchRoles = async (page: number = 1, limit: number = 10, searchParams?: any): Promise<{list: Role[], total: number}> => {
   try {
     const params = new URLSearchParams({
       page: page.toString(),
-      size: size.toString(),
+      limit: limit.toString(),
     });
     
     // 添加搜索参数

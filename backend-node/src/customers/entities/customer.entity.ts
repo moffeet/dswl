@@ -132,4 +132,5 @@ export class Customer {
   })
   @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
-} 
+
+}

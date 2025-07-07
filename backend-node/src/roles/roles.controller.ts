@@ -118,7 +118,7 @@ export class RolesController {
         list: roles,
         total,
         page: searchDto.page || 1,
-        size: searchDto.limit || 10
+        limit: searchDto.limit || 10
       }
     };
   }

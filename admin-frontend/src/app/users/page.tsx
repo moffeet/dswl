@@ -58,11 +58,11 @@ interface Role {
 }
 
 // API调用函数
-const fetchUsers = async (page: number = 1, size: number = 10, searchParams?: any): Promise<{list: User[], total: number}> => {
+const fetchUsers = async (page: number = 1, limit: number = 10, searchParams?: any): Promise<{list: User[], total: number}> => {
   try {
     const params = new URLSearchParams({
       page: page.toString(),
-      size: size.toString(),
+      limit: limit.toString(),
     });
     
     // 添加搜索参数

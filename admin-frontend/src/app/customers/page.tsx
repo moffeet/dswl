@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Table, Button, Input, Space, Modal, Form, Message, Card, Typography, Grid, Tooltip, Select } from '@arco-design/web-react';
 import { IconSearch, IconRefresh, IconPlus, IconEdit, IconDelete, IconEye, IconSettings } from '@arco-design/web-react/icon';
-import { API_ENDPOINTS } from '@/config/api';
+import { API_ENDPOINTS, getAuthHeaders } from '@/config/api';
 import api from '@/utils/api';
 import { geocodeAddress, reverseGeocodeCoordinates } from '@/utils/amap';
+import CustomerSync from '@/components/CustomerSync';
 
 const { Title } = Typography;
 const { Row, Col } = Grid;
@@ -83,14 +84,7 @@ export default function CustomersPage() {
   const [storeCoordinatesEditable, setStoreCoordinatesEditable] = useState(false);
   const [warehouseCoordinatesEditable, setWarehouseCoordinatesEditable] = useState(false);
 
-  // 获取认证头
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Authorization': token ? `Bearer ${token}` : '',
-      'Content-Type': 'application/json',
-    };
-  };
+
 
   // 获取客户列表
   const fetchCustomers = async (params: any = {}) => {
@@ -105,7 +99,7 @@ export default function CustomersPage() {
 
       const queryParams = new URLSearchParams({
         page: (params.page || pagination.current).toString(),
-        pageSize: pagination.pageSize.toString(),
+        limit: pagination.pageSize.toString(),
         ...(searchParams.customerNumber && { customerNumber: searchParams.customerNumber }),
         ...(searchParams.customerName && { customerName: searchParams.customerName }),
       });
@@ -116,7 +110,7 @@ export default function CustomersPage() {
       
       if (response.ok) {
         const result = await response.json();
-        if (result.code === 0 && Array.isArray(result.data)) {
+        if (result.code === 200 && Array.isArray(result.data)) {
           // 映射后端字段到前端字段
           const mappedData = result.data.map((item: any) => ({
             id: item.id,
@@ -395,7 +389,7 @@ export default function CustomersPage() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.code === 0) {
+        if (result.code === 200) {
           const { longitude, latitude } = result.data;
           if (addressType === 'store') {
             geocodeForm.setFieldsValue({
@@ -494,7 +488,7 @@ export default function CustomersPage() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.code === 0) {
+        if (result.code === 200) {
           const { address } = result.data;
           if (addressType === 'store') {
             geocodeForm.setFieldsValue({
@@ -584,7 +578,7 @@ export default function CustomersPage() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.code === 0) {
+        if (result.code === 200) {
           Message.success('地址信息保存成功');
           setGeocodeModalVisible(false);
           fetchCustomers();
@@ -635,7 +629,7 @@ export default function CustomersPage() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.code === 0) {
+        if (result.code === 200) {
           const { syncedCount, updatedCount, newCount } = result.data;
           Message.success(`同步成功！共处理 ${syncedCount} 个客户，更新 ${updatedCount} 个，新增 ${newCount} 个`);
           setSyncModalVisible(false);
@@ -665,7 +659,7 @@ export default function CustomersPage() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.code === 0) {
+        if (result.code === 200) {
           setLastSyncTime(result.data.lastSyncTime);
         }
       }
@@ -911,15 +905,7 @@ export default function CustomersPage() {
             )}
           </div>
           <Space size={12}>
-            <Button
-              type="primary"
-              icon={<IconRefresh />}
-              onClick={handleSync}
-              loading={syncLoading}
-              style={{ borderRadius: 6 }}
-            >
-              同步
-            </Button>
+            <CustomerSync onSyncComplete={() => fetchCustomers()} />
             <Button
               type="primary"
               status="danger"

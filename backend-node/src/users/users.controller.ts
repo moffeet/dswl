@@ -165,7 +165,7 @@ export class UsersController {
             },
             total: { type: 'number', example: 50 },
             page: { type: 'number', example: 1 },
-            size: { type: 'number', example: 10 }
+            limit: { type: 'number', example: 10 }
           }
         }
       }
@@ -186,7 +186,7 @@ export class UsersController {
         list: safeUsers,
         total,
         page: searchDto.page || 1,
-        size: searchDto.limit || 10
+        limit: searchDto.limit || 10
       }
     };
   }
