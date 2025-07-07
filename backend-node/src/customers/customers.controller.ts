@@ -154,13 +154,80 @@ export class CustomersController {
     }
   }
 
-  @ApiOperation({ 
+  @ApiOperation({
+    summary: 'Excel导出',
+    description: '导出客户数据为Excel文件，支持选择性导出或全部导出'
+  })
+  @ApiQuery({
+    name: 'customerIds',
+    description: '要导出的客户ID列表，用逗号分隔，不提供则导出全部',
+    required: false,
+    example: '1,2,3'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '导出成功',
+    headers: {
+      'Content-Type': {
+        description: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      },
+      'Content-Disposition': {
+        description: 'attachment; filename="customers.xlsx"'
+      }
+    }
+  })
+  @ApiResponse({ status: 500, description: '导出失败' })
+  @Get('export')
+  async exportToExcel(@Query('customerIds') customerIds: string, @Res() res: Response) {
+    try {
+      let ids: number[] | undefined;
+
+      this.logger.log(`Excel导出开始 - 接收到的customerIds参数: ${customerIds}`);
+
+      if (customerIds && customerIds.trim()) {
+        // 解析并验证ID
+        const parsedIds = customerIds.split(',')
+          .map(id => parseInt(id.trim()))
+          .filter(id => !isNaN(id) && id > 0 && Number.isInteger(id) && Number.isFinite(id));
+
+        this.logger.log(`控制器 - 解析后的有效IDs: ${JSON.stringify(parsedIds)}`);
+
+        // 如果解析后没有有效的ID，则设为undefined以导出全部
+        if (parsedIds.length === 0) {
+          ids = undefined;
+        } else {
+          ids = parsedIds;
+        }
+      }
+
+      const excelBuffer = await this.customersService.exportToExcel(ids);
+
+      const filename = `customers_${new Date().toISOString().split('T')[0]}.xlsx`;
+      this.logger.log(`Excel导出成功 - 文件名: ${filename}, 大小: ${excelBuffer.length} bytes`);
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', excelBuffer.length);
+
+      res.send(excelBuffer);
+    } catch (error) {
+      this.logger.error(`Excel导出失败: ${error.message}`, error.stack);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        code: 500,
+        message: '导出失败',
+        data: null,
+        error: error.message,
+      });
+    }
+  }
+
+  @ApiOperation({
     summary: '获取客户详情',
     description: '根据客户ID获取客户的详细信息'
   })
   @ApiParam({ name: 'id', description: '客户ID', example: 1 })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -186,30 +253,35 @@ export class CustomersController {
   @ApiResponse({ status: 404, description: '客户不存在' })
   @ApiResponse({ status: 500, description: '获取失败' })
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @Res() res: Response) {
     try {
+      this.logger.log(`获取客户详情 - ID: ${id}`);
+
       const customer = await this.customersService.findOne(parseInt(id));
-      
+
       if (!customer) {
-        return {
+        this.logger.warn(`客户不存在 - ID: ${id}`);
+        return res.status(HttpStatus.NOT_FOUND).json({
           code: 404,
           message: '客户不存在',
           data: null,
-        };
+        });
       }
-      
-      return {
+
+      this.logger.log(`获取客户详情成功 - ID: ${id}, 客户名称: ${customer.customerName}`);
+      return res.status(HttpStatus.OK).json({
         code: 0,
         message: '获取成功',
         data: customer,
-      };
+      });
     } catch (error) {
-      return {
+      this.logger.error(`获取客户详情失败 - ID: ${id}, 错误: ${error.message}`, error.stack);
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         code: 500,
         message: '获取失败',
         data: null,
         error: error.message,
-      };
+      });
     }
   }
 
@@ -625,72 +697,7 @@ export class CustomersController {
     }
   }
 
-  @ApiOperation({
-    summary: 'Excel导出',
-    description: '导出客户数据为Excel文件，支持选择性导出或全部导出'
-  })
-  @ApiQuery({
-    name: 'customerIds',
-    description: '要导出的客户ID列表，用逗号分隔，不提供则导出全部',
-    required: false,
-    example: '1,2,3'
-  })
-  @ApiResponse({
-    status: 200,
-    description: '导出成功',
-    headers: {
-      'Content-Type': {
-        description: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      },
-      'Content-Disposition': {
-        description: 'attachment; filename="customers.xlsx"'
-      }
-    }
-  })
-  @ApiResponse({ status: 500, description: '导出失败' })
-  @Get('export')
-  async exportToExcel(@Query('customerIds') customerIds: string, @Res() res: Response) {
-    try {
-      let ids: number[] | undefined;
 
-      this.logger.log(`Excel导出开始 - 接收到的customerIds参数: ${customerIds}`);
-
-      if (customerIds && customerIds.trim()) {
-        // 解析并验证ID
-        const parsedIds = customerIds.split(',')
-          .map(id => parseInt(id.trim()))
-          .filter(id => !isNaN(id) && id > 0 && Number.isInteger(id) && Number.isFinite(id));
-
-        this.logger.log(`控制器 - 解析后的有效IDs: ${JSON.stringify(parsedIds)}`);
-
-        // 如果解析后没有有效的ID，则设为undefined以导出全部
-        if (parsedIds.length === 0) {
-          ids = undefined;
-        } else {
-          ids = parsedIds;
-        }
-      }
-
-      const excelBuffer = await this.customersService.exportToExcel(ids);
-
-      const filename = `customers_${new Date().toISOString().split('T')[0]}.xlsx`;
-      this.logger.log(`Excel导出成功 - 文件名: ${filename}, 大小: ${excelBuffer.length} bytes`);
-
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Length', excelBuffer.length);
-
-      res.send(excelBuffer);
-    } catch (error) {
-      this.logger.error(`Excel导出失败: ${error.message}`, error.stack);
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        code: 500,
-        message: '导出失败',
-        data: null,
-        error: error.message,
-      });
-    }
-  }
 
   @ApiOperation({
     summary: '获取最后同步时间',
