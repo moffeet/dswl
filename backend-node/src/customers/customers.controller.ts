@@ -294,6 +294,31 @@ export class CustomersController {
       }
     }
   })
+  @Get('sync-metadata')
+  @ApiOperation({
+    summary: '获取同步元数据',
+    description: '获取外部系统同步的元数据信息，包括最后同步时间等'
+  })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getSyncMetadata() {
+    try {
+      const metadata = await this.customerSyncService.getSyncMetadata();
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: RESPONSE_MESSAGES.GET_SUCCESS,
+        data: metadata
+      };
+    } catch (error) {
+      this.logger.error(`获取同步元数据失败: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: `获取同步元数据失败: ${error.message}`,
+        data: null
+      };
+    }
+  }
+
   @ApiResponse({ status: 404, description: '客户不存在' })
   @ApiResponse({ status: 500, description: '获取失败' })
   @Get(':id')
@@ -745,7 +770,7 @@ export class CustomersController {
   @Post('sync')
   @ApiOperation({
     summary: '同步外部系统客户数据',
-    description: '从外部系统同步客户数据，以客户ID为基准，同步客户名称和门店地址，保留仓库地址不变'
+    description: '从外部系统同步客户数据，以客户ID为基准。新客户：同步门店地址并计算经纬度；现有客户：只更新客户名称，门店地址以当前系统为准'
   })
   @ApiResponse({
     status: 200,
@@ -769,11 +794,14 @@ export class CustomersController {
       }
     }
   })
-  async syncFromExternal() {
+  async syncFromExternal(@Request() req: any) {
     try {
       this.logger.log('开始同步外部系统客户数据');
 
-      const result = await this.customerSyncService.syncFromExternalSystem();
+      const currentUser = req.user; // 从JWT中获取当前用户信息
+      const updateBy = currentUser?.username || currentUser?.name || '系统管理员';
+
+      const result = await this.customerSyncService.syncFromExternalSystem(updateBy);
 
       return {
         code: RESPONSE_CODES.SUCCESS,
@@ -790,30 +818,4 @@ export class CustomersController {
     }
   }
 
-
-
-  @Get('sync-metadata')
-  @ApiOperation({
-    summary: '获取同步元数据',
-    description: '获取外部系统同步的元数据信息，包括最后同步时间等'
-  })
-  @ApiResponse({ status: 200, description: '获取成功' })
-  async getSyncMetadata() {
-    try {
-      const metadata = await this.customerSyncService.getSyncMetadata();
-
-      return {
-        code: RESPONSE_CODES.SUCCESS,
-        message: RESPONSE_MESSAGES.GET_SUCCESS,
-        data: metadata
-      };
-    } catch (error) {
-      this.logger.error(`获取同步元数据失败: ${error.message}`, error.stack);
-      return {
-        code: RESPONSE_CODES.SERVER_ERROR,
-        message: `获取失败: ${error.message}`,
-        data: null
-      };
-    }
-  }
 }

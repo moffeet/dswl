@@ -222,10 +222,20 @@ export class CustomersService {
     }
 
     // 更新同步时间
-    await this.customerRepository.update(
-      syncDto.customerIds ? { id: In(syncDto.customerIds) } : {},
-      { lastSyncTime: syncTime }
-    );
+    if (syncDto.customerIds && syncDto.customerIds.length > 0) {
+      // 只更新指定的客户
+      await this.customerRepository.update(
+        { id: In(syncDto.customerIds) },
+        { lastSyncTime: syncTime }
+      );
+    } else {
+      // 更新所有客户
+      await this.customerRepository
+        .createQueryBuilder()
+        .update(Customer)
+        .set({ lastSyncTime: syncTime })
+        .execute();
+    }
 
     return {
       message: '客户数据同步成功',

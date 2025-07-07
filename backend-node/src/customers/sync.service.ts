@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
+import { AmapService } from './services/amap.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,8 +11,8 @@ import * as path from 'path';
  * 负责从外部系统同步客户数据
  * 同步规则：
  * - 以客户ID为基准进行匹配
- * - 门店地址和仓库地址以当前系统为准（不同步）
- * - 其他信息（客户名称、联系人等）以外部系统为准
+ * - 新客户：同步门店地址并通过高德API计算经纬度
+ * - 现有客户：只更新客户名称，门店地址以当前系统为准
  */
 @Injectable()
 export class CustomerSyncService {
@@ -20,12 +21,13 @@ export class CustomerSyncService {
   constructor(
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
+    private readonly amapService: AmapService,
   ) {}
 
   /**
    * 从外部系统同步客户数据
    */
-  async syncFromExternalSystem(): Promise<{
+  async syncFromExternalSystem(updateBy: string = '系统管理员'): Promise<{
     success: boolean;
     message: string;
     syncedCount: number;
@@ -57,9 +59,10 @@ export class CustomerSyncService {
           if (existingCustomer) {
             // 更新现有客户（保留地址信息）
             const updatedCustomer = await this.updateCustomerFromExternal(
-              existingCustomer, 
+              existingCustomer,
               externalCustomer,
-              syncTime
+              syncTime,
+              updateBy
             );
             
             if (updatedCustomer) {
@@ -71,7 +74,7 @@ export class CustomerSyncService {
             }
           } else {
             // 创建新客户
-            await this.createCustomerFromExternal(externalCustomer, syncTime);
+            await this.createCustomerFromExternal(externalCustomer, syncTime, updateBy);
             createdCount++;
             this.logger.log(`创建新客户: ${externalCustomer.customerName} (ID: ${externalCustomer.id})`);
           }
@@ -127,7 +130,7 @@ export class CustomerSyncService {
   /**
    * 从外部数据创建新客户
    */
-  private async createCustomerFromExternal(externalCustomer: any, syncTime: Date): Promise<Customer> {
+  private async createCustomerFromExternal(externalCustomer: any, syncTime: Date, updateBy: string): Promise<Customer> {
     const customer = new Customer();
 
     // 设置基本信息（来自外部系统）
@@ -138,14 +141,30 @@ export class CustomerSyncService {
     customer.storeAddress = externalCustomer.storeAddress;
     customer.status = 'active';
 
+    // 通过高德API获取门店地址的经纬度
+    if (externalCustomer.storeAddress) {
+      try {
+        this.logger.log(`正在获取门店地址经纬度: ${externalCustomer.storeAddress}`);
+        const geocodeResult = await this.amapService.geocode(externalCustomer.storeAddress);
+
+        if (geocodeResult && geocodeResult.longitude && geocodeResult.latitude) {
+          customer.storeLongitude = geocodeResult.longitude;
+          customer.storeLatitude = geocodeResult.latitude;
+          this.logger.log(`门店地址经纬度获取成功: ${geocodeResult.longitude}, ${geocodeResult.latitude}`);
+        } else {
+          this.logger.warn(`门店地址经纬度获取失败: ${externalCustomer.storeAddress}`);
+        }
+      } catch (error) {
+        this.logger.error(`获取门店地址经纬度时出错: ${error.message}`);
+      }
+    }
+
     // 设置同步信息
     customer.lastSyncTime = syncTime;
-    customer.updateBy = '外部系统同步';
+    customer.updateBy = updateBy;
 
     // 仓库地址暂时为空，等待后续手动设置
     customer.warehouseAddress = null;
-    customer.storeLongitude = null;
-    customer.storeLatitude = null;
     customer.warehouseLongitude = null;
     customer.warehouseLatitude = null;
 
@@ -158,25 +177,21 @@ export class CustomerSyncService {
   private async updateCustomerFromExternal(
     existingCustomer: Customer,
     externalCustomer: any,
-    syncTime: Date
+    syncTime: Date,
+    updateBy: string
   ): Promise<Customer | null> {
     let hasChanges = false;
 
-    // 检查并更新客户名称（保留仓库地址信息）
+    // 只检查并更新客户名称（门店地址以当前系统为准，不同步）
     if (existingCustomer.customerName !== externalCustomer.customerName) {
       existingCustomer.customerName = externalCustomer.customerName;
       hasChanges = true;
-    }
-
-    // 检查并更新门店地址
-    if (existingCustomer.storeAddress !== externalCustomer.storeAddress) {
-      existingCustomer.storeAddress = externalCustomer.storeAddress;
-      hasChanges = true;
+      this.logger.log(`更新客户名称: ${existingCustomer.customerNumber} - ${externalCustomer.customerName}`);
     }
 
     if (hasChanges) {
       existingCustomer.lastSyncTime = syncTime;
-      existingCustomer.updateBy = '外部系统同步';
+      existingCustomer.updateBy = updateBy;
       return await this.customerRepository.save(existingCustomer);
     }
 
@@ -190,11 +205,35 @@ export class CustomerSyncService {
    */
   async getSyncMetadata(): Promise<any> {
     try {
+      // 获取外部系统数据
       const externalData = this.loadExternalSystemData();
-      return externalData.syncMetadata;
+
+      // 获取当前系统客户数量
+      const currentCustomerCount = await this.customerRepository.count();
+
+      // 获取最后同步时间（查找最近一次同步的客户）
+      const lastSyncCustomer = await this.customerRepository
+        .createQueryBuilder('customer')
+        .where('customer.lastSyncTime IS NOT NULL')
+        .orderBy('customer.lastSyncTime', 'DESC')
+        .getOne();
+
+      return {
+        dataSource: externalData.syncMetadata?.dataSource || '外部ERP系统',
+        currentCustomerCount: currentCustomerCount,
+        externalCustomerCount: externalData.customers?.length || 0,
+        lastSyncTime: lastSyncCustomer?.lastSyncTime || null,
+        syncVersion: externalData.syncMetadata?.syncVersion || 'v1.2.0'
+      };
     } catch (error) {
       this.logger.error(`获取同步元数据失败: ${error.message}`);
-      return null;
+      return {
+        dataSource: '外部ERP系统',
+        currentCustomerCount: 0,
+        externalCustomerCount: 0,
+        lastSyncTime: null,
+        syncVersion: 'v1.2.0'
+      };
     }
   }
 }

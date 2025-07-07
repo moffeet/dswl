@@ -310,7 +310,7 @@ start_backend() {
     if PORT=$BACKEND_PORT nohup npm run start:dev > "../$LOG_DIR/backend.log" 2>&1 & then
         local pid=$!
         echo $pid > "../$PID_DIR/backend.pid"
-        sleep 8  # 给更多时间启动
+        sleep 3  # 减少等待时间，加快启动
         
         if kill -0 $pid 2>/dev/null && check_port $BACKEND_PORT; then
             log_success "后端服务启动成功 (开发模式, PID: $pid, 端口: $BACKEND_PORT)"
@@ -329,7 +329,7 @@ start_backend() {
         if PORT=$BACKEND_PORT nohup npm start > "../$LOG_DIR/backend.log" 2>&1 & then
             local pid=$!
             echo $pid > "../$PID_DIR/backend.pid"
-            sleep 8  # 给更多时间启动
+            sleep 3  # 减少等待时间，加快启动
             
             if kill -0 $pid 2>/dev/null && check_port $BACKEND_PORT; then
                 log_success "后端服务启动成功 (生产模式, PID: $pid, 端口: $BACKEND_PORT)"
