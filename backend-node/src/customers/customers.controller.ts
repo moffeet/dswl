@@ -6,7 +6,7 @@ import { CustomerSyncService } from './sync.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto, CustomerListQueryDto } from './dto/search-customer.dto';
-import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
+import { BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
@@ -598,45 +598,7 @@ export class CustomersController {
     }
   }
 
-  @ApiOperation({
-    summary: '同步客户数据',
-    description: '与另一个系统同步客户数据，地址信息以当前系统为准'
-  })
-  @ApiResponse({
-    status: 200,
-    description: '同步成功',
-    schema: {
-      example: {
-        code: RESPONSE_CODES.SUCCESS,
-        message: '客户数据同步成功',
-        data: {
-          message: '客户数据同步成功',
-          syncTime: '2025-06-27T08:16:28.000Z',
-          count: 5
-        }
-      }
-    }
-  })
-  @ApiResponse({ status: 500, description: '同步失败' })
-  @Post('sync')
-  async syncCustomers(@Body() syncCustomerDto: SyncCustomerDto) {
-    try {
-      const result = await this.customersService.syncCustomers(syncCustomerDto);
-
-      return {
-        code: RESPONSE_CODES.SUCCESS,
-        message: '同步成功',
-        data: result,
-      };
-    } catch (error) {
-      return {
-        code: RESPONSE_CODES.SERVER_ERROR,
-        message: '同步失败',
-        data: null,
-        error: error.message,
-      };
-    }
-  }
+  // 删除了重复的同步端点，使用下面的外部系统同步端点
 
   @ApiOperation({
     summary: '批量删除客户',
@@ -806,7 +768,14 @@ export class CustomersController {
       return {
         code: RESPONSE_CODES.SUCCESS,
         message: result.message,
-        data: result
+        data: {
+          message: result.message,
+          syncedCount: result.syncedCount,
+          createdCount: result.createdCount,
+          updatedCount: result.updatedCount,
+          skippedCount: result.skippedCount,
+          syncTime: result.lastSyncTime
+        }
       };
     } catch (error) {
       this.logger.error(`同步外部系统数据失败: ${error.message}`, error.stack);

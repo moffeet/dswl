@@ -29,14 +29,11 @@ interface SyncResult {
 }
 
 interface SyncMetadata {
+  dataSource: string;
+  currentCustomerCount: number;
+  externalCustomerCount: number;
   lastSyncTime: string;
   syncVersion: string;
-  totalCustomers: number;
-  totalStoreAddresses: number;
-  totalWarehouses: number;
-  dataSource: string;
-  syncStatus: string;
-  nextScheduledSync: string;
 }
 
 interface CustomerSyncProps {
@@ -86,11 +83,26 @@ export default function CustomerSync({ onSyncComplete }: CustomerSyncProps) {
         const result = await response.json();
         if (result.code === 200) {
           setSyncResult(result.data);
-          Message.success('同步完成！');
-          
+
+          // 显示同步结果弹窗
+          const { createdCount, updatedCount, syncedCount } = result.data;
+          Modal.success({
+            title: '同步完成',
+            content: (
+              <div>
+                <p>本次同步处理了 <strong>{syncedCount}</strong> 个客户：</p>
+                <ul style={{ marginLeft: 20, marginTop: 8 }}>
+                  <li>新增客户：<strong style={{ color: '#00B42A' }}>{createdCount}</strong> 个</li>
+                  <li>更新客户：<strong style={{ color: '#1890FF' }}>{updatedCount}</strong> 个</li>
+                </ul>
+              </div>
+            ),
+            okText: '确定'
+          });
+
           // 刷新元数据
           await fetchSyncMetadata();
-          
+
           // 通知父组件刷新数据
           if (onSyncComplete) {
             onSyncComplete();
@@ -164,7 +176,7 @@ export default function CustomerSync({ onSyncComplete }: CustomerSyncProps) {
             </Button>
           </Space>
         }
-        width={600}
+        style={{ width: 600 }}
         maskClosable={false}
       >
         <div style={{ padding: '16px 0' }}>
@@ -205,34 +217,16 @@ export default function CustomerSync({ onSyncComplete }: CustomerSyncProps) {
                     value: syncMetadata.syncVersion
                   },
                   {
-                    label: '客户总数',
-                    value: `${syncMetadata.totalCustomers} 个`
+                    label: '外部系统客户数',
+                    value: `${syncMetadata.externalCustomerCount} 个`
                   },
                   {
-                    label: '门店地址',
-                    value: `${syncMetadata.totalStoreAddresses} 个`
-                  },
-                  {
-                    label: '仓库地址',
-                    value: `${syncMetadata.totalWarehouses} 个`
-                  },
-                  {
-                    label: '同步状态',
-                    value: (
-                      <span style={{ 
-                        color: syncMetadata.syncStatus === 'completed' ? '#00B42A' : '#F53F3F' 
-                      }}>
-                        {syncMetadata.syncStatus === 'completed' ? '正常' : '异常'}
-                      </span>
-                    )
+                    label: '当前系统客户数',
+                    value: `${syncMetadata.currentCustomerCount} 个`
                   },
                   {
                     label: '上次同步',
                     value: formatDateTime(syncMetadata.lastSyncTime)
-                  },
-                  {
-                    label: '下次计划',
-                    value: formatDateTime(syncMetadata.nextScheduledSync)
                   }
                 ]}
               />

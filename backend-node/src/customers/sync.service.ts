@@ -51,9 +51,9 @@ export class CustomerSyncService {
 
       for (const externalCustomer of externalData.customers) {
         try {
-          // 根据客户ID查找现有客户
+          // 根据客户编号查找现有客户
           const existingCustomer = await this.customerRepository.findOne({
-            where: { id: externalCustomer.id }
+            where: { customerNumber: externalCustomer.customerNumber }
           });
 
           if (existingCustomer) {
@@ -67,21 +67,21 @@ export class CustomerSyncService {
             
             if (updatedCustomer) {
               updatedCount++;
-              this.logger.log(`更新客户: ${externalCustomer.customerName} (ID: ${externalCustomer.id})`);
+              this.logger.log(`更新客户: ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber})`);
             } else {
               skippedCount++;
-              this.logger.log(`跳过客户: ${externalCustomer.customerName} (ID: ${externalCustomer.id}) - 无需更新`);
+              this.logger.log(`跳过客户: ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber}) - 无需更新`);
             }
           } else {
             // 创建新客户
             await this.createCustomerFromExternal(externalCustomer, syncTime, updateBy);
             createdCount++;
-            this.logger.log(`创建新客户: ${externalCustomer.customerName} (ID: ${externalCustomer.id})`);
+            this.logger.log(`创建新客户: ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber})`);
           }
           
           syncedCount++;
         } catch (error) {
-          this.logger.error(`同步客户失败 (ID: ${externalCustomer.id}): ${error.message}`);
+          this.logger.error(`同步客户失败 (编号: ${externalCustomer.customerNumber}): ${error.message}`);
           skippedCount++;
         }
       }
@@ -134,9 +134,7 @@ export class CustomerSyncService {
     const customer = new Customer();
 
     // 设置基本信息（来自外部系统）
-    // 生成客户编号
-    const customerCount = await this.customerRepository.count();
-    customer.customerNumber = `C${String(customerCount + 1).padStart(3, '0')}`;
+    customer.customerNumber = externalCustomer.customerNumber;
     customer.customerName = externalCustomer.customerName;
     customer.storeAddress = externalCustomer.storeAddress;
     customer.status = 'active';
