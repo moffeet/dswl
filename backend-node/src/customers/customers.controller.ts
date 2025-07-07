@@ -8,12 +8,15 @@ import { SearchCustomerDto } from './dto/search-customer.dto';
 import { SyncCustomerDto, BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto, ExternalCustomerDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CustomLogger } from '../config/logger.config';
 
 @ApiTags('客户管理 - Customer Management')
 @Controller('customers')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class CustomersController {
+  private readonly logger = new CustomLogger('CustomersController');
+
   constructor(private readonly customersService: CustomersService) {}
 
   @ApiOperation({ 
@@ -650,7 +653,7 @@ export class CustomersController {
     try {
       let ids: number[] | undefined;
 
-      console.log('控制器 - 接收到的customerIds参数:', customerIds);
+      this.logger.log(`Excel导出开始 - 接收到的customerIds参数: ${customerIds}`);
 
       if (customerIds && customerIds.trim()) {
         // 解析并验证ID
@@ -658,7 +661,7 @@ export class CustomersController {
           .map(id => parseInt(id.trim()))
           .filter(id => !isNaN(id) && id > 0 && Number.isInteger(id) && Number.isFinite(id));
 
-        console.log('控制器 - 解析后的有效IDs:', parsedIds);
+        this.logger.log(`控制器 - 解析后的有效IDs: ${JSON.stringify(parsedIds)}`);
 
         // 如果解析后没有有效的ID，则设为undefined以导出全部
         if (parsedIds.length === 0) {
@@ -671,6 +674,7 @@ export class CustomersController {
       const excelBuffer = await this.customersService.exportToExcel(ids);
 
       const filename = `customers_${new Date().toISOString().split('T')[0]}.xlsx`;
+      this.logger.log(`Excel导出成功 - 文件名: ${filename}, 大小: ${excelBuffer.length} bytes`);
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -678,6 +682,7 @@ export class CustomersController {
 
       res.send(excelBuffer);
     } catch (error) {
+      this.logger.error(`Excel导出失败: ${error.message}`, error.stack);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         code: 500,
         message: '导出失败',

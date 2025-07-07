@@ -105,6 +105,10 @@ export class UsersService {
   }
 
   async findOne(id: number): Promise<User> {
+    if (!id || typeof id !== 'number' || !Number.isInteger(id) || id <= 0) {
+      throw new NotFoundException('无效的用户ID');
+    }
+
     const user = await this.userRepository.findOne({
       where: { id },
       relations: ['roles']

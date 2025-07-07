@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, HttpException, HttpStatus } from '@nestjs/common';
+import { CustomLogger } from '../config/logger.config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { Customer } from './entities/customer.entity';
@@ -11,6 +12,8 @@ import * as XLSX from 'xlsx';
 
 @Injectable()
 export class CustomersService {
+  private readonly logger = new CustomLogger('CustomersService');
+
   constructor(
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
@@ -96,6 +99,10 @@ export class CustomersService {
   }
 
   async findOne(id: number): Promise<Customer> {
+    if (!id || typeof id !== 'number' || !Number.isInteger(id) || id <= 0) {
+      throw new NotFoundException('无效的客户ID');
+    }
+
     return await this.customerRepository.findOne({
       where: { id },
     });
@@ -221,32 +228,36 @@ export class CustomersService {
    * @returns Excel文件Buffer
    */
   async exportToExcel(customerIds?: number[]): Promise<Buffer> {
-    let customers: Customer[];
+    try {
+      let customers: Customer[];
 
-    console.log('导出Excel - 接收到的customerIds:', customerIds);
+      this.logger.log(`导出Excel - 接收到的customerIds: ${JSON.stringify(customerIds)}`);
 
-    if (customerIds && customerIds.length > 0) {
-      // 验证所有ID都是有效的数字
-      const validIds = customerIds.filter(id =>
-        !isNaN(id) &&
-        id > 0 &&
-        Number.isInteger(id) &&
-        Number.isFinite(id)
-      );
-      console.log('导出Excel - 有效的customerIds:', validIds);
+      if (customerIds && customerIds.length > 0) {
+        // 验证所有ID都是有效的数字
+        const validIds = customerIds.filter(id =>
+          !isNaN(id) &&
+          id > 0 &&
+          Number.isInteger(id) &&
+          Number.isFinite(id)
+        );
+        this.logger.log(`导出Excel - 有效的customerIds: ${JSON.stringify(validIds)}`);
 
-      if (validIds.length > 0) {
-        customers = await this.customerRepository.find({
-          where: { id: In(validIds) }
-        });
+        if (validIds.length > 0) {
+          customers = await this.customerRepository.find({
+            where: { id: In(validIds) }
+          });
+          this.logger.log(`导出Excel - 查询到${customers.length}个指定客户`);
+        } else {
+          // 如果没有有效ID，导出全部
+          customers = await this.customerRepository.find();
+          this.logger.log(`导出Excel - 没有有效ID，查询到${customers.length}个全部客户`);
+        }
       } else {
-        // 如果没有有效ID，导出全部
+        // 导出全部客户
         customers = await this.customerRepository.find();
+        this.logger.log(`导出Excel - 导出全部，查询到${customers.length}个客户`);
       }
-    } else {
-      // 导出全部客户
-      customers = await this.customerRepository.find();
-    }
 
     // 准备Excel数据
     const excelData = customers.map(customer => ({
@@ -290,9 +301,14 @@ export class CustomersService {
 
     XLSX.utils.book_append_sheet(workbook, worksheet, '客户数据');
 
-    // 生成Excel文件
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    return excelBuffer;
+      // 生成Excel文件
+      const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      this.logger.log(`导出Excel - 成功生成Excel文件，大小: ${excelBuffer.length} bytes`);
+      return excelBuffer;
+    } catch (error) {
+      this.logger.error(`导出Excel失败: ${error.message}`, error.stack);
+      throw new HttpException(`导出Excel失败: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   /**

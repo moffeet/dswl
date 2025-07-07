@@ -9,6 +9,7 @@ import { RolesModule } from './roles/roles.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { AuthModule } from './auth/auth.module';
 import { CustomersModule } from './customers/customers.module';
+import { LogsModule } from './logs/logs.module';
 import { HealthController } from './common/health.controller';
 import { databaseConfig } from './config/database.config';
 
@@ -41,6 +42,7 @@ import { databaseConfig } from './config/database.config';
     PermissionsModule,
     AuthModule,
     CustomersModule,
+    LogsModule,
   ],
   controllers: [HealthController],
 })

@@ -13,7 +13,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
   database: process.env.DATABASE_NAME || 'logistics_db',
   entities: [User, Role, Permission, Customer],
   synchronize: false, // 关闭自动同步，使用现有数据库结构
-  logging: true,
+  logging: true, // 只记录错误日志，不记录查询日志
   timezone: '+08:00',
   charset: 'utf8mb4',
   extra: {
