@@ -46,9 +46,19 @@ export class UsersService {
       }
     }
 
+    // 生成密码：如果未提供密码，则自动生成（手机后4位 + asdf）
+    let password = createUserDto.password;
+    if (!password) {
+      if (!createUserDto.phone || createUserDto.phone.length < 4) {
+        throw new ConflictException('未提供密码时，手机号必须提供且长度不少于4位');
+      }
+      const phoneLast4 = createUserDto.phone.slice(-4);
+      password = phoneLast4 + 'asdf';
+    }
+
     // 加密密码
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = this.userRepository.create({
       ...createUserDto,
@@ -59,12 +69,23 @@ export class UsersService {
     const savedUser = await this.userRepository.save(user);
 
     // 分配角色
-    if (createUserDto.roleIds && createUserDto.roleIds.length > 0) {
-      const roles = await this.roleRepository.find({
-        where: { id: In(createUserDto.roleIds) }
+    if (createUserDto.roleId) {
+      const role = await this.roleRepository.findOne({
+        where: { id: createUserDto.roleId }
       });
-      savedUser.roles = roles;
-      await this.userRepository.save(savedUser);
+      if (role) {
+        savedUser.roles = [role];
+        await this.userRepository.save(savedUser);
+      }
+    } else {
+      // 如果没有指定角色，分配默认的普通用户角色
+      const defaultRole = await this.roleRepository.findOne({
+        where: { roleCode: 'normal' }
+      });
+      if (defaultRole) {
+        savedUser.roles = [defaultRole];
+        await this.userRepository.save(savedUser);
+      }
     }
 
     return await this.findOne(savedUser.id);
@@ -165,32 +186,34 @@ export class UsersService {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
     }
 
-    // 移除roleIds字段，避免尝试更新不存在的数据库字段
-    const { roleIds, ...updateData } = updateUserDto;
+    // 移除roleId字段，避免尝试更新不存在的数据库字段
+    const { roleId, ...updateData } = updateUserDto;
 
     await this.userRepository.update(id, updateData);
 
     // 更新角色
-    if (roleIds !== undefined) {
+    if (roleId !== undefined) {
       try {
         const updatedUser = await this.userRepository.findOne({
           where: { id },
           relations: ['roles']
         });
-        
+
         if (!updatedUser) {
           throw new NotFoundException('更新后的用户不存在');
         }
-        
-        if (roleIds.length > 0) {
-          const roles = await this.roleRepository.find({
-            where: { id: In(roleIds) }
+
+        if (roleId) {
+          const role = await this.roleRepository.findOne({
+            where: { id: roleId }
           });
-          updatedUser.roles = roles;
+          if (role) {
+            updatedUser.roles = [role];
+          }
         } else {
           updatedUser.roles = [];
         }
-        
+
         await this.userRepository.save(updatedUser);
       } catch (error) {
         console.error('角色更新失败:', error);
@@ -204,6 +227,24 @@ export class UsersService {
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
     await this.userRepository.remove(user);
+  }
+
+  async removeMultiple(ids: number[]): Promise<void> {
+    if (!ids || ids.length === 0) {
+      throw new ConflictException('请提供要删除的用户ID');
+    }
+
+    // 检查所有用户是否存在
+    const users = await this.userRepository.find({
+      where: { id: In(ids) }
+    });
+
+    if (users.length !== ids.length) {
+      throw new NotFoundException('部分用户不存在');
+    }
+
+    // 批量删除
+    await this.userRepository.remove(users);
   }
 
   async validateUser(username: string, password: string): Promise<User | null> {

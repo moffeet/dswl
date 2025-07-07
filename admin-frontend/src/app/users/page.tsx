@@ -18,16 +18,18 @@ import {
   Grid
 } from '@arco-design/web-react';
 import type { ColumnProps } from '@arco-design/web-react/lib/Table';
-import { 
-  IconPlus, 
-  IconEdit, 
-  IconDelete, 
-  IconSearch, 
-  IconRefresh, 
+import {
+  IconPlus,
+  IconEdit,
+  IconDelete,
+  IconSearch,
+  IconRefresh,
   IconUser,
   IconLock,
   IconCheckCircle,
-  IconUserGroup
+  IconUserGroup,
+  IconEye,
+  IconEyeInvisible
 } from '@arco-design/web-react/icon';
 import { API_ENDPOINTS } from '@/config/api';
 
@@ -164,6 +166,24 @@ const deleteUser = async (id: number): Promise<boolean> => {
   }
 };
 
+const deleteMultipleUsers = async (ids: number[]): Promise<boolean> => {
+  try {
+    const response = await fetch(API_ENDPOINTS.users, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ids }),
+    });
+    const result = await response.json();
+    return result.code === 200;
+  } catch (error) {
+    console.error('批量删除用户失败:', error);
+    return false;
+  }
+};
+
 export default function UsersPage() {
   const [data, setData] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -181,6 +201,12 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
+
+  // 多选状态
+  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
+
+  // 密码显示状态
+  const [showPasswords, setShowPasswords] = useState<{[key: number]: boolean}>({});
 
   // 加载数据
   const loadData = async () => {
@@ -261,6 +287,29 @@ export default function UsersPage() {
       width: 120,
     },
     {
+      title: '密码',
+      key: 'password',
+      width: 120,
+      align: 'center',
+      render: (_, record) => (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+            {showPasswords[record.id] ? '123456' : '******'}
+          </span>
+          <Button
+            type="text"
+            size="mini"
+            icon={showPasswords[record.id] ? <IconEyeInvisible /> : <IconEye />}
+            onClick={() => togglePasswordVisibility(record.id)}
+            style={{
+              color: '#64748b',
+              padding: '2px 4px'
+            }}
+          />
+        </div>
+      ),
+    },
+    {
       title: '角色',
       key: 'roles',
       width: 200,
@@ -284,6 +333,16 @@ export default function UsersPage() {
           status={status === 'normal' ? 'success' : 'default'}
           text={status === 'normal' ? '启用' : '禁用'}
         />
+      ),
+    },
+    {
+      title: '上次登录时间',
+      dataIndex: 'lastLoginTime',
+      width: 160,
+      render: (time: string) => (
+        <div style={{ color: '#64748b', fontSize: '12px' }}>
+          {time ? new Date(time).toLocaleString() : '从未登录'}
+        </div>
       ),
     },
     {
@@ -360,7 +419,7 @@ export default function UsersPage() {
     setEditingUser(user);
     form.setFieldsValue({
       ...user,
-      roleIds: user.roles?.map(role => role.id) || []
+      roleId: user.roles?.[0]?.id || null  // 取第一个角色的ID，因为现在是单选
     });
     setVisible(true);
   };
@@ -379,13 +438,46 @@ export default function UsersPage() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      Message.warning('请选择要删除的用户');
+      return;
+    }
+
+    try {
+      const success = await deleteMultipleUsers(selectedRowKeys);
+      if (success) {
+        Message.success(`成功删除 ${selectedRowKeys.length} 个用户`);
+        setSelectedRowKeys([]);
+        loadData();
+      } else {
+        Message.error('批量删除失败');
+      }
+    } catch (error) {
+      Message.error('批量删除失败');
+    }
+  };
+
+  const togglePasswordVisibility = (userId: number) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
+
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
+      // 处理角色字段：将roleId转换为后端期望的格式
+      const submitData = {
+        ...values,
+        // 如果是编辑模式且只修改角色，确保roleId字段正确传递
+      };
+
       const success = editingUser
-        ? await updateUser(editingUser.id, values)
-        : await createUser(values);
-      
+        ? await updateUser(editingUser.id, submitData)
+        : await createUser(submitData);
+
       if (success) {
         Message.success(editingUser ? '更新成功' : '创建成功');
         setVisible(false);
@@ -597,22 +689,47 @@ export default function UsersPage() {
             <IconUser style={{ color: '#3b82f6' }} />
             用户管理
           </div>
-              <Button
-                type="primary"
-            icon={<IconPlus />} 
-                onClick={handleAdd}
-                style={{
-              height: '40px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                  border: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                }}
-              >
-                新增用户
-              </Button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <Button
+                  type="primary"
+                  icon={<IconPlus />}
+                  onClick={handleAdd}
+                  style={{
+                    height: '40px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    border: 'none',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                  }}
+                >
+                  新增用户
+                </Button>
+
+                <Popconfirm
+                  title={`确认删除选中的 ${selectedRowKeys.length} 个用户？`}
+                  onOk={handleBatchDelete}
+                  okText="确认"
+                  cancelText="取消"
+                  disabled={selectedRowKeys.length === 0}
+                >
+                  <Button
+                    type="primary"
+                    status="danger"
+                    icon={<IconDelete />}
+                    disabled={selectedRowKeys.length === 0}
+                    style={{
+                      height: '40px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                </Popconfirm>
+              </div>
         </div>
 
         {/* 表格 */}
@@ -622,6 +739,13 @@ export default function UsersPage() {
           rowKey="id"
           loading={loading}
           pagination={false}
+          rowSelection={{
+            type: 'checkbox',
+            selectedRowKeys,
+            onChange: (selectedRowKeys) => {
+              setSelectedRowKeys(selectedRowKeys as number[]);
+            },
+          }}
           style={{
             borderRadius: '8px',
             overflow: 'hidden'
@@ -697,100 +821,129 @@ export default function UsersPage() {
           onSubmit={handleSubmit}
           style={{ marginTop: '16px' }}
         >
-          <GridRow gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>用户名</span>}
-                  field="username"
-                  rules={[{ required: true, message: '请输入用户名' }]}
-                >
-                <Input 
-                  placeholder="请输入用户名" 
-                  style={{ 
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
-                />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>昵称</span>}
-                field="nickname"
-              >
-                <Input 
-                  placeholder="请输入昵称" 
-                  style={{ 
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
-                />
-                </Form.Item>
-              </Col>
-          </GridRow>
-
-          <GridRow gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>邮箱</span>}
-                field="email"
-                  rules={[
-                  { type: 'email', message: '请输入有效的邮箱地址' }
-                ]}
-              >
-                <Input 
-                  placeholder="请输入邮箱" 
-                  style={{ 
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
-                />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>手机号</span>}
-                field="phone"
-              >
-                <Input 
-                  placeholder="请输入手机号" 
-                  style={{ 
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
-                />
-                </Form.Item>
-              </Col>
-          </GridRow>
-
           {!editingUser && (
-                <Form.Item
-              label={<span style={{ fontSize: '14px', fontWeight: '500' }}>密码</span>}
-              field="password"
-              rules={[{ required: true, message: '请输入密码' }]}
-            >
-              <Input.Password 
-                placeholder="请输入密码" 
-                style={{ 
-                  borderRadius: '6px',
-                  height: '36px'
-                }}
-              />
-                </Form.Item>
+            <GridRow gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>用户名</span>}
+                    field="username"
+                    rules={[{ required: true, message: '请输入用户名' }]}
+                  >
+                  <Input
+                    placeholder="请输入用户名"
+                    style={{
+                      borderRadius: '6px',
+                      height: '36px'
+                    }}
+                  />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>昵称</span>}
+                  field="nickname"
+                >
+                  <Input
+                    placeholder="请输入昵称"
+                    style={{
+                      borderRadius: '6px',
+                      height: '36px'
+                    }}
+                  />
+                  </Form.Item>
+                </Col>
+            </GridRow>
           )}
 
+          {!editingUser && (
+            <GridRow gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>邮箱</span>}
+                  field="email"
+                    rules={[
+                    { type: 'email', message: '请输入有效的邮箱地址' }
+                  ]}
+                >
+                  <Input
+                    placeholder="请输入邮箱"
+                    style={{
+                      borderRadius: '6px',
+                      height: '36px'
+                    }}
+                  />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>手机号</span>}
+                  field="phone"
+                  rules={!editingUser ? [{ required: true, message: '请输入手机号' }] : []}
+                >
+                  <Input
+                    placeholder="请输入手机号"
+                    style={{
+                      borderRadius: '6px',
+                      height: '36px'
+                    }}
+                  />
+                  </Form.Item>
+                </Col>
+            </GridRow>
+          )}
+
+          {/* 编辑模式下显示用户基本信息（只读） */}
+          {editingUser && (
+            <div style={{
+              background: '#f8fafc',
+              padding: '16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '12px', color: '#475569' }}>
+                用户基本信息（不可修改）
+              </div>
+              <GridRow gutter={16}>
+                <Col span={8}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <span style={{ color: '#64748b', fontSize: '12px' }}>用户名</span>
+                    <div style={{ fontSize: '14px', fontWeight: '500' }}>{editingUser.username}</div>
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <span style={{ color: '#64748b', fontSize: '12px' }}>昵称</span>
+                    <div style={{ fontSize: '14px', fontWeight: '500' }}>{editingUser.nickname || '-'}</div>
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <span style={{ color: '#64748b', fontSize: '12px' }}>手机号</span>
+                    <div style={{ fontSize: '14px', fontWeight: '500' }}>{editingUser.phone || '-'}</div>
+                  </div>
+                </Col>
+              </GridRow>
+            </div>
+          )}
+
+          {/* 新增用户时不显示密码字段，系统自动生成 */}
+
           <GridRow gutter={16}>
-              <Col span={12}>
+              <Col span={editingUser ? 24 : 12}>
                 <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色</span>}
-                field="roleIds"
+                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>
+                  角色 {editingUser && <span style={{ color: '#ef4444' }}>*</span>}
+                </span>}
+                field="roleId"
+                initialValue={roles.find(role => role.roleCode === 'normal')?.id}
+                rules={[{ required: true, message: '请选择角色' }]}
               >
-                <Select 
+                <Select
                   placeholder="请选择角色"
-                  mode="multiple"
-                  style={{ 
+                  style={{
                     borderRadius: '6px',
-                    minHeight: '36px'
+                    height: '36px'
                   }}
                 >
                   {roles.map(role => (
@@ -801,23 +954,25 @@ export default function UsersPage() {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>状态</span>}
-                  field="status"
-                initialValue="normal"
-              >
-                <Select 
-                  style={{ 
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
+              {!editingUser && (
+                <Col span={12}>
+                  <Form.Item
+                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>状态</span>}
+                    field="status"
+                  initialValue="normal"
                 >
-                  <Option value="normal">启用</Option>
-                  <Option value="disabled">禁用</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
+                  <Select
+                    style={{
+                      borderRadius: '6px',
+                      height: '36px'
+                    }}
+                  >
+                    <Option value="normal">启用</Option>
+                    <Option value="disabled">禁用</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              )}
           </GridRow>
           </Form>
       </Modal>

@@ -3,7 +3,7 @@ import { CreateUserDto } from './create-user.dto';
 import { IsOptional } from 'class-validator';
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
-  @ApiPropertyOptional({ description: '角色ID列表', type: [Number], example: [1, 2] })
+  @ApiPropertyOptional({ description: '角色ID', type: Number, example: 1 })
   @IsOptional()
-  roleIds?: number[];
+  roleId?: number;
 } 

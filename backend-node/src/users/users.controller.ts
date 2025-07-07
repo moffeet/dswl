@@ -232,4 +232,35 @@ export class UsersController {
       message: '删除成功'
     };
   }
+
+  @Delete()
+  @ApiOperation({
+    summary: '批量删除用户',
+    description: '批量删除多个用户，支持传入用户ID数组'
+  })
+  @ApiBody({
+    description: '用户ID数组',
+    schema: {
+      type: 'object',
+      required: ['ids'],
+      properties: {
+        ids: {
+          type: 'array',
+          items: { type: 'number' },
+          description: '要删除的用户ID数组',
+          example: [1, 2, 3]
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 200, description: '批量删除成功' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @ApiResponse({ status: 404, description: '部分用户不存在' })
+  async removeMultiple(@Body() body: { ids: number[] }) {
+    await this.usersService.removeMultiple(body.ids);
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '批量删除成功'
+    };
+  }
 } 

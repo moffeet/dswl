@@ -1,11 +1,17 @@
--- 物流配送管理系统数据库初始化脚本
+-- 物流配送管理系统数据库初始化脚本 (MySQL 8.0 兼容版本)
 -- 开发环境：直接删除重建数据库
 
+-- 设置 MySQL 8.0 兼容模式
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET FOREIGN_KEY_CHECKS = 0;
+SET sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
 DROP DATABASE IF EXISTS logistics_db;
-CREATE DATABASE logistics_db CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE DATABASE logistics_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE logistics_db;
 
 -- 1. 用户表
+DROP TABLE IF EXISTS t_users;
 CREATE TABLE t_users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
     username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
@@ -16,16 +22,17 @@ CREATE TABLE t_users (
     gender ENUM('male', 'female') DEFAULT 'male' COMMENT '性别',
     status ENUM('normal', 'disabled') DEFAULT 'normal' COMMENT '用户状态',
     avatar VARCHAR(255) COMMENT '头像URL',
-    last_login_time DATETIME COMMENT '最后登录时间',
+    last_login_time DATETIME NULL COMMENT '最后登录时间',
     last_login_ip VARCHAR(50) COMMENT '最后登录IP',
     current_login_ip VARCHAR(50) COMMENT '当前登录IP',
     current_token VARCHAR(1000) COMMENT '当前登录token',
     create_by BIGINT COMMENT '创建人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) COMMENT = '用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '用户表';
 
 -- 2. 角色表
+DROP TABLE IF EXISTS t_roles;
 CREATE TABLE t_roles (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '角色ID',
     role_name VARCHAR(50) NOT NULL COMMENT '角色名称',
@@ -36,9 +43,10 @@ CREATE TABLE t_roles (
     create_by BIGINT COMMENT '创建人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) COMMENT = '角色表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '角色表';
 
 -- 3. 权限表 - 分菜单权限和按钮权限
+DROP TABLE IF EXISTS t_permissions;
 CREATE TABLE t_permissions (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '权限ID',
     permission_name VARCHAR(100) NOT NULL COMMENT '权限名称',
@@ -52,31 +60,30 @@ CREATE TABLE t_permissions (
     status ENUM('normal', 'disabled') DEFAULT 'normal' COMMENT '权限状态',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) COMMENT = '权限表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '权限表';
 
 -- 4. 用户角色关联表 - 多对多
+DROP TABLE IF EXISTS t_user_roles;
 CREATE TABLE t_user_roles (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    FOREIGN KEY (user_id) REFERENCES t_users(id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES t_roles(id) ON DELETE CASCADE,
     UNIQUE KEY uk_user_role (user_id, role_id)
-) COMMENT = '用户角色关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '用户角色关联表';
 
 -- 5. 角色权限关联表 - 多对多
+DROP TABLE IF EXISTS t_role_permissions;
 CREATE TABLE t_role_permissions (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     permission_id BIGINT NOT NULL COMMENT '权限ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    FOREIGN KEY (role_id) REFERENCES t_roles(id) ON DELETE CASCADE,
-    FOREIGN KEY (permission_id) REFERENCES t_permissions(id) ON DELETE CASCADE,
     UNIQUE KEY uk_role_permission (role_id, permission_id)
-) COMMENT = '角色权限关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '角色权限关联表';
 
 -- 6. 客户表
+DROP TABLE IF EXISTS t_customers;
 CREATE TABLE t_customers (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     customerNumber VARCHAR(50) NOT NULL UNIQUE,
@@ -92,7 +99,7 @@ CREATE TABLE t_customers (
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updateBy VARCHAR(50) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建索引
 CREATE INDEX idx_users_username ON t_users(username);
@@ -154,12 +161,13 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 ('客户导出', 'btn.customer.export', 'button', @menu_customers_id, 305);
 
 -- 插入角色数据（包含小程序登录权限）
-INSERT INTO t_roles (role_name, role_code, description, mini_app_login_enabled, create_by) VALUES
-('超级管理员', 'admin', '系统超级管理员，拥有所有权限', FALSE, 1),
-('管理员', 'manager', '管理员，拥有系统管理和部分业务权限', FALSE, 1),
-('司机', 'driver', '司机角色，主要负责配送业务', TRUE, 1),
-('销售', 'sales', '销售角色，主要负责客户和订单管理', TRUE, 1),
-('客服', 'service', '客服角色，主要负责客户服务', TRUE, 1);
+INSERT INTO t_roles (role_name, role_code, description, status, mini_app_login_enabled, create_by) VALUES
+('超级管理员', 'admin', '系统超级管理员，拥有所有权限', 'enabled', FALSE, 1),
+('管理员', 'manager', '管理员，拥有系统管理和部分业务权限', 'enabled', FALSE, 1),
+('司机', 'driver', '司机角色，主要负责配送业务', 'enabled', TRUE, 1),
+('销售', 'sales', '销售角色，主要负责客户和订单管理', 'enabled', TRUE, 1),
+('客服', 'service', '客服角色，主要负责客户服务', 'enabled', TRUE, 1),
+('普通用户', 'normal', '普通用户角色，基础权限', 'enabled', FALSE, 1);
 
 -- 插入用户数据（密码均为：123456）
 INSERT INTO t_users (username, password, nickname, phone, email, gender, create_by) VALUES
@@ -240,6 +248,15 @@ SELECT
     create_time
 FROM t_users 
 WHERE username = 'admin';
+
+-- 添加外键约束
+ALTER TABLE t_user_roles ADD CONSTRAINT fk_user_roles_user_id FOREIGN KEY (user_id) REFERENCES t_users(id) ON DELETE CASCADE;
+ALTER TABLE t_user_roles ADD CONSTRAINT fk_user_roles_role_id FOREIGN KEY (role_id) REFERENCES t_roles(id) ON DELETE CASCADE;
+ALTER TABLE t_role_permissions ADD CONSTRAINT fk_role_permissions_role_id FOREIGN KEY (role_id) REFERENCES t_roles(id) ON DELETE CASCADE;
+ALTER TABLE t_role_permissions ADD CONSTRAINT fk_role_permissions_permission_id FOREIGN KEY (permission_id) REFERENCES t_permissions(id) ON DELETE CASCADE;
+
+-- 重新启用外键检查
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- 显示初始化完成信息
 SELECT '🚀 物流配送管理系统 - 数据库初始化完成！' AS message;

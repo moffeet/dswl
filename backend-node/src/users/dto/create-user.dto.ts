@@ -8,11 +8,11 @@ export class CreateUserDto {
   @Length(2, 50, { message: '用户名长度必须在2-50个字符之间' })
   username: string;
 
-  @ApiProperty({ description: '密码', example: '123456' })
-  @IsNotEmpty({ message: '密码不能为空' })
+  @ApiPropertyOptional({ description: '密码（可选，不提供时自动生成）', example: '123456' })
+  @IsOptional()
   @IsString({ message: '密码必须是字符串' })
   @Length(6, 20, { message: '密码长度必须在6-20个字符之间' })
-  password: string;
+  password?: string;
 
   @ApiPropertyOptional({ description: '昵称', example: '张三' })
   @IsOptional()
@@ -46,7 +46,7 @@ export class CreateUserDto {
   @IsString({ message: '头像URL必须是字符串' })
   avatar?: string;
 
-  @ApiPropertyOptional({ description: '角色ID列表', type: [Number], example: [1, 2] })
+  @ApiPropertyOptional({ description: '角色ID', type: Number, example: 1 })
   @IsOptional()
-  roleIds?: number[];
+  roleId?: number;
 } 
