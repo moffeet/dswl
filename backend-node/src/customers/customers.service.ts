@@ -39,63 +39,144 @@ export class CustomersService {
     return await this.customerRepository.save(customer);
   }
 
-  async findAll(page: number = 1, limit: number = 10) {
+  async findAll(page: number = 1, limit: number = 10, currentUser?: any) {
+    this.logger.log(`获取客户列表 - 页码: ${page}, 每页: ${limit}, 用户: ${currentUser?.username || 'unknown'}`);
+
     const [data, total] = await this.customerRepository.findAndCount({
       skip: (page - 1) * limit,
       take: limit,
-      order: { createdAt: 'DESC' },
+      order: { updatedAt: 'DESC' },
     });
 
+    // 根据用户权限过滤返回字段
+    const isSuperAdmin = this.checkIsSuperAdmin(currentUser);
+    const filteredData = data.map(customer => this.filterCustomerFields(customer, isSuperAdmin));
+
+    const totalPages = Math.ceil(total / limit);
+
+    this.logger.log(`获取客户列表完成 - 总计 ${total} 条记录，返回第 ${page} 页，共 ${totalPages} 页`);
+
     return {
-      data,
+      data: filteredData,
       total,
       page,
       limit,
+      totalPages,
     };
   }
 
-  async search(searchDto: SearchCustomerDto) {
+  async search(searchDto: SearchCustomerDto, currentUser?: any) {
+    this.logger.log(`客户搜索开始 - 参数: ${JSON.stringify(searchDto)}, 用户: ${currentUser?.username || 'unknown'}`);
+
     const queryBuilder = this.customerRepository.createQueryBuilder('customer');
 
+    // 搜索条件：客户编号
     if (searchDto.customerNumber) {
       queryBuilder.andWhere('customer.customerNumber LIKE :customerNumber', {
         customerNumber: `%${searchDto.customerNumber}%`,
       });
     }
 
+    // 搜索条件：客户名称
     if (searchDto.customerName) {
       queryBuilder.andWhere('customer.customerName LIKE :customerName', {
         customerName: `%${searchDto.customerName}%`,
       });
     }
 
-    if (searchDto.storeAddress) {
-      queryBuilder.andWhere('customer.storeAddress LIKE :storeAddress', {
-        storeAddress: `%${searchDto.storeAddress}%`,
+    // 搜索条件：更新人
+    if (searchDto.updateBy) {
+      queryBuilder.andWhere('customer.updateBy LIKE :updateBy', {
+        updateBy: `%${searchDto.updateBy}%`,
       });
     }
 
-    if (searchDto.warehouseAddress) {
-      queryBuilder.andWhere('customer.warehouseAddress LIKE :warehouseAddress', {
-        warehouseAddress: `%${searchDto.warehouseAddress}%`,
+    // 状态筛选（仅超级管理员可见）
+    const isSuperAdmin = this.checkIsSuperAdmin(currentUser);
+    if (searchDto.status && isSuperAdmin) {
+      queryBuilder.andWhere('customer.status = :status', {
+        status: searchDto.status,
       });
     }
 
-    // 添加分页支持
+    // 排序
+    const sortBy = searchDto.sortBy || 'updatedAt';
+    const sortOrder = searchDto.sortOrder || 'DESC';
+
+    // 映射排序字段到数据库字段
+    const sortFieldMap = {
+      'updatedAt': 'customer.updatedAt',
+      'createdAt': 'customer.createdAt',
+      'customerNumber': 'customer.customerNumber',
+      'customerName': 'customer.customerName'
+    };
+
+    const dbSortField = sortFieldMap[sortBy] || 'customer.updatedAt';
+    queryBuilder.orderBy(dbSortField, sortOrder);
+
+    // 分页
     const page = searchDto.page || 1;
     const limit = searchDto.limit || 10;
-    
+
     queryBuilder
-      .orderBy('customer.createTime', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
+    // 根据用户权限过滤返回字段
+    const filteredData = data.map(customer => this.filterCustomerFields(customer, isSuperAdmin));
+
+    const totalPages = Math.ceil(total / limit);
+
+    this.logger.log(`客户搜索完成 - 找到 ${total} 条记录，返回第 ${page} 页，共 ${totalPages} 页`);
+
     return {
-      data,
+      data: filteredData,
       total,
+      page,
+      limit,
+      totalPages,
     };
+  }
+
+  /**
+   * 检查用户是否为超级管理员
+   */
+  private checkIsSuperAdmin(user?: any): boolean {
+    if (!user || !user.roles) {
+      return false;
+    }
+
+    // 检查用户是否有admin角色
+    return user.roles.some(role =>
+      role.roleCode === 'admin' || role.roleCode === 'super_admin'
+    );
+  }
+
+  /**
+   * 根据用户权限过滤客户字段
+   */
+  private filterCustomerFields(customer: any, isSuperAdmin: boolean) {
+    const baseFields = {
+      id: customer.id,
+      customerNumber: customer.customerNumber,
+      customerName: customer.customerName,
+      storeAddress: customer.storeAddress,
+      warehouseAddress: customer.warehouseAddress,
+      updateBy: customer.updateBy,
+      updatedAt: customer.updatedAt,
+    };
+
+    // 只有超级管理员可以看到状态字段
+    if (isSuperAdmin) {
+      return {
+        ...baseFields,
+        status: customer.status,
+      };
+    }
+
+    return baseFields;
   }
 
   async findOne(id: number): Promise<Customer> {

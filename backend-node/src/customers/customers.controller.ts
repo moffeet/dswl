@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
@@ -19,14 +19,38 @@ export class CustomersController {
 
   constructor(private readonly customersService: CustomersService) {}
 
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '获取客户列表',
-    description: '分页获取客户列表，支持页码和每页数量控制。数据来源：t_customers表'
+    description: `
+获取客户列表，支持搜索、排序和分页功能。
+
+**查询字段：**
+- 客户编号、客户名、门店地址、仓库地址、更新人、状态(仅超级管理员可见)、更新时间（同步时间）
+
+**搜索功能：**
+- 客户编号：支持模糊匹配
+- 客户名：支持模糊匹配
+- 更新人：支持模糊匹配
+
+**排序功能：**
+- 默认按更新时间倒序排列
+- 支持按更新时间、创建时间、客户编号、客户名排序
+
+**权限说明：**
+- 普通用户：无法查看和筛选客户状态
+- 超级管理员：可以查看和筛选客户状态
+    `
   })
-  @ApiQuery({ name: 'page', required: false, description: '页码，默认为1', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: '每页数量，默认为10', example: 10 })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiQuery({ name: 'page', description: '页码', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', description: '每页数量', required: false, example: 10 })
+  @ApiQuery({ name: 'customerNumber', description: '客户编号搜索（模糊匹配）', required: false, example: 'C001' })
+  @ApiQuery({ name: 'customerName', description: '客户名称搜索（模糊匹配）', required: false, example: '科技' })
+  @ApiQuery({ name: 'updateBy', description: '更新人搜索（模糊匹配）', required: false, example: '管理员' })
+  @ApiQuery({ name: 'status', description: '状态筛选（仅超级管理员可见）', required: false, enum: ['active', 'inactive'] })
+  @ApiQuery({ name: 'sortBy', description: '排序字段', required: false, enum: ['updatedAt', 'createdAt', 'customerNumber', 'customerName'], example: 'updatedAt' })
+  @ApiQuery({ name: 'sortOrder', description: '排序方向', required: false, enum: ['ASC', 'DESC'], example: 'DESC' })
+  @ApiResponse({
+    status: 200,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -38,58 +62,68 @@ export class CustomersController {
           items: {
             type: 'object',
             properties: {
-              id: { type: 'number', example: 1, description: '客户ID' },
-              customerNumber: { type: 'string', example: 'C001', description: '客户编号，自动生成' },
-              customerName: { type: 'string', example: '深圳科技有限公司', description: '客户名称' },
-              storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座', description: '门店地址' },
-              warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座', description: '仓库地址' },
-              updateBy: { type: 'string', example: '管理员', description: '更新人' },
-              createTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '创建时间' },
-              updateTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '更新时间' }
+              id: { type: 'number', example: 1 },
+              customerNumber: { type: 'string', example: 'C001' },
+              customerName: { type: 'string', example: '深圳科技有限公司' },
+              storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座' },
+              warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座' },
+              updateBy: { type: 'string', example: '管理员' },
+              status: { type: 'string', example: 'active', description: '仅超级管理员可见' },
+              updatedAt: { type: 'string', example: '2025-06-27T08:16:28.000Z' }
             }
           }
         },
-        total: { type: 'number', example: 7, description: '总记录数' },
-        page: { type: 'number', example: 1, description: '当前页码' },
-        limit: { type: 'number', example: 10, description: '每页数量' }
+        total: { type: 'number', example: 100 },
+        page: { type: 'number', example: 1 },
+        limit: { type: 'number', example: 10 },
+        totalPages: { type: 'number', example: 10 }
       }
     }
   })
+  @ApiResponse({ status: 500, description: '获取失败' })
   @Get()
-  async findAll(@Query() query: any) {
+  async findAll(@Query() query: any, @Request() req) {
     try {
+      const currentUser = req.user; // 从JWT中获取当前用户信息
+
       // 检查是否有搜索条件
-      const hasSearchParams = query.customerNumber || query.customerName || query.storeAddress || query.warehouseAddress;
-      
-      if (hasSearchParams) {
-        // 有搜索条件，使用搜索功能
+      const hasSearchParams = query.customerNumber || query.customerName || query.updateBy || query.status;
+
+      if (hasSearchParams || query.sortBy || query.sortOrder) {
+        // 有搜索条件或排序要求，使用搜索功能
         const searchDto: SearchCustomerDto = {
           customerNumber: query.customerNumber,
           customerName: query.customerName,
-          storeAddress: query.storeAddress,
-          warehouseAddress: query.warehouseAddress,
+          updateBy: query.updateBy,
           status: query.status,
+          sortBy: query.sortBy || 'updatedAt',
+          sortOrder: query.sortOrder || 'DESC',
           page: parseInt(query.page) || 1,
-          limit: parseInt(query.limit || query.pageSize) || 10,
+          limit: parseInt(query.limit) || 10,
         };
-        
-        const result = await this.customersService.search(searchDto);
-        
+
+        this.logger.log(`客户搜索请求 - 用户: ${currentUser?.username}, 参数: ${JSON.stringify(searchDto)}`);
+
+        const result = await this.customersService.search(searchDto, currentUser);
+
         return {
           code: 0,
           message: '搜索成功',
           data: result.data,
           total: result.total,
-          page: searchDto.page,
-          limit: searchDto.limit,
+          page: result.page,
+          limit: result.limit,
+          totalPages: result.totalPages,
         };
       } else {
-        // 没有搜索条件，使用普通分页
+        // 没有搜索条件，使用普通分页（默认按更新时间排序）
         const page = parseInt(query.page) || 1;
-        const limit = parseInt(query.limit || query.pageSize) || 10;
-        
-        const result = await this.customersService.findAll(page, limit);
-        
+        const limit = parseInt(query.limit) || 10;
+
+        this.logger.log(`客户列表请求 - 用户: ${currentUser?.username}, 页码: ${page}, 每页: ${limit}`);
+
+        const result = await this.customersService.findAll(page, limit, currentUser);
+
         return {
           code: 0,
           message: '获取成功',
@@ -97,9 +131,11 @@ export class CustomersController {
           total: result.total,
           page: result.page,
           limit: result.limit,
+          totalPages: result.totalPages,
         };
       }
     } catch (error) {
+      this.logger.error(`获取客户列表失败: ${error.message}`, error.stack);
       return {
         code: 500,
         message: '获取失败',
@@ -218,6 +254,46 @@ export class CustomersController {
         data: null,
         error: error.message,
       });
+    }
+  }
+
+  @ApiOperation({
+    summary: '获取最后同步时间',
+    description: '获取客户数据的最后同步时间'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+    schema: {
+      example: {
+        code: 0,
+        message: '获取成功',
+        data: {
+          lastSyncTime: '2025-06-27T08:16:28.000Z'
+        }
+      }
+    }
+  })
+  @Get('last-sync-time')
+  async getLastSyncTime() {
+    try {
+      const lastSyncTime = await this.customersService.getLastSyncTime();
+
+      return {
+        code: 0,
+        message: '获取成功',
+        data: {
+          lastSyncTime
+        },
+      };
+    } catch (error) {
+      this.logger.error(`获取最后同步时间失败: ${error.message}`, error.stack);
+      return {
+        code: 500,
+        message: '获取失败',
+        data: null,
+        error: error.message,
+      };
     }
   }
 
@@ -699,42 +775,5 @@ export class CustomersController {
 
 
 
-  @ApiOperation({
-    summary: '获取最后同步时间',
-    description: '获取客户数据的最后同步时间'
-  })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    schema: {
-      example: {
-        code: 0,
-        message: '获取成功',
-        data: {
-          lastSyncTime: '2025-06-27T08:16:28.000Z'
-        }
-      }
-    }
-  })
-  @Get('last-sync-time')
-  async getLastSyncTime() {
-    try {
-      const lastSyncTime = await this.customersService.getLastSyncTime();
 
-      return {
-        code: 0,
-        message: '获取成功',
-        data: {
-          lastSyncTime
-        },
-      };
-    } catch (error) {
-      return {
-        code: 500,
-        message: '获取失败',
-        data: null,
-        error: error.message,
-      };
-    }
-  }
 }

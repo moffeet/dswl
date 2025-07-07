@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Table, Button, Input, Space, Modal, Form, Message, Card, Typography, Grid, Tooltip, Select } from '@arco-design/web-react';
 import { IconSearch, IconRefresh, IconPlus, IconEdit, IconDelete, IconEye, IconSettings } from '@arco-design/web-react/icon';
 import { API_ENDPOINTS } from '@/config/api';
@@ -51,14 +51,14 @@ export default function CustomersPage() {
     sizeCanChange: true,
   });
 
-  // 搜索状态 - 扩展搜索字段
+  // 防止重复请求的标志
+  const initialLoadRef = useRef(false);
+
+  // 搜索状态 - 只保留客户编号和客户名
   const [searchForm] = Form.useForm();
   const [searchValues, setSearchValues] = useState({
     customerNumber: '',    // 客户编号
     customerName: '',      // 客户名
-    storeAddress: '',      // 门店地址
-    warehouseAddress: '',  // 仓库地址
-    status: '',            // 状态
   });
 
   // 模态框状态
@@ -166,8 +166,12 @@ export default function CustomersPage() {
 
   // 组件加载时获取数据
   useEffect(() => {
-    fetchCustomers();
-    fetchLastSyncTime();
+    // 防止React Strict Mode导致的重复请求
+    if (!initialLoadRef.current) {
+      initialLoadRef.current = true;
+      fetchCustomers();
+      fetchLastSyncTime();
+    }
   }, []);
 
   // 搜索
@@ -176,16 +180,10 @@ export default function CustomersPage() {
     const searchParams = {
       customerNumber: values.customerNumber || '',
       customerName: values.customerName || '',
-      storeAddress: values.storeAddress || '',
-      warehouseAddress: values.warehouseAddress || '',
-      status: values.status || '',
     };
     setSearchValues({
       customerNumber: values.customerNumber || '',
       customerName: values.customerName || '',
-      storeAddress: values.storeAddress || '',
-      warehouseAddress: values.warehouseAddress || '',
-      status: values.status || '',
     });
     setPagination(prev => ({ ...prev, current: 1 }));
     fetchCustomers({ ...searchParams, page: 1 });
@@ -197,9 +195,6 @@ export default function CustomersPage() {
     const resetValues = {
       customerNumber: '',
       customerName: '',
-      storeAddress: '',
-      warehouseAddress: '',
-      status: ''
     };
     setSearchValues(resetValues);
     setPagination(prev => ({ ...prev, current: 1 }));
@@ -335,9 +330,19 @@ export default function CustomersPage() {
   };
 
   // 分页变化
-  const handleTableChange = (pagination: any) => {
-    setPagination(prev => ({ ...prev, ...pagination }));
-    fetchCustomers({ page: pagination.current, pageSize: pagination.pageSize });
+  const handleTableChange = (newPagination: any) => {
+    // 检查是否真的有变化，避免重复请求
+    const hasPageChange = newPagination.current !== pagination.current;
+    const hasPageSizeChange = newPagination.pageSize !== pagination.pageSize;
+
+    if (hasPageChange || hasPageSizeChange) {
+      setPagination(prev => ({ ...prev, ...newPagination }));
+      fetchCustomers({
+        page: newPagination.current,
+        pageSize: newPagination.pageSize,
+        ...searchValues // 保持当前搜索条件
+      });
+    }
   };
 
   // 格式化时间
@@ -844,7 +849,7 @@ export default function CustomersPage() {
         </div>
         <Form form={searchForm} layout="horizontal">
           <Row gutter={24}>
-            <Col span={5}>
+            <Col span={6}>
               <Form.Item label="客户编号" field="customerNumber" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
                 <Input
                   placeholder="请输入客户编号"
@@ -852,7 +857,7 @@ export default function CustomersPage() {
                 />
               </Form.Item>
             </Col>
-            <Col span={5}>
+            <Col span={6}>
               <Form.Item label="客户名" field="customerName" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
                 <Input
                   placeholder="请输入客户名"
@@ -860,23 +865,7 @@ export default function CustomersPage() {
                 />
               </Form.Item>
             </Col>
-            <Col span={5}>
-              <Form.Item label="门店地址" field="storeAddress" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
-                <Input
-                  placeholder="请输入门店地址"
-                  style={{ borderRadius: 6 }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={5}>
-              <Form.Item label="仓库地址" field="warehouseAddress" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
-                <Input
-                  placeholder="请输入仓库地址"
-                  style={{ borderRadius: 6 }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={4}>
+            <Col span={6}>
               <Space size={8}>
                 <Button
                   type="primary"
