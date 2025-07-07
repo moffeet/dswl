@@ -118,9 +118,30 @@ export class CustomerSyncService {
    */
   private loadExternalSystemData(): any {
     try {
-      const dataPath = path.join(__dirname, '../mock/external-system-data.json');
+      // 在生产环境中，使用相对于项目根目录的路径
+      let dataPath: string;
+
+      // 检查是否在编译后的 dist 目录中运行
+      if (__dirname.includes('/dist/')) {
+        // 生产环境：从 dist 目录指向源码目录
+        dataPath = path.join(process.cwd(), 'src/mock/external-system-data.json');
+      } else {
+        // 开发环境：使用相对路径
+        dataPath = path.join(__dirname, '../mock/external-system-data.json');
+      }
+
+      this.logger.log(`尝试读取外部系统数据文件: ${dataPath}`);
+
+      if (!fs.existsSync(dataPath)) {
+        this.logger.error(`外部系统数据文件不存在: ${dataPath}`);
+        throw new Error(`外部系统数据文件不存在: ${dataPath}`);
+      }
+
       const rawData = fs.readFileSync(dataPath, 'utf8');
-      return JSON.parse(rawData);
+      const data = JSON.parse(rawData);
+
+      this.logger.log(`成功读取外部系统数据，客户数量: ${data.customers?.length || 0}`);
+      return data;
     } catch (error) {
       this.logger.error(`读取外部系统数据失败: ${error.message}`);
       throw new Error('无法读取外部系统数据');
