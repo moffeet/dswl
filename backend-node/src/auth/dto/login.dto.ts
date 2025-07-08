@@ -168,20 +168,28 @@ export class ChangePasswordDto {
 }
 
 export class LoginResponseDto {
-  @ApiProperty({ description: 'JWT访问令牌' })
-  accessToken: string;
+  @ApiProperty({ description: 'JWT访问令牌', required: false })
+  accessToken?: string;
 
-  @ApiProperty({ description: '用户信息' })
-  user: {
+  @ApiProperty({ description: '用户信息', required: false })
+  user?: {
     id: number;
     username: string;
-    nickname?: string;
-    status: string;
+    nickname: string;
     roles?: any[];
-    avatar?: string;
-    phone?: string;
-    email?: string;
   };
+
+  @ApiProperty({ description: '是否需要修改密码', required: false })
+  requirePasswordChange?: boolean;
+
+  @ApiProperty({ description: '用户ID（首次登录时）', required: false })
+  userId?: number;
+
+  @ApiProperty({ description: '用户名（首次登录时）', required: false })
+  username?: string;
+
+  @ApiProperty({ description: '消息', required: false })
+  message?: string;
 }
 
 export class LogoutResponseDto {

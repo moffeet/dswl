@@ -263,4 +263,18 @@ export class UsersController {
       message: '批量删除成功'
     };
   }
-} 
+
+  @Post(':id/reset-password')
+  @ApiOperation({ summary: '重置用户密码' })
+  @ApiResponse({ status: 200, description: '重置成功' })
+  async resetPassword(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.usersService.resetPassword(id);
+    // 移除密码字段
+    const { password, ...result } = user;
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '密码重置成功，已重置为用户名',
+      data: result
+    };
+  }
+}

@@ -406,4 +406,61 @@ export class AuthController {
       }
     };
   }
+
+  @ApiOperation({
+    summary: '首次登录修改密码',
+    description: `
+🔑 **首次登录修改密码接口**
+
+## 📋 功能说明
+- 用于首次登录用户修改密码
+- 密码必须包含英文和数字，长度6-12位
+- 修改成功后可正常登录
+
+## 🔒 密码规则
+- 必须包含英文字母
+- 必须包含数字
+- 长度6-12位
+- 不能与用户名相同
+    `
+  })
+  @ApiBody({
+    description: '修改密码请求参数',
+    schema: {
+      type: 'object',
+      required: ['userId', 'newPassword'],
+      properties: {
+        userId: {
+          type: 'number',
+          description: '用户ID',
+          example: 1
+        },
+        newPassword: {
+          type: 'string',
+          description: '新密码（英文+数字，6-12位）',
+          example: 'abc123'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: '✅ 修改成功',
+    example: {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '密码修改成功',
+      data: null
+    }
+  })
+  @Post('change-password')
+  async changePassword(@Body() body: { userId: number; newPassword: string }) {
+    console.log('收到修改密码请求:', body);
+    await this.authService.changePassword(body.userId, body.newPassword);
+    console.log('密码修改成功');
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '密码修改成功',
+      data: null
+    };
+  }
 }

@@ -128,6 +128,13 @@ class ApiClient {
    * POST请求
    */
   async post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
+    // 添加调试信息
+    if (url.includes('change-password')) {
+      console.log('🔧 API POST 请求:', url);
+      console.log('🔧 API POST 数据:', data);
+      console.log('🔧 API POST 数据类型:', typeof data);
+      console.log('🔧 API POST 数据 JSON:', JSON.stringify(data));
+    }
     return this.request<T>(url, { method: 'POST', body: data });
   }
 

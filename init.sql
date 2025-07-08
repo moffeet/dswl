@@ -16,12 +16,8 @@ CREATE TABLE t_users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
     username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
     password VARCHAR(255) NOT NULL COMMENT '密码',
-    nickname VARCHAR(100) COMMENT '昵称',
-    phone VARCHAR(20) COMMENT '手机号',
-    email VARCHAR(100) COMMENT '邮箱',
-    gender ENUM('male', 'female') DEFAULT 'male' COMMENT '性别',
-    status ENUM('normal', 'disabled') DEFAULT 'normal' COMMENT '用户状态',
-    avatar VARCHAR(255) COMMENT '头像URL',
+    nickname VARCHAR(100) NOT NULL COMMENT '昵称',
+    is_first_login TINYINT(1) DEFAULT 1 COMMENT '是否首次登录：1-是，0-否',
     last_login_time DATETIME NULL COMMENT '最后登录时间',
     last_login_ip VARCHAR(50) COMMENT '最后登录IP',
     current_login_ip VARCHAR(50) COMMENT '当前登录IP',
@@ -107,9 +103,6 @@ CREATE TABLE t_customers (
 
 -- 创建索引
 CREATE INDEX idx_users_username ON t_users(username);
-CREATE INDEX idx_users_phone ON t_users(phone);
-CREATE INDEX idx_users_email ON t_users(email);
-CREATE INDEX idx_users_status ON t_users(status);
 CREATE INDEX idx_roles_code ON t_roles(role_code);
 CREATE INDEX idx_roles_status ON t_roles(status);
 CREATE INDEX idx_permissions_code ON t_permissions(permission_code);
@@ -170,11 +163,11 @@ INSERT INTO t_roles (role_name, role_code, description, status, create_by) VALUE
 ('超级管理员', 'admin', '系统超级管理员，拥有所有权限，不可修改', 'enabled', 1);
 
 -- 插入用户数据（密码均为：123456）
-INSERT INTO t_users (username, password, nickname, phone, email, gender, create_by) VALUES
-('admin', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '系统管理员', '13800138000', 'admin@logistics.com', 'male', 1),
-('manager001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '张经理', '13800138001', 'manager@logistics.com', 'male', 1),
-('driver001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '李师傅', '13800138002', 'driver001@logistics.com', 'male', 1),
-('sales001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '王销售', '13800138003', 'sales001@logistics.com', 'female', 1);
+INSERT INTO t_users (username, password, nickname, create_by) VALUES
+('admin', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '系统管理员', 1),
+('manager001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '张经理', 1),
+('driver001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '李师傅', 1),
+('sales001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '王销售', 1);
 
 -- 分配用户角色
 INSERT INTO t_user_roles (user_id, role_id) VALUES
@@ -255,15 +248,12 @@ DESCRIBE t_users;
 
 -- 验证admin用户
 SELECT '✅ Admin用户验证' AS message;
-SELECT 
+SELECT
     id,
     username,
     nickname,
-    status,
-    phone,
-    email,
     create_time
-FROM t_users 
+FROM t_users
 WHERE username = 'admin';
 
 -- 添加外键约束

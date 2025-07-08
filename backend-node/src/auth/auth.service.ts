@@ -59,9 +59,20 @@ export class AuthService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
+    // 检查是否首次登录
+    if (user.isFirstLogin === 1) {
+      // 首次登录，返回特殊状态要求修改密码
+      return {
+        requirePasswordChange: true,
+        userId: user.id,
+        username: user.username,
+        message: '首次登录，请修改密码'
+      };
+    }
+
     // 获取当前IP
     const currentIp = this.extractIpAddress(req);
-    
+
     // 自动踢出其他会话（正常的业务逻辑）
     // 如果用户在其他地方有登录，自动使其失效
     await this.ipLimitService.forceLogoutOtherSessions(user.id);
@@ -85,7 +96,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         nickname: user.nickname,
-        status: user.status,
+
         roles: user.roles || [],
       },
     };
@@ -110,9 +121,7 @@ export class AuthService {
       return null;
     }
 
-    if (user.status !== 'normal') {
-      throw new UnauthorizedException('用户账号已被禁用');
-    }
+
 
     // 使用bcrypt验证密码
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -153,4 +162,8 @@ export class AuthService {
       console.error('更新登录信息失败:', error);
     }
   }
-} 
+
+  async changePassword(userId: number, newPassword: string): Promise<void> {
+    await this.usersService.changePassword(userId, newPassword);
+  }
+}

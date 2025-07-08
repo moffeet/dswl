@@ -26,34 +26,12 @@ export class UsersService {
       throw new ConflictException('用户名已存在');
     }
 
-    // 检查手机号是否已存在
-    if (createUserDto.phone) {
-      const existingPhone = await this.userRepository.findOne({
-        where: { phone: createUserDto.phone }
-      });
-      if (existingPhone) {
-        throw new ConflictException('手机号已存在');
-      }
-    }
 
-    // 检查邮箱是否已存在
-    if (createUserDto.email) {
-      const existingEmail = await this.userRepository.findOne({
-        where: { email: createUserDto.email }
-      });
-      if (existingEmail) {
-        throw new ConflictException('邮箱已存在');
-      }
-    }
 
-    // 生成密码：如果未提供密码，则自动生成（手机后4位 + asdf）
+    // 生成密码：如果未提供密码，则使用用户名作为默认密码
     let password = createUserDto.password;
     if (!password) {
-      if (!createUserDto.phone || createUserDto.phone.length < 4) {
-        throw new ConflictException('未提供密码时，手机号必须提供且长度不少于4位');
-      }
-      const phoneLast4 = createUserDto.phone.slice(-4);
-      password = phoneLast4 + 'asdf';
+      password = createUserDto.username;
     }
 
     // 加密密码
@@ -63,7 +41,7 @@ export class UsersService {
     const user = this.userRepository.create({
       ...createUserDto,
       password: hashedPassword,
-      status: createUserDto.status || 'normal'
+      isFirstLogin: 1  // 新用户默认为首次登录
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -92,12 +70,6 @@ export class UsersService {
     }
     if (filters.nickname) {
       where.nickname = Like(`%${filters.nickname}%`);
-    }
-    if (filters.phone) {
-      where.phone = Like(`%${filters.phone}%`);
-    }
-    if (filters.email) {
-      where.email = Like(`%${filters.email}%`);
     }
     if (filters.gender) {
       where.gender = filters.gender;
@@ -152,25 +124,7 @@ export class UsersService {
       }
     }
 
-    // 检查手机号是否已存在（排除当前用户）
-    if (updateUserDto.phone && updateUserDto.phone !== user.phone) {
-      const existingPhone = await this.userRepository.findOne({
-        where: { phone: updateUserDto.phone }
-      });
-      if (existingPhone) {
-        throw new ConflictException('手机号已存在');
-      }
-    }
 
-    // 检查邮箱是否已存在（排除当前用户）
-    if (updateUserDto.email && updateUserDto.email !== user.email) {
-      const existingEmail = await this.userRepository.findOne({
-        where: { email: updateUserDto.email }
-      });
-      if (existingEmail) {
-        throw new ConflictException('邮箱已存在');
-      }
-    }
 
     // 如果更新密码，需要加密
     if (updateUserDto.password) {
@@ -260,8 +214,8 @@ export class UsersService {
 
 
 
-  async updateLoginInfo(userId: number, updateData: { 
-    lastLoginTime?: Date; 
+  async updateLoginInfo(userId: number, updateData: {
+    lastLoginTime?: Date;
     lastLoginIp?: string;
     currentLoginIp?: string | null;
     currentToken?: string | null;
@@ -270,9 +224,43 @@ export class UsersService {
     const filteredData = Object.fromEntries(
       Object.entries(updateData).filter(([_, value]) => value !== undefined)
     );
-    
+
     if (Object.keys(filteredData).length > 0) {
       await this.userRepository.update(userId, filteredData);
     }
   }
-} 
+
+  async resetPassword(id: number): Promise<User> {
+    const user = await this.findOne(id);
+
+    // 重置密码为用户名
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(user.username, salt);
+
+    // 更新密码并设置为首次登录
+    await this.userRepository.update(id, {
+      password: hashedPassword,
+      isFirstLogin: 1
+    });
+
+    return await this.findOne(id);
+  }
+
+  async changePassword(userId: number, newPassword: string): Promise<void> {
+    // 验证密码格式：英文+数字，6-12位
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{6,12}$/;
+    if (!passwordRegex.test(newPassword)) {
+      throw new ConflictException('密码必须包含英文和数字，长度6-12位');
+    }
+
+    // 加密新密码
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // 更新密码并标记为非首次登录
+    await this.userRepository.update(userId, {
+      password: hashedPassword,
+      isFirstLogin: 0
+    });
+  }
+}

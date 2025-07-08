@@ -16,29 +16,13 @@ export class User {
   @Column({ length: 255, comment: '密码（加密后）' })
   password: string;
 
-  @ApiProperty({ description: '昵称', required: false })
-  @Column({ length: 50, nullable: true, comment: '昵称' })
-  nickname?: string;
+  @ApiProperty({ description: '昵称' })
+  @Column({ length: 100, nullable: false, comment: '昵称' })
+  nickname: string;
 
-  @ApiProperty({ description: '手机号', required: false })
-  @Column({ length: 20, nullable: true, comment: '手机号' })
-  phone?: string;
-
-  @ApiProperty({ description: '邮箱', required: false })
-  @Column({ length: 100, nullable: true, comment: '邮箱' })
-  email?: string;
-
-  @ApiProperty({ description: '性别', enum: ['male', 'female'], required: false })
-  @Column({ type: 'enum', enum: ['male', 'female'], nullable: true, comment: '性别' })
-  gender?: 'male' | 'female';
-
-  @ApiProperty({ description: '用户状态', enum: ['normal', 'disabled'] })
-  @Column({ type: 'enum', enum: ['normal', 'disabled'], default: 'normal', comment: '用户状态' })
-  status: 'normal' | 'disabled';
-
-  @ApiProperty({ description: '头像URL', required: false })
-  @Column({ length: 255, nullable: true, comment: '头像URL' })
-  avatar?: string;
+  @ApiProperty({ description: '是否首次登录' })
+  @Column({ name: 'is_first_login', type: 'tinyint', width: 1, default: 1, comment: '是否首次登录：1-是，0-否' })
+  isFirstLogin: number;
 
   @ApiProperty({ description: '最后登录时间', required: false })
   @Column({ name: 'last_login_time', type: 'datetime', nullable: true, comment: '最后登录时间' })

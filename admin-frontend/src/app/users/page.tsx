@@ -166,6 +166,23 @@ const deleteUser = async (id: number): Promise<boolean> => {
   }
 };
 
+const resetPassword = async (id: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.users}/${id}/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    const result = await response.json();
+    return result.code === 200;
+  } catch (error) {
+    console.error('重置密码失败:', error);
+    return false;
+  }
+};
+
 const deleteMultipleUsers = async (ids: number[]): Promise<boolean> => {
   try {
     const response = await fetch(API_ENDPOINTS.users, {
@@ -205,8 +222,7 @@ export default function UsersPage() {
   // 多选状态
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
 
-  // 密码显示状态
-  const [showPasswords, setShowPasswords] = useState<{[key: number]: boolean}>({});
+
 
   // 加载数据
   const loadData = async () => {
@@ -272,44 +288,6 @@ export default function UsersPage() {
       width: 120,
     },
     {
-      title: '邮箱',
-      dataIndex: 'email',
-      width: 180,
-      render: (email: string) => (
-        <div style={{ color: '#64748b' }}>
-          {email}
-        </div>
-      ),
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phone',
-      width: 120,
-    },
-    {
-      title: '密码',
-      key: 'password',
-      width: 120,
-      align: 'center',
-      render: (_, record) => (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-            {showPasswords[record.id] ? '123456' : '******'}
-          </span>
-          <Button
-            type="text"
-            size="mini"
-            icon={showPasswords[record.id] ? <IconEyeInvisible /> : <IconEye />}
-            onClick={() => togglePasswordVisibility(record.id)}
-            style={{
-              color: '#64748b',
-              padding: '2px 4px'
-            }}
-          />
-        </div>
-      ),
-    },
-    {
       title: '角色',
       key: 'roles',
       width: 200,
@@ -358,7 +336,7 @@ export default function UsersPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      width: 160,
       align: 'center',
       fixed: 'right',
       render: (_, record) => (
@@ -368,12 +346,29 @@ export default function UsersPage() {
               size="small"
             icon={<IconEdit />}
             onClick={() => handleEdit(record)}
-              style={{ 
+              style={{
               color: '#3b82f6',
               padding: '4px 8px',
               borderRadius: '4px'
             }}
           />
+          <Popconfirm
+            title="确认重置此用户密码？重置后密码将变为用户名"
+            onOk={() => handleResetPassword(record.id)}
+            okText="确认"
+            cancelText="取消"
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<IconLock />}
+              style={{
+                color: '#f59e0b',
+                padding: '4px 8px',
+                borderRadius: '4px'
+              }}
+            />
+          </Popconfirm>
           <Popconfirm
             title="确认删除此用户？"
             onOk={() => handleDelete(record.id)}
@@ -384,7 +379,7 @@ export default function UsersPage() {
               type="text"
               size="small"
               icon={<IconDelete />}
-              style={{ 
+              style={{
                 color: '#ef4444',
                 padding: '4px 8px',
                 borderRadius: '4px'
@@ -438,6 +433,20 @@ export default function UsersPage() {
     }
   };
 
+  const handleResetPassword = async (id: number) => {
+    try {
+      const success = await resetPassword(id);
+      if (success) {
+        Message.success('密码重置成功，已重置为用户名');
+        loadData();
+      } else {
+        Message.error('重置密码失败');
+      }
+    } catch (error) {
+      Message.error('重置密码失败');
+    }
+  };
+
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
       Message.warning('请选择要删除的用户');
@@ -458,12 +467,7 @@ export default function UsersPage() {
     }
   };
 
-  const togglePasswordVisibility = (userId: number) => {
-    setShowPasswords(prev => ({
-      ...prev,
-      [userId]: !prev[userId]
-    }));
-  };
+
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
@@ -822,74 +826,70 @@ export default function UsersPage() {
           style={{ marginTop: '16px' }}
         >
           {!editingUser && (
-            <GridRow gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>用户名</span>}
-                    field="username"
-                    rules={[{ required: true, message: '请输入用户名' }]}
-                  >
-                  <Input
-                    placeholder="请输入用户名"
-                    style={{
-                      borderRadius: '6px',
-                      height: '36px'
-                    }}
-                  />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>昵称</span>}
-                  field="nickname"
-                >
-                  <Input
-                    placeholder="请输入昵称"
-                    style={{
-                      borderRadius: '6px',
-                      height: '36px'
-                    }}
-                  />
-                  </Form.Item>
-                </Col>
-            </GridRow>
-          )}
+            <>
+              <Form.Item
+                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>账户 <span style={{ color: '#ef4444' }}>*</span></span>}
+                field="username"
+                rules={[{ required: true, message: '请输入账户名' }]}
+              >
+                <Input
+                  placeholder="请输入账户名"
+                  style={{
+                    borderRadius: '6px',
+                    height: '36px'
+                  }}
+                />
+              </Form.Item>
 
-          {!editingUser && (
-            <GridRow gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>邮箱</span>}
-                  field="email"
-                    rules={[
-                    { type: 'email', message: '请输入有效的邮箱地址' }
-                  ]}
+              <Form.Item
+                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色 <span style={{ color: '#ef4444' }}>*</span></span>}
+                field="roleId"
+                rules={[{ required: true, message: '请选择角色' }]}
+              >
+                <Select
+                  placeholder="请选择角色"
+                  style={{
+                    borderRadius: '6px',
+                    height: '36px'
+                  }}
                 >
-                  <Input
-                    placeholder="请输入邮箱"
-                    style={{
-                      borderRadius: '6px',
-                      height: '36px'
-                    }}
-                  />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>手机号</span>}
-                  field="phone"
-                  rules={!editingUser ? [{ required: true, message: '请输入手机号' }] : []}
-                >
-                  <Input
-                    placeholder="请输入手机号"
-                    style={{
-                      borderRadius: '6px',
-                      height: '36px'
-                    }}
-                  />
-                  </Form.Item>
-                </Col>
-            </GridRow>
+                  {roles.map(role => (
+                    <Option key={role.id} value={role.id}>
+                      {role.roleName}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>昵称 <span style={{ color: '#ef4444' }}>*</span></span>}
+                field="nickname"
+                rules={[{ required: true, message: '请输入昵称' }]}
+              >
+                <Input
+                  placeholder="请输入昵称"
+                  style={{
+                    borderRadius: '6px',
+                    height: '36px'
+                  }}
+                />
+              </Form.Item>
+
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#f6f8fa',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                fontSize: '12px',
+                color: '#666'
+              }}>
+                <div>💡 <strong>说明：</strong></div>
+                <div>• 账户：只能英语+数字</div>
+                <div>• 角色：从角色列表中选择，角色默认为空</div>
+                <div>• 昵称：可中文</div>
+                <div>• 密码：默认生成，与账户名相同</div>
+              </div>
+            </>
           )}
 
           {/* 编辑模式下显示用户基本信息（只读） */}
@@ -929,51 +929,29 @@ export default function UsersPage() {
 
           {/* 新增用户时不显示密码字段，系统自动生成 */}
 
-          <GridRow gutter={16}>
-              <Col span={editingUser ? 24 : 12}>
-                <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>
-                  角色 {editingUser && <span style={{ color: '#ef4444' }}>*</span>}
-                </span>}
-                field="roleId"
-                initialValue={roles.find(role => role.roleCode === 'normal')?.id}
-                rules={[{ required: true, message: '请选择角色' }]}
+          {editingUser && (
+            <Form.Item
+              label={<span style={{ fontSize: '14px', fontWeight: '500' }}>
+                角色 <span style={{ color: '#ef4444' }}>*</span>
+              </span>}
+              field="roleId"
+              rules={[{ required: true, message: '请选择角色' }]}
+            >
+              <Select
+                placeholder="请选择角色"
+                style={{
+                  borderRadius: '6px',
+                  height: '36px'
+                }}
               >
-                <Select
-                  placeholder="请选择角色"
-                  style={{
-                    borderRadius: '6px',
-                    height: '36px'
-                  }}
-                >
-                  {roles.map(role => (
-                    <Option key={role.id} value={role.id}>
-                      {role.roleName}
-                    </Option>
-                  ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              {!editingUser && (
-                <Col span={12}>
-                  <Form.Item
-                  label={<span style={{ fontSize: '14px', fontWeight: '500' }}>状态</span>}
-                    field="status"
-                  initialValue="normal"
-                >
-                  <Select
-                    style={{
-                      borderRadius: '6px',
-                      height: '36px'
-                    }}
-                  >
-                    <Option value="normal">启用</Option>
-                    <Option value="disabled">禁用</Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-              )}
-          </GridRow>
+                {roles.map(role => (
+                  <Option key={role.id} value={role.id}>
+                    {role.roleName}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
           </Form>
       </Modal>
     </div>
