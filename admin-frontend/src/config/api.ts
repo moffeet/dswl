@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
   roles: `${API_BASE_URL}/api/roles`,
   permissions: `${API_BASE_URL}/api/permissions`,
   customers: `${API_BASE_URL}/api/customers`,
+  wxUsers: `${API_BASE_URL}/api/wx-users`,
 };
 
 // 高德地图API配置

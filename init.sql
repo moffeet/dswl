@@ -101,6 +101,23 @@ CREATE TABLE t_customers (
     updateBy VARCHAR(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 7. 小程序用户表
+DROP TABLE IF EXISTS t_wx_users;
+CREATE TABLE t_wx_users (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
+    name VARCHAR(100) NOT NULL COMMENT '姓名',
+    phone VARCHAR(20) NOT NULL UNIQUE COMMENT '手机号（唯一）',
+    role ENUM('司机', '销售') NOT NULL COMMENT '角色：司机/销售',
+    wechat_id VARCHAR(100) DEFAULT NULL COMMENT '微信ID',
+    mac_address VARCHAR(50) DEFAULT NULL COMMENT 'MAC地址',
+
+    is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
+    create_by BIGINT COMMENT '创建人ID',
+    update_by BIGINT COMMENT '更新人ID',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '小程序用户表';
+
 -- 创建索引
 CREATE INDEX idx_users_username ON t_users(username);
 CREATE INDEX idx_roles_code ON t_roles(role_code);
@@ -111,6 +128,9 @@ CREATE INDEX idx_permissions_parent ON t_permissions(parent_id);
 CREATE INDEX idx_users_is_deleted ON t_users(is_deleted);
 CREATE INDEX idx_roles_is_deleted ON t_roles(is_deleted);
 CREATE INDEX idx_customers_is_deleted ON t_customers(is_deleted);
+CREATE INDEX idx_wx_users_phone ON t_wx_users(phone);
+CREATE INDEX idx_wx_users_is_deleted ON t_wx_users(is_deleted);
+CREATE INDEX idx_wx_users_role ON t_wx_users(role);
 
 -- 插入菜单权限数据（扁平结构，与静态权限常量一致）
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, path, component, icon, sort_order) VALUES
@@ -186,6 +206,22 @@ INSERT INTO t_customers (customerNumber, customerName, storeAddress, warehouseAd
 ('C004', '佛山物流中心', '佛山市禅城区物流园A区', '佛山市禅城区物流园B区', 113.1221, 23.0167, 113.1231, 23.0177, '系统'),
 ('C005', '惠州电子厂', '惠州市惠城区工业园东区', '惠州市惠城区工业园西区', 114.4129, 23.0793, 114.4139, 23.0803, '管理员');
 
+-- 插入小程序用户测试数据
+INSERT INTO t_wx_users (name, phone, role, wechat_id, mac_address, create_by) VALUES
+('张三', '13800138001', '司机', 'wx_zhangsan', '00:11:22:33:44:55', 1),
+('李四', '13800138002', '销售', 'wx_lisi', '00:11:22:33:44:56', 1),
+('王五', '13800138003', '司机', 'wx_wangwu', '00:11:22:33:44:57', 1),
+('赵六', '13800138004', '销售', 'wx_zhaoliu', '00:11:22:33:44:58', 1),
+('钱七', '13800138005', '司机', 'wx_qianqi', '00:11:22:33:44:59', 1);
+
+-- 插入小程序用户测试数据
+INSERT INTO t_wx_users (name, phone, role, wechat_id, mac_address, create_by) VALUES
+('张三', '13800138001', '司机', 'wx_zhangsan', '00:11:22:33:44:55', 1),
+('李四', '13800138002', '销售', 'wx_lisi', '00:11:22:33:44:56', 1),
+('王五', '13800138003', '司机', 'wx_wangwu', '00:11:22:33:44:57', 1),
+('赵六', '13800138004', '销售', 'wx_zhaoliu', '00:11:22:33:44:58', 1),
+('钱七', '13800138005', '已死', 'wx_qianqi', '00:11:22:33:44:59', 1);
+
 -- ========================================
 -- 🎉 数据库初始化完成！
 -- ========================================
@@ -209,6 +245,7 @@ ALTER TABLE t_user_roles ADD CONSTRAINT fk_user_roles_user_id FOREIGN KEY (user_
 ALTER TABLE t_user_roles ADD CONSTRAINT fk_user_roles_role_id FOREIGN KEY (role_id) REFERENCES t_roles(id) ON DELETE CASCADE;
 ALTER TABLE t_role_permissions ADD CONSTRAINT fk_role_permissions_role_id FOREIGN KEY (role_id) REFERENCES t_roles(id) ON DELETE CASCADE;
 ALTER TABLE t_role_permissions ADD CONSTRAINT fk_role_permissions_permission_id FOREIGN KEY (permission_id) REFERENCES t_permissions(id) ON DELETE CASCADE;
+
 
 -- 重新启用外键检查
 SET FOREIGN_KEY_CHECKS = 1;
