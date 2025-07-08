@@ -436,7 +436,7 @@ export default function LoginPage() {
         footer={null}
         maskClosable={false}
         closable={false}
-        width={480}
+        style={{ width: 480 }}
       >
         <div style={{ marginBottom: '16px', color: '#86909C' }}>
           <p>用户：<strong>{currentUsername}</strong></p>
@@ -464,9 +464,9 @@ export default function LoginPage() {
         <Form
           form={changePasswordForm}
           layout="vertical"
-          onFinish={handleChangePassword}
+          onSubmit={handleChangePassword}
           autoComplete="off"
-          onFinishFailed={(errorInfo) => {
+          onSubmitFailed={(errorInfo: any) => {
             console.log('🔧 表单验证失败:', errorInfo);
             Message.error('请检查表单输入');
           }}
@@ -477,8 +477,18 @@ export default function LoginPage() {
             rules={[
               { required: true, message: '请输入新密码' },
               {
-                pattern: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,12}$/,
-                message: '密码必须包含英文和数字，长度6-12位'
+                validator: (value: string | undefined, callback: (error?: React.ReactNode) => void) => {
+                  if (!value) {
+                    callback();
+                    return;
+                  }
+                  const pattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,12}$/;
+                  if (!pattern.test(value)) {
+                    callback('密码必须包含英文和数字，长度6-12位');
+                  } else {
+                    callback();
+                  }
+                }
               }
             ]}
           >
@@ -495,14 +505,20 @@ export default function LoginPage() {
             dependencies={['newPassword']}
             rules={[
               { required: true, message: '请确认新密码' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve();
+              {
+                validator: (value: string | undefined, callback: (error?: React.ReactNode) => void) => {
+                  if (!value) {
+                    callback();
+                    return;
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'));
-                },
-              }),
+                  const newPassword = changePasswordForm.getFieldValue('newPassword');
+                  if (newPassword === value) {
+                    callback();
+                  } else {
+                    callback('两次输入的密码不一致');
+                  }
+                }
+              }
             ]}
           >
             <Input.Password
