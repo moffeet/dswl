@@ -56,11 +56,17 @@ export class User {
   @Column({ name: 'current_token', length: 1000, nullable: true, comment: '当前登录token' })
   currentToken?: string;
 
-
+  @ApiProperty({ description: '是否删除', required: false })
+  @Column({ name: 'is_deleted', type: 'tinyint', width: 1, default: 0, comment: '是否删除：0-未删除，1-已删除' })
+  isDeleted: number;
 
   @ApiProperty({ description: '创建人ID', required: false })
   @Column({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' })
   createBy?: number;
+
+  @ApiProperty({ description: '更新人ID', required: false })
+  @Column({ name: 'update_by', type: 'bigint', nullable: true, comment: '更新人ID' })
+  updateBy?: number;
 
   @ApiProperty({ description: '创建时间' })
   @CreateDateColumn({ name: 'create_time', comment: '创建时间' })

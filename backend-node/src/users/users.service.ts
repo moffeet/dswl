@@ -93,7 +93,7 @@ export class UsersService {
 
   async findAll(searchDto: UserQueryDto): Promise<{ users: User[], total: number }> {
     const { page = 1, limit = 10, ...filters } = searchDto;
-    const where: any = {};
+    const where: any = { isDeleted: 0 }; // 只查询未删除的用户
 
     if (filters.username) {
       where.username = Like(`%${filters.username}%`);
@@ -131,7 +131,7 @@ export class UsersService {
     }
 
     const user = await this.userRepository.findOne({
-      where: { id },
+      where: { id, isDeleted: 0 }, // 只查询未删除的用户
       relations: ['roles']
     });
     if (!user) {
@@ -142,7 +142,7 @@ export class UsersService {
 
   async findByUsername(username: string): Promise<User | null> {
     return await this.userRepository.findOne({
-      where: { username },
+      where: { username, isDeleted: 0 }, // 只查询未删除的用户
       relations: ['roles']
     });
   }
@@ -224,27 +224,38 @@ export class UsersService {
     return await this.findOne(id);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, updateBy?: number): Promise<void> {
     const user = await this.findOne(id);
-    await this.userRepository.remove(user);
+
+    // 软删除：更新删除标记和更新人
+    await this.userRepository.update(id, {
+      isDeleted: 1,
+      updateBy: updateBy
+    });
   }
 
-  async removeMultiple(ids: number[]): Promise<void> {
+  async removeMultiple(ids: number[], updateBy?: number): Promise<void> {
     if (!ids || ids.length === 0) {
       throw new ConflictException('请提供要删除的用户ID');
     }
 
-    // 检查所有用户是否存在
+    // 检查所有用户是否存在且未删除
     const users = await this.userRepository.find({
-      where: { id: In(ids) }
+      where: { id: In(ids), isDeleted: 0 }
     });
 
     if (users.length !== ids.length) {
-      throw new NotFoundException('部分用户不存在');
+      throw new NotFoundException('部分用户不存在或已被删除');
     }
 
-    // 批量删除
-    await this.userRepository.remove(users);
+    // 批量软删除
+    await this.userRepository.update(
+      { id: In(ids) },
+      {
+        isDeleted: 1,
+        updateBy: updateBy
+      }
+    );
   }
 
   async validateUser(username: string, password: string): Promise<User | null> {

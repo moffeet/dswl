@@ -71,7 +71,7 @@ export class RolesService {
 
   async findAll(searchDto: RoleQueryDto): Promise<{ roles: Role[], total: number }> {
     const { page = 1, limit = 10, ...filters } = searchDto;
-    const where: any = {};
+    const where: any = { isDeleted: 0 }; // 只查询未删除的角色
 
     if (filters.roleName) {
       where.roleName = Like(`%${filters.roleName}%`);
@@ -97,12 +97,12 @@ export class RolesService {
     // 为每个角色添加用户数量统计
     const rolesWithUserCount = await Promise.all(
       roles.map(async (role) => {
-        // 查询该角色的用户数量 - 直接查询关联表
+        // 查询该角色的用户数量 - 直接查询关联表，只统计未删除的用户
         const userCountQuery = await this.roleRepository.manager.query(
-          'SELECT COUNT(*) as count FROM t_user_roles WHERE role_id = ?',
+          'SELECT COUNT(*) as count FROM t_user_roles ur JOIN t_users u ON ur.user_id = u.id WHERE ur.role_id = ? AND u.is_deleted = 0',
           [role.id]
         );
-        
+
         const userCount = userCountQuery[0]?.count || 0;
 
         return {
@@ -117,7 +117,7 @@ export class RolesService {
 
   async findOne(id: number): Promise<Role> {
     const role = await this.roleRepository.findOne({
-      where: { id },
+      where: { id, isDeleted: 0 }, // 只查询未删除的角色
       relations: ['permissions'] // 启用权限关系
     });
     if (!role) {
@@ -152,7 +152,7 @@ export class RolesService {
     return await this.findOne(id);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, deletedBy?: number): Promise<void> {
     const role = await this.findOne(id);
 
     // 检查是否为系统保护角色
@@ -162,14 +162,14 @@ export class RolesService {
 
     // 查找使用该角色的用户，将其角色改为普通用户
     const usersWithRole = await this.roleRepository.manager.query(
-      'SELECT user_id FROM t_user_roles WHERE role_id = ?',
+      'SELECT user_id FROM t_user_roles ur JOIN t_users u ON ur.user_id = u.id WHERE ur.role_id = ? AND u.is_deleted = 0',
       [id]
     );
 
     if (usersWithRole.length > 0) {
       // 获取普通用户角色
       const defaultRole = await this.roleRepository.findOne({
-        where: { roleCode: DEFAULT_ROLE }
+        where: { roleCode: DEFAULT_ROLE, isDeleted: 0 }
       });
 
       if (defaultRole) {
@@ -192,7 +192,11 @@ export class RolesService {
       }
     }
 
-    await this.roleRepository.remove(role);
+    // 软删除角色
+    await this.roleRepository.update(id, {
+      isDeleted: 1,
+      updateBy: deletedBy
+    });
   }
 
   async assignPermissions(roleId: number, permissionIds: number[]): Promise<void> {

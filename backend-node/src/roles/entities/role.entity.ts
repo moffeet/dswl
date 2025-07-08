@@ -18,8 +18,14 @@ export class Role {
   @Column({ type: 'varchar', length: 10, default: 'enabled', comment: '角色状态' })
   status: string;
 
+  @Column({ name: 'is_deleted', type: 'tinyint', width: 1, default: 0, comment: '是否删除：0-未删除，1-已删除' })
+  isDeleted: number;
+
   @Column({ name: 'create_by', type: 'bigint', nullable: true, comment: '创建人ID' })
   createBy?: number;
+
+  @Column({ name: 'update_by', type: 'bigint', nullable: true, comment: '更新人ID' })
+  updateBy?: number;
 
   @CreateDateColumn({ name: 'create_time', comment: '创建时间' })
   createTime: Date;

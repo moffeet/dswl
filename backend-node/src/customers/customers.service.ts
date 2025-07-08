@@ -43,6 +43,7 @@ export class CustomersService {
     this.logger.log(`获取客户列表 - 页码: ${page}, 每页: ${limit}, 用户: ${currentUser?.username || 'unknown'}`);
 
     const [data, total] = await this.customerRepository.findAndCount({
+      where: { isDeleted: 0 }, // 只查询未删除的客户
       skip: (page - 1) * limit,
       take: limit,
       order: { updatedAt: 'DESC' },
@@ -69,6 +70,9 @@ export class CustomersService {
     this.logger.log(`客户搜索开始 - 参数: ${JSON.stringify(searchDto)}, 用户: ${currentUser?.username || 'unknown'}`);
 
     const queryBuilder = this.customerRepository.createQueryBuilder('customer');
+
+    // 只查询未删除的客户
+    queryBuilder.where('customer.isDeleted = :isDeleted', { isDeleted: 0 });
 
     // 搜索条件：客户编号
     if (searchDto.customerNumber) {
@@ -162,9 +166,15 @@ export class CustomersService {
       throw new NotFoundException('无效的客户ID');
     }
 
-    return await this.customerRepository.findOne({
-      where: { id },
+    const customer = await this.customerRepository.findOne({
+      where: { id, isDeleted: 0 }, // 只查询未删除的客户
     });
+
+    if (!customer) {
+      throw new NotFoundException('客户不存在');
+    }
+
+    return customer;
   }
 
   async update(id: number, updateCustomerDto: UpdateCustomerDto): Promise<Customer> {
@@ -172,11 +182,15 @@ export class CustomersService {
     return await this.findOne(id);
   }
 
-  async remove(id: number): Promise<Customer> {
+  async remove(id: number, updateBy?: string): Promise<Customer> {
     const customer = await this.findOne(id);
-    if (customer) {
-      await this.customerRepository.delete(id);
-    }
+
+    // 软删除：更新删除标记和更新人
+    await this.customerRepository.update(id, {
+      isDeleted: 1,
+      updateBy: updateBy || '管理员'
+    });
+
     return customer;
   }
 
@@ -251,18 +265,26 @@ export class CustomersService {
   /**
    * 批量删除客户
    * @param batchDeleteDto 批量删除参数
+   * @param updateBy 删除人
    * @returns 删除结果
    */
-  async batchDelete(batchDeleteDto: BatchDeleteCustomerDto): Promise<{ message: string; deletedCount: number }> {
+  async batchDelete(batchDeleteDto: BatchDeleteCustomerDto, updateBy?: string): Promise<{ message: string; deletedCount: number }> {
     const customers = await this.customerRepository.find({
-      where: { id: In(batchDeleteDto.customerIds) }
+      where: { id: In(batchDeleteDto.customerIds), isDeleted: 0 } // 只查询未删除的客户
     });
 
     if (customers.length === 0) {
-      throw new NotFoundException('未找到要删除的客户');
+      throw new NotFoundException('未找到要删除的客户或客户已被删除');
     }
 
-    await this.customerRepository.delete({ id: In(batchDeleteDto.customerIds) });
+    // 批量软删除
+    await this.customerRepository.update(
+      { id: In(batchDeleteDto.customerIds) },
+      {
+        isDeleted: 1,
+        updateBy: updateBy || '管理员'
+      }
+    );
 
     return {
       message: '批量删除成功',
@@ -314,17 +336,21 @@ export class CustomersService {
 
         if (validIds.length > 0) {
           customers = await this.customerRepository.find({
-            where: { id: In(validIds) }
+            where: { id: In(validIds), isDeleted: 0 } // 只导出未删除的客户
           });
           this.logger.log(`导出Excel - 查询到${customers.length}个指定客户`);
         } else {
-          // 如果没有有效ID，导出全部
-          customers = await this.customerRepository.find();
+          // 如果没有有效ID，导出全部未删除的客户
+          customers = await this.customerRepository.find({
+            where: { isDeleted: 0 }
+          });
           this.logger.log(`导出Excel - 没有有效ID，查询到${customers.length}个全部客户`);
         }
       } else {
-        // 导出全部客户
-        customers = await this.customerRepository.find();
+        // 导出全部未删除的客户
+        customers = await this.customerRepository.find({
+          where: { isDeleted: 0 }
+        });
         this.logger.log(`导出Excel - 导出全部，查询到${customers.length}个客户`);
       }
 

@@ -107,6 +107,15 @@ export class Customer {
   lastSyncTime: Date;
 
   @ApiProperty({
+    description: '是否删除',
+    example: 0,
+    type: 'number',
+    required: false
+  })
+  @Column({ name: 'is_deleted', type: 'tinyint', width: 1, default: 0 })
+  isDeleted: number;
+
+  @ApiProperty({
     description: '更新人，记录最后修改该客户信息的用户',
     example: '管理员',
     maxLength: 50,

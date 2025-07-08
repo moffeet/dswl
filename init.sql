@@ -26,7 +26,9 @@ CREATE TABLE t_users (
     last_login_ip VARCHAR(50) COMMENT '最后登录IP',
     current_login_ip VARCHAR(50) COMMENT '当前登录IP',
     current_token VARCHAR(1000) COMMENT '当前登录token',
+    is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
     create_by BIGINT COMMENT '创建人ID',
+    update_by BIGINT COMMENT '更新人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '用户表';
@@ -39,7 +41,9 @@ CREATE TABLE t_roles (
     role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码',
     description TEXT COMMENT '角色描述',
     status ENUM('enabled', 'disabled') DEFAULT 'enabled' COMMENT '角色状态',
+    is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
     create_by BIGINT COMMENT '创建人ID',
+    update_by BIGINT COMMENT '更新人ID',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '角色表';
@@ -95,6 +99,7 @@ CREATE TABLE t_customers (
     warehouseLatitude DECIMAL(10, 7) DEFAULT NULL COMMENT '仓库纬度',
     status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '客户状态',
     lastSyncTime DATETIME DEFAULT NULL COMMENT '最后同步时间',
+    is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updateBy VARCHAR(50) DEFAULT NULL
@@ -110,6 +115,9 @@ CREATE INDEX idx_roles_status ON t_roles(status);
 CREATE INDEX idx_permissions_code ON t_permissions(permission_code);
 CREATE INDEX idx_permissions_type ON t_permissions(permission_type);
 CREATE INDEX idx_permissions_parent ON t_permissions(parent_id);
+CREATE INDEX idx_users_is_deleted ON t_users(is_deleted);
+CREATE INDEX idx_roles_is_deleted ON t_roles(is_deleted);
+CREATE INDEX idx_customers_is_deleted ON t_customers(is_deleted);
 
 -- 插入菜单权限数据（扁平结构，与静态权限常量一致）
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, path, component, icon, sort_order) VALUES
