@@ -17,10 +17,10 @@ export default function Home() {
 
   const menuItems = [
     {
-      title: '客户管理',
+      title: '客户地址',
       description: '管理客户信息、联系方式和地址',
       icon: <IconUser style={{ fontSize: '32px', color: '#1890ff' }} />,
-      path: '/customers',
+      path: '/customer',
       color: '#1890ff',
     },
     {
@@ -92,7 +92,7 @@ export default function Home() {
           欢迎回来，{user?.nickname || user?.username}！专业的物流配送管理解决方案，助力企业高效运营
         </p>
         <Space size="large">
-          <Button type="primary" size="large" onClick={() => router.push('/customers')}>
+          <Button type="primary" size="large" onClick={() => router.push('/customer')}>
             开始使用
           </Button>
           <Button size="large" onClick={() => router.push('/users')}>
