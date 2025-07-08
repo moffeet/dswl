@@ -6,6 +6,7 @@ import { LoginDto, LoginResponseDto } from './dto/login.dto';
 import { User } from '../users/entities/user.entity';
 import { BlacklistService } from './blacklist.service';
 import { IpLimitService } from './ip-limit.service';
+import { CaptchaService } from './captcha.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -16,11 +17,17 @@ export class AuthService {
     private configService: ConfigService,
     private blacklistService: BlacklistService,
     private ipLimitService: IpLimitService,
+    private captchaService: CaptchaService,
   ) {}
 
   async login(loginDto: LoginDto, req?: any, forceLogin?: boolean): Promise<LoginResponseDto> {
+    // 🔐 验证码校验
+    if (!this.captchaService.verifyCaptcha(loginDto.captchaId, loginDto.captchaCode)) {
+      throw new UnauthorizedException('验证码错误或已过期');
+    }
+
     let actualPassword: string;
-    
+
     // 🔒 安全改进：检查是否为加密数据
     if (loginDto._encrypted && loginDto.timestamp && loginDto.signature) {
       console.log('检测到加密登录数据，开始解密处理');

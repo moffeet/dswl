@@ -11,6 +11,7 @@ import { CaslAbilityFactory } from './casl/casl-ability.factory';
 import { BlacklistService } from './blacklist.service';
 import { IpLimitService } from './ip-limit.service';
 import { PermissionCheckService } from './permission-check.service';
+import { CaptchaService } from './captcha.service';
 import { User } from '../users/entities/user.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../permissions/entities/permission.entity';
@@ -28,7 +29,7 @@ import { Permission } from '../permissions/entities/permission.entity';
     UsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService],
-  exports: [AuthService, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService],
+  providers: [AuthService, JwtStrategy, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService],
+  exports: [AuthService, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService],
 })
 export class AuthModule {} 

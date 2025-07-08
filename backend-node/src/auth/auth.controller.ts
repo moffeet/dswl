@@ -1,17 +1,20 @@
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { PermissionCheckService } from './permission-check.service';
+import { CaptchaService } from './captcha.service';
 
 @ApiTags('认证管理')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly permissionCheckService: PermissionCheckService
+    private readonly permissionCheckService: PermissionCheckService,
+    private readonly captchaService: CaptchaService
   ) {}
 
   @ApiOperation({ 
@@ -467,5 +470,51 @@ export class AuthController {
       message: '密码修改成功',
       data: null
     };
+  }
+
+  @ApiOperation({
+    summary: '获取验证码',
+    description: `
+🔐 **验证码生成接口**
+
+## 📋 功能说明
+- 生成图形验证码，用于登录安全验证
+- 验证码有效期5分钟
+- 验证码为4位数字和字母组合
+- 大小写不敏感
+
+## 🎯 使用场景
+- 用户登录时需要输入验证码
+- 提高系统安全性，防止暴力破解
+
+## 📦 返回数据
+- id: 验证码唯一标识
+- svg: SVG格式的验证码图片
+    `
+  })
+  @ApiResponse({
+    status: 200,
+    description: '✅ 验证码生成成功',
+    example: {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '验证码生成成功',
+      data: {
+        id: 'abc123def456',
+        svg: '<svg>...</svg>'
+      }
+    }
+  })
+  @Get('captcha')
+  async getCaptcha(@Res() res: Response) {
+    const captcha = this.captchaService.generateCaptcha();
+
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/json');
+
+    return res.json({
+      code: RESPONSE_CODES.SUCCESS,
+      message: '验证码生成成功',
+      data: captcha
+    });
   }
 }

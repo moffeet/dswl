@@ -21,6 +21,12 @@ import { createSecureLoginData } from '../../utils/crypto';
 interface LoginForm {
   username: string;
   password: string;
+  captchaCode: string;
+}
+
+interface CaptchaData {
+  id: string;
+  svg: string;
 }
 
 export default function LoginPage() {
@@ -36,39 +42,82 @@ export default function LoginPage() {
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [changePasswordError, setChangePasswordError] = useState<string>('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [captchaData, setCaptchaData] = useState<CaptchaData | null>(null);
+  const [captchaLoading, setCaptchaLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
-  // 设置默认值
+  // 获取验证码
+  const fetchCaptcha = async () => {
+    setCaptchaLoading(true);
+    try {
+      const result = await api.get('/auth/captcha');
+      if (result.code === 200) {
+        setCaptchaData(result.data);
+      } else {
+        Message.error('获取验证码失败');
+      }
+    } catch (error) {
+      console.error('获取验证码失败:', error);
+      Message.error('获取验证码失败');
+    } finally {
+      setCaptchaLoading(false);
+    }
+  };
+
+  // 设置默认值和获取验证码
   useEffect(() => {
     form.setFieldsValue({
       username: 'admin',
       password: 'admin2025'
     });
+    fetchCaptcha(); // 页面加载时获取验证码
   }, [form]);
 
   const handleLogin = async (values: LoginForm, force = false) => {
     setLoading(true);
     setError(''); // 清除之前的错误信息
-    
+
+    // 验证验证码是否已获取
+    if (!captchaData) {
+      setError('请先获取验证码');
+      setLoading(false);
+      return;
+    }
+
+    // 验证验证码是否已输入
+    if (!values.captchaCode) {
+      setError('请输入验证码');
+      setLoading(false);
+      return;
+    }
+
     try {
       const endpoint = force ? '/auth/login/force' : '/auth/login';
-      
+
       // 🔒 安全改进：加密密码后再发送
       const secureData = createSecureLoginData(values.username, values.password);
+
+      // 添加验证码信息
+      const loginData = {
+        ...secureData,
+        captchaId: captchaData.id,
+        captchaCode: values.captchaCode
+      };
       
       console.log('=== 密码加密传输 ===');
       console.log('原始密码长度:', values.password.length);
       console.log('加密后数据:', {
-        username: secureData.username,
-        passwordLength: secureData.password.length,
-        hasTimestamp: !!secureData.timestamp,
-        hasSignature: !!secureData.signature,
-        isEncrypted: secureData._encrypted
+        username: loginData.username,
+        passwordLength: loginData.password.length,
+        hasTimestamp: !!loginData.timestamp,
+        hasSignature: !!loginData.signature,
+        isEncrypted: loginData._encrypted,
+        hasCaptcha: !!loginData.captchaId
       });
       console.log('发送加密登录数据，密码已加密处理');
-      
-      const result = await api.post(endpoint, secureData);
+
+      const result = await api.post(endpoint, loginData);
 
       if (result.code === 200) {
         // 检查是否需要修改密码
@@ -104,10 +153,18 @@ export default function LoginPage() {
       } else {
         // 设置错误信息到状态，而不是使用全局Message
         setError(result.message || '登录失败，请检查用户名和密码');
+        // 登录失败时重新获取验证码
+        await fetchCaptcha();
+        // 清空验证码输入
+        form.setFieldValue('captchaCode', '');
       }
     } catch (error: any) {
       console.error('❌ 登录错误:', error);
       setError(error.message || '网络连接失败，请稍后重试');
+      // 登录失败时重新获取验证码
+      await fetchCaptcha();
+      // 清空验证码输入
+      form.setFieldValue('captchaCode', '');
     } finally {
       setLoading(false);
     }
@@ -204,7 +261,10 @@ export default function LoginPage() {
         <Form
           form={form}
           layout="vertical"
-          onSubmit={handleLogin}
+          onSubmit={async (values) => {
+            console.log('🔧 表单验证成功，提交的值:', values);
+            await handleLogin(values);
+          }}
           autoComplete="off"
         >
           <Form.Item
@@ -238,6 +298,59 @@ export default function LoginPage() {
               }}
             />
           </Form.Item>
+
+          {/* 验证码输入框 */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: error ? '8px' : '24px' }}>
+            <Form.Item
+              field="captchaCode"
+              rules={[{ required: true, message: '请输入验证码' }]}
+              style={{ flex: 1, marginBottom: 0 }}
+            >
+              <Input
+                placeholder="请输入验证码"
+                size="large"
+                style={{
+                  borderRadius: '8px',
+                  height: '48px',
+                  borderColor: error ? '#F53F3F' : undefined
+                }}
+                maxLength={4}
+              />
+            </Form.Item>
+            <div
+              style={{
+                width: '120px',
+                height: '48px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                backgroundColor: '#f5f5f5',
+                position: 'relative'
+              }}
+              onClick={fetchCaptcha}
+              title="点击刷新验证码"
+            >
+              {captchaLoading ? (
+                <div style={{ color: '#86909C' }}>加载中...</div>
+              ) : captchaData ? (
+                <div
+                  dangerouslySetInnerHTML={{ __html: captchaData.svg }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                />
+              ) : (
+                <div style={{ color: '#86909C', fontSize: '12px' }}>点击获取</div>
+              )}
+            </div>
+          </div>
 
           {/* 错误提示信息 */}
           {error && (

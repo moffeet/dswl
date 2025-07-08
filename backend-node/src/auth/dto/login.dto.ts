@@ -116,9 +116,9 @@ const signature = generateSignature('admin', encryptedPassword, 1704387123456);
   @IsString()
   signature?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: `加密标识 - 标识当前请求是否使用加密模式
-    
+
 🔐 **使用说明**：
 - true：使用加密传输（需要 timestamp 和 signature）
 - false/undefined：明文传输（兼容模式）
@@ -130,7 +130,9 @@ const signature = generateSignature('admin', encryptedPassword, 1704387123456);
   "password": "U2FsdGVkX1/8K7gWn5W2mQ8tP3X9vK2lN4F6hB8cD1E=",
   "timestamp": 1704387123456,
   "signature": "a7b8c9d",
-  "_encrypted": true
+  "_encrypted": true,
+  "captchaId": "abc123def456",
+  "captchaCode": "A1B2"
 }
 \`\`\`
 
@@ -138,7 +140,9 @@ const signature = generateSignature('admin', encryptedPassword, 1704387123456);
 \`\`\`json
 {
   "username": "admin",
-  "password": "123456"
+  "password": "123456",
+  "captchaId": "abc123def456",
+  "captchaCode": "A1B2"
 }
 \`\`\``,
     example: true,
@@ -147,6 +151,32 @@ const signature = generateSignature('admin', encryptedPassword, 1704387123456);
   @IsOptional()
   @IsBoolean()
   _encrypted?: boolean;
+
+  @ApiProperty({
+    description: `验证码ID - 从验证码接口获取的唯一标识
+
+🔐 **使用说明**：
+- 通过 GET /auth/captcha 接口获取
+- 用于验证码验证时的标识
+- 验证码有效期5分钟`,
+    example: 'abc123def456',
+    type: 'string'
+  })
+  @IsString()
+  captchaId: string;
+
+  @ApiProperty({
+    description: `验证码 - 用户输入的验证码内容
+
+🔐 **使用说明**：
+- 4位数字和字母组合
+- 大小写不敏感
+- 一次性使用，验证后失效`,
+    example: 'A1B2',
+    type: 'string'
+  })
+  @IsString()
+  captchaCode: string;
 }
 
 export class ResetPasswordDto {
