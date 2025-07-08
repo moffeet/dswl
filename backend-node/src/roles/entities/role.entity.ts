@@ -15,8 +15,7 @@ export class Role {
   @Column({ type: 'text', nullable: true, comment: '角色描述' })
   description?: string;
 
-  @Column({ type: 'varchar', length: 10, default: 'enabled', comment: '角色状态' })
-  status: string;
+
 
   @Column({ name: 'is_deleted', type: 'tinyint', width: 1, default: 0, comment: '是否删除：0-未删除，1-已删除' })
   isDeleted: number;

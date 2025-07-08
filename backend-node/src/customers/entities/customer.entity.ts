@@ -87,14 +87,7 @@ export class Customer {
   @Column({ name: 'warehouseLatitude', type: 'decimal', precision: 10, scale: 7, nullable: true })
   warehouseLatitude: number;
 
-  @ApiProperty({
-    description: '客户状态',
-    example: 'active',
-    enum: ['active', 'inactive'],
-    required: false
-  })
-  @Column({ name: 'status', type: 'enum', enum: ['active', 'inactive'], default: 'active' })
-  status: 'active' | 'inactive';
+
 
   @ApiProperty({
     description: '最后同步时间',

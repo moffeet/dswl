@@ -26,14 +26,11 @@ import {
   IconRefresh,
   IconUser,
   IconLock,
-  IconCheckCircle,
-  IconUserGroup,
-  IconEye,
-  IconEyeInvisible
+  IconUserGroup
 } from '@arco-design/web-react/icon';
 import { API_ENDPOINTS } from '@/config/api';
 
-const { TextArea } = Input;
+
 const { Option } = Select;
 const { Row: GridRow, Col } = Grid;
 
@@ -44,7 +41,6 @@ interface User {
   email?: string;
   phone?: string;
   nickname?: string;
-  status: 'normal' | 'disabled';
   roles: Role[];  // 暂时保留，避免前端错误
   createTime: string;
   updateTime: string;
@@ -56,7 +52,6 @@ interface Role {
   roleName: string;
   roleCode: string;
   description: string;
-  status: '启用' | '禁用';
 }
 
 // API调用函数
@@ -72,7 +67,7 @@ const fetchUsers = async (page: number = 1, limit: number = 10, searchParams?: a
     if (searchParams?.nickname) params.append('nickname', searchParams.nickname);
     if (searchParams?.phone) params.append('phone', searchParams.phone);
     if (searchParams?.email) params.append('email', searchParams.email);
-    if (searchParams?.status) params.append('status', searchParams.status);
+
     
     const response = await fetch(`${API_ENDPOINTS.users}?${params.toString()}`, {
       headers: {
@@ -209,9 +204,8 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form] = Form.useForm();
   
-  // 搜索和筛选状态
+  // 搜索状态
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   
   // 分页状态
@@ -240,7 +234,7 @@ export default function UsersPage() {
         searchParams.phone = searchKeyword;
         searchParams.email = searchKeyword;
       }
-      if (selectedStatus) searchParams.status = selectedStatus;
+
       
       const [usersData, rolesData] = await Promise.all([
         fetchUsers(currentPage, pageSize, searchParams),
@@ -258,13 +252,11 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize, searchKeyword, selectedStatus]);
+  }, [currentPage, pageSize, searchKeyword]);
 
   // 统计数据
   const stats = {
     total: total,
-    active: data.filter(user => user.status === 'normal').length,
-    inactive: data.filter(user => user.status === 'disabled').length,
     withRoles: data.filter(user => user.roles && user.roles.length > 0).length
   };
 
@@ -305,18 +297,7 @@ export default function UsersPage() {
         </div>
       ),
     },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      align: 'center',
-      render: (status: string) => (
-        <Badge
-          status={status === 'normal' ? 'success' : 'default'}
-          text={status === 'normal' ? '启用' : '禁用'}
-        />
-      ),
-    },
+
     {
       title: '上次登录时间',
       dataIndex: 'lastLoginTime',
@@ -415,7 +396,6 @@ export default function UsersPage() {
 
   const handleReset = () => {
     setSearchKeyword('');
-    setSelectedStatus('');
     setSelectedRole('');
   };
 
@@ -462,7 +442,7 @@ export default function UsersPage() {
         // 设置用户信息并显示成功弹窗
         setResetUserInfo({
           username: user.username,
-          nickname: user.nickname
+          nickname: user.nickname || ''
         });
         setShowResetSuccessModal(true);
         loadData();
@@ -532,8 +512,8 @@ export default function UsersPage() {
     }}>
       {/* 统计卡片区域 */}
       <GridRow gutter={16} style={{ marginBottom: '24px' }}>
-        <Col span={6}>
-          <Card style={{ 
+        <Col span={12}>
+          <Card style={{
             borderRadius: '12px',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             border: 'none',
@@ -552,47 +532,8 @@ export default function UsersPage() {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
-          <Card style={{ 
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #48c9b0 0%, #158f89 100%)',
-            border: 'none',
-            color: 'white'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
-                  启用用户
-              </div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                  {stats.active}
-                </div>
-              </div>
-              <IconCheckCircle style={{ color: 'white', fontSize: '32px' }} />
-            </div>
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card style={{ 
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            border: 'none',
-            color: 'white'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
-                  禁用用户
-              </div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                  {stats.inactive}
-                </div>
-              </div>
-              <IconLock style={{ color: 'white', fontSize: '32px' }} />
-            </div>
-          </Card>
-        </Col>
-        <Col span={6}>
+
+        <Col span={12}>
           <Card style={{ 
             borderRadius: '12px',
             background: 'linear-gradient(135deg, #fd9644 0%, #f7931e 100%)',
@@ -647,20 +588,6 @@ export default function UsersPage() {
               prefix={<IconSearch />}
             />
             
-                <Select 
-              placeholder="状态"
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-              style={{ 
-                width: '120px',
-                borderRadius: '8px'
-              }}
-                  allowClear
-            >
-              <Option value="normal">启用</Option>
-              <Option value="disabled">禁用</Option>
-            </Select>
-
             <Select
               placeholder="角色"
               value={selectedRole}

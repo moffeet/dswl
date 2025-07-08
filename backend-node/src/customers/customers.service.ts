@@ -364,7 +364,7 @@ export class CustomersService {
       '门店纬度': customer.storeLatitude || '',
       '仓库经度': customer.warehouseLongitude || '',
       '仓库纬度': customer.warehouseLatitude || '',
-      '状态': customer.status === 'active' ? '启用' : '禁用',
+
       '更新人': customer.updateBy || '',
       '创建时间': customer.createdAt ? customer.createdAt.toLocaleString('zh-CN') : '',
       '更新时间': customer.updatedAt ? customer.updatedAt.toLocaleString('zh-CN') : '',

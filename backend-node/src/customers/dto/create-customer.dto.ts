@@ -84,13 +84,5 @@ export class CreateCustomerDto {
   @Type(() => Number)
   warehouseLatitude?: number;
 
-  @ApiProperty({
-    description: '客户状态',
-    example: 'active',
-    enum: ['active', 'inactive'],
-    required: false
-  })
-  @IsOptional()
-  @IsEnum(['active', 'inactive'])
-  status?: 'active' | 'inactive';
+
 }

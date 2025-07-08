@@ -36,7 +36,7 @@ CREATE TABLE t_roles (
     role_name VARCHAR(50) NOT NULL COMMENT '角色名称',
     role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码',
     description TEXT COMMENT '角色描述',
-    status ENUM('enabled', 'disabled') DEFAULT 'enabled' COMMENT '角色状态',
+
     is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
     create_by BIGINT COMMENT '创建人ID',
     update_by BIGINT COMMENT '更新人ID',
@@ -93,7 +93,7 @@ CREATE TABLE t_customers (
     storeLatitude DECIMAL(10, 7) DEFAULT NULL COMMENT '门店纬度',
     warehouseLongitude DECIMAL(10, 7) DEFAULT NULL COMMENT '仓库经度',
     warehouseLatitude DECIMAL(10, 7) DEFAULT NULL COMMENT '仓库纬度',
-    status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '客户状态',
+
     lastSyncTime DATETIME DEFAULT NULL COMMENT '最后同步时间',
     is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -104,7 +104,7 @@ CREATE TABLE t_customers (
 -- 创建索引
 CREATE INDEX idx_users_username ON t_users(username);
 CREATE INDEX idx_roles_code ON t_roles(role_code);
-CREATE INDEX idx_roles_status ON t_roles(status);
+
 CREATE INDEX idx_permissions_code ON t_permissions(permission_code);
 CREATE INDEX idx_permissions_type ON t_permissions(permission_type);
 CREATE INDEX idx_permissions_parent ON t_permissions(parent_id);
@@ -159,8 +159,8 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 ('小程序用户-删除', 'btn.wxuser.delete', 'button', @menu_wxuser_id, 503);
 
 -- 插入角色数据 - 只保留超级管理员角色
-INSERT INTO t_roles (role_name, role_code, description, status, create_by) VALUES
-('超级管理员', 'admin', '系统超级管理员，拥有所有权限，不可修改', 'enabled', 1);
+INSERT INTO t_roles (role_name, role_code, description, create_by) VALUES
+('超级管理员', 'admin', '系统超级管理员，拥有所有权限，不可修改', 1);
 
 -- 插入用户数据（只保留超级管理员，密码为admin2025）
 INSERT INTO t_users (username, password, nickname, create_by) VALUES
@@ -179,12 +179,12 @@ SELECT 1, id FROM t_permissions;
 
 
 -- 插入客户测试数据
-INSERT INTO t_customers (customerNumber, customerName, storeAddress, warehouseAddress, storeLongitude, storeLatitude, warehouseLongitude, warehouseLatitude, status, updateBy) VALUES
-('C001', '深圳科技有限公司', '深圳市南山区科技园南区A座', '深圳市南山区科技园南区B座', 113.9547, 22.5431, 113.9557, 22.5441, 'active', '系统'),
-('C002', '广州贸易公司', '广州市天河区珠江新城东塔', '广州市天河区珠江新城西塔', 113.3221, 23.1167, 113.3231, 23.1177, 'active', '管理员'),
-('C003', '东莞制造企业', '东莞市长安镇工业区1号', '东莞市长安镇工业区2号', 113.8059, 22.8169, 113.8069, 22.8179, 'active', '管理员'),
-('C004', '佛山物流中心', '佛山市禅城区物流园A区', '佛山市禅城区物流园B区', 113.1221, 23.0167, 113.1231, 23.0177, 'active', '系统'),
-('C005', '惠州电子厂', '惠州市惠城区工业园东区', '惠州市惠城区工业园西区', 114.4129, 23.0793, 114.4139, 23.0803, 'active', '管理员');
+INSERT INTO t_customers (customerNumber, customerName, storeAddress, warehouseAddress, storeLongitude, storeLatitude, warehouseLongitude, warehouseLatitude, updateBy) VALUES
+('C001', '深圳科技有限公司', '深圳市南山区科技园南区A座', '深圳市南山区科技园南区B座', 113.9547, 22.5431, 113.9557, 22.5441, '系统'),
+('C002', '广州贸易公司', '广州市天河区珠江新城东塔', '广州市天河区珠江新城西塔', 113.3221, 23.1167, 113.3231, 23.1177, '管理员'),
+('C003', '东莞制造企业', '东莞市长安镇工业区1号', '东莞市长安镇工业区2号', 113.8059, 22.8169, 113.8069, 22.8179, '管理员'),
+('C004', '佛山物流中心', '佛山市禅城区物流园A区', '佛山市禅城区物流园B区', 113.1221, 23.0167, 113.1231, 23.0177, '系统'),
+('C005', '惠州电子厂', '惠州市惠城区工业园东区', '惠州市惠城区工业园西区', 114.4129, 23.0793, 114.4139, 23.0803, '管理员');
 
 -- ========================================
 -- 🎉 数据库初始化完成！

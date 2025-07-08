@@ -158,7 +158,7 @@ export class CustomerSyncService {
     customer.customerNumber = externalCustomer.customerNumber;
     customer.customerName = externalCustomer.customerName;
     customer.storeAddress = externalCustomer.storeAddress;
-    customer.status = 'active';
+
 
     // 通过高德API获取门店地址的经纬度
     if (externalCustomer.storeAddress) {

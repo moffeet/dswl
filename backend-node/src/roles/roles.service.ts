@@ -55,8 +55,7 @@ export class RolesService {
     const role = this.roleRepository.create({
       roleName: createRoleDto.roleName,
       roleCode: createRoleDto.roleCode,
-      description: createRoleDto.description,
-      status: 'enabled' // 固定为启用状态
+      description: createRoleDto.description
     });
 
     const savedRole = await this.roleRepository.save(role);

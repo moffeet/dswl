@@ -47,7 +47,6 @@ interface Role {
   roleName: string;
   roleCode: string;
   description: string;
-  status: 'active' | 'inactive';
   miniAppLoginEnabled: boolean;
   permissions: Permission[];
   userCount?: number;
@@ -83,7 +82,6 @@ const fetchRoles = async (page: number = 1, limit: number = 10, searchParams?: a
     // 添加搜索参数
     if (searchParams?.roleName) params.append('roleName', searchParams.roleName);
     if (searchParams?.roleCode) params.append('roleCode', searchParams.roleCode);
-    if (searchParams?.status) params.append('status', searchParams.status);
     if (searchParams?.miniAppLoginEnabled !== undefined) {
       params.append('miniAppLoginEnabled', searchParams.miniAppLoginEnabled.toString());
     }
@@ -254,9 +252,8 @@ export default function RolesPage() {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [form] = Form.useForm();
 
-  // 搜索和筛选状态
+  // 搜索状态
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -276,7 +273,7 @@ export default function RolesPage() {
         searchParams.roleName = searchKeyword;
         searchParams.roleCode = searchKeyword;
       }
-      if (selectedStatus) searchParams.status = selectedStatus;
+
 
       const [rolesData, permissionsData, staticTreeData] = await Promise.all([
         fetchRoles(currentPage, pageSize, searchParams),
@@ -296,13 +293,11 @@ export default function RolesPage() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize, searchKeyword, selectedStatus]);
+  }, [currentPage, pageSize, searchKeyword]);
 
   // 统计数据
   const stats = {
     total: total,
-    active: data.filter(role => role.status === 'active').length,
-    inactive: data.filter(role => role.status === 'inactive').length,
     miniApp: data.filter(role => role.miniAppLoginEnabled).length
   };
 
@@ -458,18 +453,7 @@ export default function RolesPage() {
         </div>
       ),
     },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      align: 'center',
-      render: (status: string) => (
-        <Badge
-          status={status === 'active' ? 'success' : 'default'}
-          text={status === 'active' ? '启用' : '禁用'}
-        />
-      ),
-    },
+
     {
       title: '创建时间',
       dataIndex: 'createTime',
@@ -531,7 +515,6 @@ export default function RolesPage() {
 
   const handleReset = () => {
     setSearchKeyword('');
-    setSelectedStatus('');
   };
 
   const handleAdd = () => {
@@ -619,8 +602,8 @@ export default function RolesPage() {
     }}>
       {/* 统计卡片区域 */}
       <GridRow gutter={16} style={{ marginBottom: '24px' }}>
-        <Col span={6}>
-          <Card style={{ 
+        <Col span={12}>
+          <Card style={{
             borderRadius: '12px',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             border: 'none',
@@ -639,27 +622,8 @@ export default function RolesPage() {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
-          <Card style={{ 
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #48c9b0 0%, #158f89 100%)',
-            border: 'none',
-            color: 'white'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
-                  启用角色
-                </div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                  {stats.active}
-                </div>
-              </div>
-              <IconCheckCircle style={{ color: 'white', fontSize: '32px' }} />
-            </div>
-          </Card>
-        </Col>
-        <Col span={6}>
+
+        <Col span={12}>
           <Card style={{ 
             borderRadius: '12px',
             background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -679,26 +643,7 @@ export default function RolesPage() {
             </div>
           </Card>
         </Col>
-        <Col span={6}>
-          <Card style={{ 
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #fd9644 0%, #f7931e 100%)',
-            border: 'none',
-            color: 'white'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '14px', marginBottom: '8px' }}>
-                  禁用角色
-                </div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                  {stats.inactive}
-                </div>
-              </div>
-              <IconLock style={{ color: 'white', fontSize: '32px' }} />
-            </div>
-          </Card>
-        </Col>
+
       </GridRow>
 
       {/* 主内容卡片 */}
@@ -734,22 +679,7 @@ export default function RolesPage() {
               prefix={<IconSearch />}
             />
             
-              <Select
-              placeholder="状态"
-              value={selectedStatus}
-              onChange={(value) => setSelectedStatus(value)}
-                style={{ 
-                width: '120px',
-                borderRadius: '8px'
-              }}
-              allowClear
-            >
-              <Option value="active">启用</Option>
-              <Option value="inactive">禁用</Option>
-              </Select>
 
-
-            
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button 
                 icon={<IconSearch />}

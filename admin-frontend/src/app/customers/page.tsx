@@ -23,7 +23,7 @@ interface Customer {
   storeLatitude?: number;  // 门店纬度
   warehouseLongitude?: number; // 仓库经度
   warehouseLatitude?: number;  // 仓库纬度
-  status: 'active' | 'inactive'; // 状态
+
   lastSyncTime?: string;   // 最后同步时间
   updateTime: string;      // 更新时间
   updateBy: string;        // 更新人
@@ -122,7 +122,7 @@ export default function CustomersPage() {
             storeLatitude: item.storeLatitude,
             warehouseLongitude: item.warehouseLongitude,
             warehouseLatitude: item.warehouseLatitude,
-            status: item.status,
+
             lastSyncTime: item.lastSyncTime,
             updateTime: item.updateTime || item.createTime,
             updateBy: item.updateBy || '系统',
@@ -705,21 +705,7 @@ export default function CustomersPage() {
         </Tooltip>
       ),
     },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 80,
-      align: 'center' as const,
-      render: (status: string) => (
-        <span style={{
-          color: status === 'active' ? '#00B42A' : '#F53F3F',
-          fontSize: '13px',
-          fontWeight: 500
-        }}>
-          {status === 'active' ? '启用' : '禁用'}
-        </span>
-      ),
-    },
+
     {
       title: '更新人',
       dataIndex: 'updateBy',
@@ -1086,17 +1072,7 @@ export default function CustomersPage() {
             </Space>
           </div>
 
-          <Form.Item label="状态" style={{ marginBottom: 0 }}>
-            <Input
-              value={editingRecord?.status === 'active' ? '启用' : '禁用'}
-              disabled
-              style={{
-                backgroundColor: '#f7f8fa',
-                borderRadius: 6,
-                color: '#86909C'
-              }}
-            />
-          </Form.Item>
+
         </Form>
       </Modal>
 
