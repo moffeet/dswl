@@ -15,14 +15,13 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiParam,
   ApiBody
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from '../common/dto/pagination.dto';
-import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
+import { RESPONSE_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('👤 用户管理')
@@ -33,63 +32,9 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '创建用户',
     description: '创建新的系统用户，用户创建后可以分配角色获得相应权限。密码会自动加密存储，返回数据不包含密码字段。'
-  })
-  @ApiBody({
-    description: '用户创建数据',
-    schema: {
-      type: 'object',
-      required: ['username', 'password', 'nickname'],
-      properties: {
-        username: {
-          type: 'string',
-          description: '用户名，系统内唯一',
-          example: 'admin'
-        },
-        password: {
-          type: 'string',
-          description: '登录密码，最少6位',
-          minLength: 6,
-          example: 'admin123'
-        },
-        nickname: {
-          type: 'string',
-          description: '用户昵称',
-          example: '管理员'
-        },
-        gender: {
-          type: 'string',
-          enum: ['male', 'female'],
-          description: '性别',
-          example: 'male'
-        },
-        phone: {
-          type: 'string',
-          description: '手机号码',
-          example: '13800138000'
-        },
-        email: {
-          type: 'string',
-          description: '邮箱地址',
-          format: 'email',
-          example: 'admin@example.com'
-        },
-        status: {
-          type: 'string',
-          enum: ['normal', 'disabled'],
-          description: '用户状态',
-          example: 'normal'
-        },
-        roleIds: {
-          type: 'array',
-          items: { type: 'number' },
-          description: '角色ID数组',
-          example: [1, 2]
-        }
-      }
-    }
   })
   @ApiResponse({ 
     status: 201, 
@@ -130,13 +75,12 @@ export class UsersController {
   }
 
   @Get()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '获取用户列表',
-    description: '分页查询用户列表，支持按用户名、昵称、手机号、邮箱、性别、状态进行筛选。返回数据不包含密码字段。'
+    description: '分页查询用户列表，支持按用户名、昵称进行筛选。返回数据不包含密码字段。'
   })
-
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -154,12 +98,20 @@ export class UsersController {
                   id: { type: 'number', example: 1 },
                   username: { type: 'string', example: 'admin' },
                   nickname: { type: 'string', example: '管理员' },
-                  gender: { type: 'string', example: 'male' },
-                  phone: { type: 'string', example: '13800138000' },
-                  email: { type: 'string', example: 'admin@example.com' },
-                  status: { type: 'string', example: 'normal' },
+                  isFirstLogin: { type: 'number', example: 0 },
+                  lastLoginTime: { type: 'string', example: '2024-01-20T10:30:00.000Z' },
                   createTime: { type: 'string', example: '2024-01-20T10:30:00.000Z' },
-                  updateTime: { type: 'string', example: '2024-01-20T10:30:00.000Z' }
+                  updateTime: { type: 'string', example: '2024-01-20T10:30:00.000Z' },
+                  roles: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'number', example: 1 },
+                        roleName: { type: 'string', example: '超级管理员' }
+                      }
+                    }
+                  }
                 }
               }
             },

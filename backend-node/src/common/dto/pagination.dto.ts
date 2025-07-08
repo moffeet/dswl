@@ -56,38 +56,6 @@ export class UserQueryDto extends PaginationDto {
   })
   @IsOptional()
   nickname?: string;
-
-  @ApiProperty({
-    description: '手机号，支持模糊匹配',
-    example: '138',
-    required: false
-  })
-  @IsOptional()
-  phone?: string;
-
-  @ApiProperty({
-    description: '邮箱，支持模糊匹配',
-    example: 'admin',
-    required: false
-  })
-  @IsOptional()
-  email?: string;
-
-  @ApiProperty({
-    description: '性别',
-    enum: ['male', 'female'],
-    required: false
-  })
-  @IsOptional()
-  gender?: 'male' | 'female';
-
-  @ApiProperty({
-    description: '用户状态',
-    enum: ['normal', 'disabled'],
-    required: false
-  })
-  @IsOptional()
-  status?: 'normal' | 'disabled';
 }
 
 /**

@@ -71,12 +71,6 @@ export class UsersService {
     if (filters.nickname) {
       where.nickname = Like(`%${filters.nickname}%`);
     }
-    if (filters.gender) {
-      where.gender = filters.gender;
-    }
-    if (filters.status) {
-      where.status = filters.status;
-    }
 
     const [users, total] = await this.userRepository.findAndCount({
       where,
