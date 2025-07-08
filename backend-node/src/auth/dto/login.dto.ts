@@ -54,7 +54,6 @@ fetch('/api/auth/login', {
     }
   })
   @IsString()
-  @MinLength(6)
   password: string;
 
   @ApiPropertyOptional({ 

@@ -222,6 +222,10 @@ export default function UsersPage() {
   // 多选状态
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
 
+  // 重置密码成功弹窗状态
+  const [showResetSuccessModal, setShowResetSuccessModal] = useState(false);
+  const [resetUserInfo, setResetUserInfo] = useState<{ username: string; nickname: string } | null>(null);
+
 
 
   // 加载数据
@@ -339,55 +343,66 @@ export default function UsersPage() {
       width: 160,
       align: 'center',
       fixed: 'right',
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            <Button
-            type="text"
-              size="small"
-            icon={<IconEdit />}
-            onClick={() => handleEdit(record)}
-              style={{
-              color: '#3b82f6',
-              padding: '4px 8px',
-              borderRadius: '4px'
-            }}
-          />
-          <Popconfirm
-            title="确认重置此用户密码？重置后密码将变为用户名"
-            onOk={() => handleResetPassword(record.id)}
-            okText="确认"
-            cancelText="取消"
-          >
-            <Button
+      render: (_, record) => {
+        // 系统管理员（admin）不可编辑、删除、重置密码
+        if (record.username === 'admin') {
+          return (
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <span style={{ color: '#86909C', fontSize: '12px' }}>系统用户</span>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <Button
               type="text"
-              size="small"
-              icon={<IconLock />}
-              style={{
-                color: '#f59e0b',
+                size="small"
+              icon={<IconEdit />}
+              onClick={() => handleEdit(record)}
+                style={{
+                color: '#3b82f6',
                 padding: '4px 8px',
                 borderRadius: '4px'
               }}
             />
-          </Popconfirm>
-          <Popconfirm
-            title="确认删除此用户？"
-            onOk={() => handleDelete(record.id)}
-            okText="确认"
-            cancelText="取消"
-          >
-            <Button
-              type="text"
-              size="small"
-              icon={<IconDelete />}
-              style={{
-                color: '#ef4444',
-                padding: '4px 8px',
-                borderRadius: '4px'
-              }}
-            />
-          </Popconfirm>
-        </div>
-      ),
+            <Popconfirm
+              title="确认重置此用户密码？重置后密码将变为用户名"
+              onOk={() => handleResetPassword(record.id)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={<IconLock />}
+                style={{
+                  color: '#f59e0b',
+                  padding: '4px 8px',
+                  borderRadius: '4px'
+                }}
+              />
+            </Popconfirm>
+            <Popconfirm
+              title="确认删除此用户？"
+              onOk={() => handleDelete(record.id)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button
+                type="text"
+                size="small"
+                icon={<IconDelete />}
+                style={{
+                  color: '#ef4444',
+                  padding: '4px 8px',
+                  borderRadius: '4px'
+                }}
+              />
+            </Popconfirm>
+          </div>
+        );
+      },
     },
   ];
 
@@ -435,9 +450,21 @@ export default function UsersPage() {
 
   const handleResetPassword = async (id: number) => {
     try {
+      // 先获取用户信息
+      const user = data.find(u => u.id === id);
+      if (!user) {
+        Message.error('用户不存在');
+        return;
+      }
+
       const success = await resetPassword(id);
       if (success) {
-        Message.success('密码重置成功，已重置为用户名');
+        // 设置用户信息并显示成功弹窗
+        setResetUserInfo({
+          username: user.username,
+          nickname: user.nickname
+        });
+        setShowResetSuccessModal(true);
         loadData();
       } else {
         Message.error('重置密码失败');
@@ -842,9 +869,8 @@ export default function UsersPage() {
               </Form.Item>
 
               <Form.Item
-                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色 <span style={{ color: '#ef4444' }}>*</span></span>}
+                label={<span style={{ fontSize: '14px', fontWeight: '500' }}>角色</span>}
                 field="roleId"
-                rules={[{ required: true, message: '请选择角色' }]}
               >
                 <Select
                   placeholder="请选择角色"
@@ -932,10 +958,9 @@ export default function UsersPage() {
           {editingUser && (
             <Form.Item
               label={<span style={{ fontSize: '14px', fontWeight: '500' }}>
-                角色 <span style={{ color: '#ef4444' }}>*</span>
+                角色
               </span>}
               field="roleId"
-              rules={[{ required: true, message: '请选择角色' }]}
             >
               <Select
                 placeholder="请选择角色"
@@ -954,6 +979,39 @@ export default function UsersPage() {
           )}
           </Form>
       </Modal>
+
+      {/* 重置密码成功弹窗 */}
+      <Modal
+        title="密码重置成功"
+        visible={showResetSuccessModal}
+        onCancel={() => setShowResetSuccessModal(false)}
+        footer={[
+          <Button
+            key="confirm"
+            type="primary"
+            onClick={() => setShowResetSuccessModal(false)}
+          >
+            确认
+          </Button>
+        ]}
+        maskClosable={false}
+        closable={false}
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ fontSize: '16px', color: '#52C41A', marginBottom: '12px' }}>
+            ✅ 密码重置成功！
+          </div>
+          {resetUserInfo && (
+            <div style={{ fontSize: '14px', color: '#86909C', lineHeight: '1.6' }}>
+              <p>用户：<strong>{resetUserInfo.nickname}</strong>（{resetUserInfo.username}）</p>
+              <p>新密码已重置为：<strong style={{ color: '#1890ff' }}>{resetUserInfo.username}</strong></p>
+              <p style={{ color: '#F53F3F', fontSize: '12px', marginTop: '8px' }}>
+                该用户下次登录时需要修改密码
+              </p>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
-} 
+}

@@ -162,19 +162,13 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 INSERT INTO t_roles (role_name, role_code, description, status, create_by) VALUES
 ('超级管理员', 'admin', '系统超级管理员，拥有所有权限，不可修改', 'enabled', 1);
 
--- 插入用户数据（密码均为：123456）
+-- 插入用户数据（只保留超级管理员，密码为admin2025）
 INSERT INTO t_users (username, password, nickname, create_by) VALUES
-('admin', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '系统管理员', 1),
-('manager001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '张经理', 1),
-('driver001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '李师傅', 1),
-('sales001', '$2b$10$KC0763ClzRKOCCAC17mIQOHZR/kDEgTyq8lPorEzrfxyIV2mDykSC', '王销售', 1);
+('admin', '$2b$10$aSpzsNf3J/SPHRYg0C/95O9z/RT7aLa81I.q.5V6b/d3OPCLqi7N2', '系统管理员', 1);
 
 -- 分配用户角色
 INSERT INTO t_user_roles (user_id, role_id) VALUES
-(1, 1), -- admin 分配超级管理员角色
-(2, 3), -- manager001 分配管理员角色
-(3, 4), -- driver001 分配司机角色
-(4, 5); -- sales001 分配销售角色
+(1, 1); -- admin 分配超级管理员角色
 
 -- 分配角色权限
 
@@ -182,53 +176,7 @@ INSERT INTO t_user_roles (user_id, role_id) VALUES
 INSERT INTO t_role_permissions (role_id, permission_id) 
 SELECT 1, id FROM t_permissions;
 
--- 2. 普通用户角色权限（只有客户地址管理权限）
-INSERT INTO t_role_permissions (role_id, permission_id)
-SELECT 2, id FROM t_permissions
-WHERE permission_code IN (
-    'menu.customer'
-);
 
--- 3. 管理员角色权限（用户管理 + 角色管理）
-INSERT INTO t_role_permissions (role_id, permission_id)
-SELECT 3, id FROM t_permissions
-WHERE permission_code IN (
-    'menu.users', 'menu.roles',
-    'btn.users.add', 'btn.users.edit', 'btn.users.delete',
-    'btn.roles.add', 'btn.roles.edit', 'btn.roles.delete'
-);
-
--- 4. 司机角色权限（客户地址查看，可使用小程序）
-INSERT INTO t_role_permissions (role_id, permission_id)
-SELECT 4, id FROM t_permissions
-WHERE permission_code IN (
-    'menu.customer', 'menu.map'
-);
-
--- 5. 销售角色权限（客户地址管理 + 签收单管理，可使用小程序）
-INSERT INTO t_role_permissions (role_id, permission_id)
-SELECT 5, id FROM t_permissions
-WHERE permission_code IN (
-    'menu.customer', 'menu.receipts', 'menu.map',
-    'btn.customer.edit', 'btn.customer.export',
-    'btn.receipts.add', 'btn.receipts.edit', 'btn.receipts.delete'
-);
-
--- 6. 客服角色权限（客户地址编辑 + 小程序用户管理，可使用小程序）
-INSERT INTO t_role_permissions (role_id, permission_id)
-SELECT 6, id FROM t_permissions
-WHERE permission_code IN (
-    'menu.customer', 'menu.wxuser', 'menu.map',
-    'btn.customer.edit',
-    'btn.wxuser.add', 'btn.wxuser.edit', 'btn.wxuser.delete'
-);
-
--- 7. 小程序用户角色权限（小程序专用基础权限）
-INSERT INTO t_role_permissions (role_id, permission_id)
-SELECT 7, id FROM t_permissions
-WHERE permission_code IN (
-    'menu.customer', 'menu.map'
-);
 
 -- 插入客户测试数据
 INSERT INTO t_customers (customerNumber, customerName, storeAddress, warehouseAddress, storeLongitude, storeLatitude, warehouseLongitude, warehouseLatitude, status, updateBy) VALUES
@@ -269,7 +217,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 SELECT '🚀 物流配送管理系统 - 数据库初始化完成！' AS message;
 SELECT '📋 登录信息：' AS info;
 SELECT '   👤 用户名: admin' AS username;
-SELECT '   🔑 密码: 123456' AS password;
+SELECT '   🔑 密码: admin（首次登录需修改密码）' AS password;
 SELECT '   🌐 前端地址: http://localhost:3001' AS frontend_url;
 SELECT '   🔗 后端地址: http://localhost:3000' AS backend_url;
 SELECT '✨ 系统已集成安全增强功能：' AS features;

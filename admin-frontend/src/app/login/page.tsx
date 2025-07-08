@@ -34,6 +34,8 @@ export default function LoginPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUsername, setCurrentUsername] = useState<string>('');
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState<string>('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
@@ -41,7 +43,7 @@ export default function LoginPage() {
   useEffect(() => {
     form.setFieldsValue({
       username: 'admin',
-      password: '123456'
+      password: 'admin2025'
     });
   }, [form]);
 
@@ -74,6 +76,7 @@ export default function LoginPage() {
           Message.info('首次登录，请修改密码');
           setCurrentUserId(result.data.userId);
           setCurrentUsername(result.data.username || values.username);
+          setChangePasswordError(''); // 清除之前的错误
           setShowChangePasswordModal(true);
           return;
         }
@@ -129,11 +132,12 @@ export default function LoginPage() {
 
     if (!currentUserId) {
       console.error('🔧 currentUserId 为空');
-      Message.error('用户ID不存在，请重新登录');
+      setChangePasswordError('用户ID不存在，请重新登录');
       return;
     }
 
     setChangePasswordLoading(true);
+    setChangePasswordError(''); // 清除之前的错误
     try {
       const requestData = {
         userId: currentUserId,
@@ -146,21 +150,16 @@ export default function LoginPage() {
       console.log('🔧 修改密码响应:', result);
 
       if (result.code === 200) {
-        Message.success('密码修改成功！');
+        // 显示成功弹窗
         setShowChangePasswordModal(false);
         changePasswordForm.resetFields();
-
-        // 修改密码成功后，使用新密码重新登录
-        if (loginData) {
-          const newLoginData = { ...loginData, password: values.newPassword };
-          await handleLogin(newLoginData, false);
-        }
+        setShowSuccessModal(true);
       } else {
-        Message.error(result.message || '密码修改失败');
+        setChangePasswordError(result.message || '密码修改失败');
       }
     } catch (error: any) {
       console.error('🔧 修改密码错误:', error);
-      Message.error(error.message || '修改密码失败');
+      setChangePasswordError(error.message || '修改密码失败');
     } finally {
       setChangePasswordLoading(false);
     }
@@ -305,10 +304,7 @@ export default function LoginPage() {
           fontSize: '12px'
         }}>
           <p style={{ margin: '0 0 8px 0' }}>
-            <strong>默认管理员账号：</strong>admin
-          </p>
-          <p style={{ margin: '0 0 16px 0' }}>
-            <strong>默认密码：</strong>123456
+            <strong>初始密码与账户一致</strong>
           </p>
           <p style={{ margin: 0 }}>
             忘记密码？请联系系统管理员
@@ -336,6 +332,21 @@ export default function LoginPage() {
             注意：新密码不能与用户名相同
           </p>
         </div>
+
+        {/* 错误提示区域 */}
+        {changePasswordError && (
+          <div style={{
+            marginBottom: '16px',
+            padding: '12px',
+            backgroundColor: '#FFF2F0',
+            border: '1px solid #FFCCC7',
+            borderRadius: '6px',
+            color: '#F53F3F',
+            fontSize: '14px'
+          }}>
+            {changePasswordError}
+          </div>
+        )}
 
         <Form
           form={changePasswordForm}
@@ -402,9 +413,6 @@ export default function LoginPage() {
                 fontWeight: 'bold'
               }}
               onClick={() => {
-                console.log('🔧🔧🔧 登录页面修改密码按钮被点击了！');
-                alert('登录页面修改密码按钮被点击了！');
-
                 const values = changePasswordForm.getFieldsValue();
                 console.log('🔧 表单当前值:', values);
 
@@ -416,6 +424,40 @@ export default function LoginPage() {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 密码修改成功弹窗 */}
+      <Modal
+        title="密码修改成功"
+        visible={showSuccessModal}
+        onCancel={() => setShowSuccessModal(false)}
+        footer={[
+          <Button
+            key="confirm"
+            type="primary"
+            onClick={async () => {
+              setShowSuccessModal(false);
+              // 修改密码成功后，使用新密码重新登录
+              if (loginData) {
+                const newLoginData = { ...loginData, password: changePasswordForm.getFieldValue('newPassword') };
+                await handleLogin(newLoginData, false);
+              }
+            }}
+          >
+            确认
+          </Button>
+        ]}
+        maskClosable={false}
+        closable={false}
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ fontSize: '16px', color: '#52C41A', marginBottom: '12px' }}>
+            ✅ 密码修改成功！
+          </div>
+          <div style={{ fontSize: '14px', color: '#86909C' }}>
+            点击确认按钮将自动使用新密码登录
+          </div>
+        </div>
       </Modal>
     </div>
   );

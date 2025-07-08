@@ -114,6 +114,11 @@ export class UsersService {
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 
+    // 系统管理员不可更改
+    if (user.username === 'admin') {
+      throw new ConflictException('系统管理员不可更改');
+    }
+
     // 检查用户名是否已存在（排除当前用户）
     if (updateUserDto.username && updateUserDto.username !== user.username) {
       const existingUser = await this.userRepository.findOne({
@@ -173,6 +178,11 @@ export class UsersService {
   async remove(id: number, updateBy?: number): Promise<void> {
     const user = await this.findOne(id);
 
+    // 系统管理员不可删除
+    if (user.username === 'admin') {
+      throw new ConflictException('系统管理员不可删除');
+    }
+
     // 软删除：更新删除标记和更新人
     await this.userRepository.update(id, {
       isDeleted: 1,
@@ -192,6 +202,12 @@ export class UsersService {
 
     if (users.length !== ids.length) {
       throw new NotFoundException('部分用户不存在或已被删除');
+    }
+
+    // 检查是否包含系统管理员
+    const hasAdmin = users.some(user => user.username === 'admin');
+    if (hasAdmin) {
+      throw new ConflictException('不能删除系统管理员');
     }
 
     // 批量软删除
@@ -233,6 +249,11 @@ export class UsersService {
   async resetPassword(id: number): Promise<User> {
     const user = await this.findOne(id);
 
+    // 系统管理员不可重置密码
+    if (user.username === 'admin') {
+      throw new ConflictException('系统管理员密码不可重置');
+    }
+
     // 重置密码为用户名
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(user.username, salt);
@@ -247,6 +268,17 @@ export class UsersService {
   }
 
   async changePassword(userId: number, newPassword: string): Promise<void> {
+    // 获取用户信息
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new ConflictException('用户不存在');
+    }
+
+    // 验证新密码不能与用户名相同
+    if (newPassword === user.username) {
+      throw new ConflictException('新密码不能与用户名相同');
+    }
+
     // 验证密码格式：英文+数字，6-12位
     const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{6,12}$/;
     if (!passwordRegex.test(newPassword)) {
@@ -257,10 +289,9 @@ export class UsersService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // 更新密码并标记为非首次登录
+    // 更新密码
     await this.userRepository.update(userId, {
-      password: hashedPassword,
-      isFirstLogin: 0
+      password: hashedPassword
     });
   }
 }

@@ -59,8 +59,9 @@ export class AuthService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    // 检查是否首次登录
-    if (user.isFirstLogin === 1) {
+    // 检查是否首次登录（通过账号和密码是否相同判断）
+    const isFirstLogin = user.username === actualPassword;
+    if (isFirstLogin) {
       // 首次登录，返回特殊状态要求修改密码
       return {
         requirePasswordChange: true,
