@@ -165,15 +165,9 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 ('小程序用户-编辑', 'btn.wxuser.edit', 'button', @menu_wxuser_id, 502),
 ('小程序用户-删除', 'btn.wxuser.delete', 'button', @menu_wxuser_id, 503);
 
--- 插入角色数据
+-- 插入角色数据 - 只保留超级管理员角色
 INSERT INTO t_roles (role_name, role_code, description, status, create_by) VALUES
-('超级管理员', 'admin', '系统超级管理员，拥有所有权限', 'enabled', 1),
-('普通用户', 'normal', '普通用户角色，基础权限', 'enabled', 1),
-('管理员', 'manager', '管理员，拥有系统管理和部分业务权限', 'enabled', 1),
-('司机', 'driver', '司机角色，主要负责配送业务，可使用小程序', 'enabled', 1),
-('销售', 'sales', '销售角色，主要负责客户和订单管理，可使用小程序', 'enabled', 1),
-('客服', 'service', '客服角色，主要负责客户服务，可使用小程序', 'enabled', 1),
-('小程序用户', 'miniapp', '小程序专用角色，用于小程序登录用户', 'enabled', 1);
+('超级管理员', 'admin', '系统超级管理员，拥有所有权限，不可修改', 'enabled', 1);
 
 -- 插入用户数据（密码均为：123456）
 INSERT INTO t_users (username, password, nickname, phone, email, gender, create_by) VALUES

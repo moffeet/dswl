@@ -68,25 +68,17 @@ export class UsersService {
 
     const savedUser = await this.userRepository.save(user);
 
-    // 分配角色
+    // 分配角色（如果指定了角色）
     if (createUserDto.roleId) {
       const role = await this.roleRepository.findOne({
-        where: { id: createUserDto.roleId }
+        where: { id: createUserDto.roleId, isDeleted: 0 }
       });
       if (role) {
         savedUser.roles = [role];
         await this.userRepository.save(savedUser);
       }
-    } else {
-      // 如果没有指定角色，分配默认的普通用户角色
-      const defaultRole = await this.roleRepository.findOne({
-        where: { roleCode: 'normal' }
-      });
-      if (defaultRole) {
-        savedUser.roles = [defaultRole];
-        await this.userRepository.save(savedUser);
-      }
     }
+    // 如果没有指定角色，则不分配任何角色，用户只能访问home页面
 
     return await this.findOne(savedUser.id);
   }

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import '@arco-design/web-react/dist/css/arco.css';
 import { AuthProvider } from './context/auth';
+import { PermissionProvider } from './context/permission';
 import ClientLayout from './ClientLayout';
 
 // 使用本地字体变量，避免 Google Fonts 连接超时
@@ -30,7 +31,9 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className="antialiased">
         <AuthProvider>
-          <ClientLayout>{children}</ClientLayout>
+          <PermissionProvider>
+            <ClientLayout>{children}</ClientLayout>
+          </PermissionProvider>
         </AuthProvider>
       </body>
     </html>

@@ -4,7 +4,7 @@ import { Repository, Like, In } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { Permission } from '../permissions/entities/permission.entity';
 import { RoleQueryDto } from '../common/dto/pagination.dto';
-import { PROTECTED_ROLES, DEFAULT_ROLE, isProtectedRole } from '../common/constants/permissions';
+import { PROTECTED_ROLES, isProtectedRole } from '../common/constants/permissions';
 
 export interface CreateRoleDto {
   roleName: string;
@@ -160,36 +160,20 @@ export class RolesService {
       throw new BadRequestException('系统角色不允许删除');
     }
 
-    // 查找使用该角色的用户，将其角色改为普通用户
+    // 查找使用该角色的用户，清空其角色关联
     const usersWithRole = await this.roleRepository.manager.query(
       'SELECT user_id FROM t_user_roles ur JOIN t_users u ON ur.user_id = u.id WHERE ur.role_id = ? AND u.is_deleted = 0',
       [id]
     );
 
     if (usersWithRole.length > 0) {
-      // 获取普通用户角色
-      const defaultRole = await this.roleRepository.findOne({
-        where: { roleCode: DEFAULT_ROLE, isDeleted: 0 }
-      });
+      // 删除所有使用该角色的用户角色关联，用户将没有角色，只能访问home页面
+      await this.roleRepository.manager.query(
+        'DELETE FROM t_user_roles WHERE role_id = ?',
+        [id]
+      );
 
-      if (defaultRole) {
-        // 将所有使用该角色的用户改为普通用户角色
-        const userIds = usersWithRole.map((u: any) => u.user_id);
-
-        // 先删除原有角色关联
-        await this.roleRepository.manager.query(
-          'DELETE FROM t_user_roles WHERE role_id = ?',
-          [id]
-        );
-
-        // 添加新的角色关联
-        for (const userId of userIds) {
-          await this.roleRepository.manager.query(
-            'INSERT INTO t_user_roles (user_id, role_id) VALUES (?, ?)',
-            [userId, defaultRole.id]
-          );
-        }
-      }
+      console.log(`角色删除：已清空 ${usersWithRole.length} 个用户的角色关联，这些用户现在只能访问home页面`);
     }
 
     // 软删除角色

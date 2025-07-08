@@ -4,11 +4,15 @@ import { AuthService } from './auth.service';
 import { LoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
+import { PermissionCheckService } from './permission-check.service';
 
 @ApiTags('认证管理')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly permissionCheckService: PermissionCheckService
+  ) {}
 
   @ApiOperation({ 
     summary: '用户登录',
@@ -359,4 +363,47 @@ export class AuthController {
       }
     };
   }
-} 
+
+  @Get('permissions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '获取用户权限信息',
+    description: '获取当前用户的权限信息，包括角色、权限列表和可访问的菜单'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '获取成功' },
+        data: {
+          type: 'object',
+          properties: {
+            hasRole: { type: 'boolean', description: '是否有角色' },
+            roles: { type: 'array', description: '用户角色列表' },
+            permissions: { type: 'array', items: { type: 'string' }, description: '权限代码列表' },
+            menus: { type: 'array', description: '可访问的菜单列表' }
+          }
+        }
+      }
+    }
+  })
+  async getUserPermissions(@Request() req: any) {
+    const permissionInfo = await this.permissionCheckService.getUserPermissionInfo(req.user.id);
+    const menus = await this.permissionCheckService.getUserMenus(req.user.id);
+
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '获取成功',
+      data: {
+        hasRole: permissionInfo.hasRole,
+        roles: permissionInfo.roles,
+        permissions: permissionInfo.permissions,
+        menus: menus
+      }
+    };
+  }
+}

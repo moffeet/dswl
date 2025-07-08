@@ -4,6 +4,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import Navigation from '../components/Navigation';
 import ProtectedRoute from './components/ProtectedRoute';
+import PagePermissionGuard from './components/PagePermissionGuard';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -19,12 +20,13 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <ProtectedRoute>
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        backgroundColor: '#f5f5f5',
-        overflow: 'hidden'
-      }}>
+      <PagePermissionGuard>
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          backgroundColor: '#f5f5f5',
+          overflow: 'hidden'
+        }}>
         {/* 侧边栏 - 固定宽度 */}
         <div style={{ 
           width: '240px', 
@@ -102,6 +104,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           </div>
         </div>
       </div>
+      </PagePermissionGuard>
     </ProtectedRoute>
   );
 } 

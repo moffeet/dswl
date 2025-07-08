@@ -1,21 +1,39 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '../app/context/auth';
-import { Button, Dropdown, Menu, Avatar, Space } from '@arco-design/web-react';
-import { IconUser, IconPoweroff, IconSettings } from '@arco-design/web-react/icon';
+import { usePermission } from '../app/context/permission';
+import { Button, Dropdown, Menu, Avatar, Space, Alert } from '@arco-design/web-react';
+import { IconUser, IconPoweroff, IconSettings, IconHome, IconUserGroup, IconLocation, IconFile, IconMobile, IconNav } from '@arco-design/web-react/icon';
 
 interface NavigationProps {}
 
 export default function Navigation({}: NavigationProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { permissionInfo, hasRole, isLoading } = usePermission();
 
-  const menuItems = [
-    { href: '/customers', icon: '👤', label: '客户管理' },
-    { href: '/users', icon: '👥', label: '用户管理' },
-    { href: '/roles', icon: '🔐', label: '角色权限' },
-  ];
+  // 图标映射
+  const iconMap: { [key: string]: React.ReactNode } = {
+    'IconHome': <IconHome />,
+    'IconUser': <IconUser />,
+    'IconUserGroup': <IconUserGroup />,
+    'IconLocation': <IconLocation />,
+    'IconFileText': <IconFile />,
+    'IconMobile': <IconMobile />,
+    'IconMap': <IconNav />,
+  };
+
+  // 根据权限获取菜单项
+  const menuItems = permissionInfo?.menus?.map(menu => ({
+    href: menu.path,
+    icon: iconMap[menu.icon || 'IconHome'] || '📄',
+    label: menu.name,
+    code: menu.code
+  })) || [];
 
   const userMenuItems = [
     {
@@ -125,35 +143,58 @@ export default function Navigation({}: NavigationProps) {
       </div>
 
       {/* 导航菜单 */}
-      <div style={{ 
+      <div style={{
         flex: 1,
         padding: '12px 0',
         overflowY: 'auto'
       }}>
-        {menuItems.map((item) => (
-          <a 
-            key={item.href}
-            href={item.href} 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: '12px',
-              padding: '14px 20px', 
-              color: '#374151', 
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              borderLeft: `3px solid ${hoveredItem === item.href ? '#1890ff' : 'transparent'}`,
-              backgroundColor: hoveredItem === item.href ? '#f3f4f6' : 'transparent'
-            }}
-            onMouseEnter={() => setHoveredItem(item.href)}
-            onMouseLeave={() => setHoveredItem(null)}
-          >
-            <span style={{ fontSize: '16px' }}>{item.icon}</span>
-            {item.label}
-          </a>
-        ))}
+        {isLoading ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+            加载菜单中...
+          </div>
+        ) : !hasRole ? (
+          <div style={{ padding: '12px 20px' }}>
+            <Alert
+              type="warning"
+              content="您还没有分配角色，只能访问首页。请联系管理员分配角色。"
+              style={{ fontSize: '12px' }}
+            />
+          </div>
+        ) : menuItems.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+            暂无可访问的菜单
+          </div>
+        ) : (
+          menuItems.map((item) => {
+            const isActive = pathname === item.href;
+            const isHovered = hoveredItem === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 20px',
+                  color: isActive ? '#1890ff' : '#374151',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: isActive ? '600' : '500',
+                  transition: 'all 0.2s ease',
+                  borderLeft: `3px solid ${isActive ? '#1890ff' : (isHovered ? '#1890ff' : 'transparent')}`,
+                  backgroundColor: isActive ? '#e6f7ff' : (isHovered ? '#f3f4f6' : 'transparent')
+                }}
+                onMouseEnter={() => setHoveredItem(item.href)}
+                onMouseLeave={() => setHoveredItem(null)}
+              >
+                <span style={{ fontSize: '16px' }}>{item.icon}</span>
+                {item.label}
+              </Link>
+            );
+          })
+        )}
       </div>
     </div>
   );

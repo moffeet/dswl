@@ -66,3 +66,56 @@ export const getAuthHeaders = () => {
     'Content-Type': 'application/json',
   };
 };
+
+// 创建API实例
+export const api = {
+  get: async (url: string, options?: RequestInit) => {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
+    return response.json();
+  },
+
+  post: async (url: string, data?: any, options?: RequestInit) => {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      ...options,
+    });
+    return response.json();
+  },
+
+  put: async (url: string, data?: any, options?: RequestInit) => {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      ...options,
+    });
+    return response.json();
+  },
+
+  delete: async (url: string, options?: RequestInit) => {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
+    return response.json();
+  },
+};

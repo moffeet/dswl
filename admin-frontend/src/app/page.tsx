@@ -1,15 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Button, Card, Space } from '@arco-design/web-react';
+import { Button, Card, Space, Alert, Result } from '@arco-design/web-react';
 import { Grid } from '@arco-design/web-react';
-import { IconUser, IconUserGroup, IconSettings } from '@arco-design/web-react/icon';
+import { IconUser, IconUserGroup, IconSettings, IconLock } from '@arco-design/web-react/icon';
 import { useRouter } from 'next/navigation';
+import { usePermission } from './context/permission';
+import { useAuth } from './context/auth';
 
 const { Row, Col } = Grid;
 
 export default function Home() {
   const router = useRouter();
+  const { hasRole, permissionInfo, isLoading } = usePermission();
+  const { user } = useAuth();
 
   const menuItems = [
     {
@@ -36,6 +40,47 @@ export default function Home() {
 
   ];
 
+  // 如果正在加载权限信息
+  if (isLoading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div>正在加载...</div>
+      </div>
+    );
+  }
+
+  // 如果没有角色，显示特殊提示
+  if (!hasRole) {
+    return (
+      <div style={{ padding: '40px', backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 64px)' }}>
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#333', marginBottom: '16px' }}>
+            🎯 物流配送管理系统
+          </h1>
+          <p style={{ fontSize: '16px', color: '#666', marginBottom: '32px' }}>
+            欢迎 {user?.nickname || user?.username}！
+          </p>
+        </div>
+
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <Result
+            status="warning"
+            title="权限受限"
+            subTitle="您还没有分配角色，目前只能访问首页。请联系系统管理员为您分配合适的角色以获得更多功能权限。"
+            extra={[
+              <Alert
+                key="info"
+                type="info"
+                content="系统管理员可以在「角色权限」模块中为您分配角色，分配后您将能够访问相应的功能模块。"
+                style={{ marginTop: '20px', textAlign: 'left' }}
+              />
+            ]}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '40px', backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 64px)' }}>
       {/* 欢迎区域 */}
@@ -44,7 +89,7 @@ export default function Home() {
           🎯 物流配送管理系统
         </h1>
         <p style={{ fontSize: '16px', color: '#666', marginBottom: '32px' }}>
-          专业的物流配送管理解决方案，助力企业高效运营
+          欢迎回来，{user?.nickname || user?.username}！专业的物流配送管理解决方案，助力企业高效运营
         </p>
         <Space size="large">
           <Button type="primary" size="large" onClick={() => router.push('/customers')}>
