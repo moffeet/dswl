@@ -119,11 +119,11 @@ export class RoleQueryDto extends PaginationDto {
 
   @ApiProperty({
     description: '角色状态',
-    enum: ['启用', '禁用'],
+    enum: ['enabled', 'disabled'],
     required: false
   })
   @IsOptional()
-  status?: '启用' | '禁用';
+  status?: 'enabled' | 'disabled';
 
   @ApiProperty({
     description: '是否启用小程序登录',
