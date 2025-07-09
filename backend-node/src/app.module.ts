@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 import { CustomersModule } from './customers/customers.module';
 import { WxUsersModule } from './wx-users/wx-users.module';
 import { ReceiptsModule } from './receipts/receipts.module';
+import { CheckinsModule } from './checkins/checkins.module';
 import { HealthController } from './common/health.controller';
 import { databaseConfig } from './config/database.config';
 
@@ -54,6 +55,7 @@ import { databaseConfig } from './config/database.config';
     CustomersModule,
     WxUsersModule,
     ReceiptsModule,
+    CheckinsModule,
   ],
   controllers: [HealthController],
 })

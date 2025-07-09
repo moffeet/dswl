@@ -3,6 +3,7 @@ import { CustomLogger } from '../config/logger.config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Customer } from './entities/customer.entity';
+import { WxUser } from '../wx-users/entities/wx-user.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto } from './dto/search-customer.dto';
@@ -17,6 +18,8 @@ export class CustomersService {
   constructor(
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
+    @InjectRepository(WxUser)
+    private wxUserRepository: Repository<WxUser>,
     private amapService: AmapService,
   ) {}
 
@@ -173,6 +176,26 @@ export class CustomersService {
     if (!customer) {
       throw new NotFoundException('客户不存在');
     }
+
+    return customer;
+  }
+
+  /**
+   * 根据客户编号查找客户（用于小程序）
+   * @param customerNumber 客户编号
+   * @returns 客户信息或null
+   */
+  async findByCustomerNumber(customerNumber: string): Promise<Customer | null> {
+    if (!customerNumber || typeof customerNumber !== 'string') {
+      return null;
+    }
+
+    const customer = await this.customerRepository.findOne({
+      where: {
+        customerNumber: customerNumber.trim(),
+        isDeleted: 0
+      }
+    });
 
     return customer;
   }
@@ -419,5 +442,89 @@ export class CustomersService {
     return customer.lastSyncTime || null;
   }
 
+  /**
+   * 根据微信ID查找微信用户（用于小程序）
+   * @param wechatId 微信ID
+   * @returns 微信用户信息或null
+   */
+  async findWxUserByWechatId(wechatId: string): Promise<WxUser | null> {
+    if (!wechatId || typeof wechatId !== 'string') {
+      return null;
+    }
 
+    const wxUser = await this.wxUserRepository.findOne({
+      where: {
+        wechatId: wechatId.trim(),
+        isDeleted: 0
+      }
+    });
+
+    return wxUser;
+  }
+
+  /**
+   * 小程序销售更新客户地址信息
+   * @param wechatId 微信用户ID
+   * @param customerNumber 客户编号
+   * @param updateData 更新数据
+   * @returns 更新后的客户信息
+   */
+  async wxUpdateCustomerAddress(wechatId: string, customerNumber: string, updateData: { storeAddress?: string; warehouseAddress?: string }): Promise<Customer> {
+    // 1. 验证客户存在
+    const customer = await this.findByCustomerNumber(customerNumber);
+    if (!customer) {
+      throw new NotFoundException('客户不存在');
+    }
+
+    // 2. 准备更新数据
+    const updateFields: any = {
+      updateBy: wechatId, // 使用微信ID作为更新人
+      updatedAt: new Date()
+    };
+
+    // 3. 如果有地址更新，需要获取经纬度
+    if (updateData.storeAddress && updateData.storeAddress !== customer.storeAddress) {
+      updateFields.storeAddress = updateData.storeAddress;
+
+      try {
+        // 调用高德地图API获取门店地址的经纬度
+        const storeCoords = await this.amapService.geocode(updateData.storeAddress);
+        if (storeCoords) {
+          updateFields.storeLongitude = storeCoords.longitude;
+          updateFields.storeLatitude = storeCoords.latitude;
+          this.logger.log(`获取门店地址经纬度成功 - 地址: ${updateData.storeAddress}, 经纬度: ${storeCoords.longitude}, ${storeCoords.latitude}`);
+        }
+      } catch (error) {
+        this.logger.error(`获取门店地址经纬度失败: ${error.message}`, error.stack);
+        // 经纬度获取失败不影响地址更新
+      }
+    }
+
+    if (updateData.warehouseAddress && updateData.warehouseAddress !== customer.warehouseAddress) {
+      updateFields.warehouseAddress = updateData.warehouseAddress;
+
+      try {
+        // 调用高德地图API获取仓库地址的经纬度
+        const warehouseCoords = await this.amapService.geocode(updateData.warehouseAddress);
+        if (warehouseCoords) {
+          updateFields.warehouseLongitude = warehouseCoords.longitude;
+          updateFields.warehouseLatitude = warehouseCoords.latitude;
+          this.logger.log(`获取仓库地址经纬度成功 - 地址: ${updateData.warehouseAddress}, 经纬度: ${warehouseCoords.longitude}, ${warehouseCoords.latitude}`);
+        }
+      } catch (error) {
+        this.logger.error(`获取仓库地址经纬度失败: ${error.message}`, error.stack);
+        // 经纬度获取失败不影响地址更新
+      }
+    }
+
+    // 4. 执行更新
+    await this.customerRepository.update(customer.id, updateFields);
+
+    // 5. 返回更新后的客户信息
+    const updatedCustomer = await this.findOne(customer.id);
+
+    this.logger.log(`小程序销售更新客户成功 - 微信ID: ${wechatId}, 客户: ${customer.customerName}, 客户编号: ${customerNumber}`);
+
+    return updatedCustomer;
+  }
 }

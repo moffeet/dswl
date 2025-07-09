@@ -1,0 +1,85 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsOptional, IsNotEmpty, MaxLength } from 'class-validator';
+
+export class WxUpdateCustomerDto {
+  @ApiProperty({
+    description: '微信用户ID',
+    example: 'wx_zhangsan',
+    maxLength: 100
+  })
+  @IsString()
+  @IsNotEmpty({ message: '微信用户ID不能为空' })
+  @MaxLength(100, { message: '微信用户ID长度不能超过100个字符' })
+  wechatId: string;
+
+  @ApiProperty({
+    description: '客户编号',
+    example: 'C001',
+    maxLength: 50
+  })
+  @IsString()
+  @IsNotEmpty({ message: '客户编号不能为空' })
+  @MaxLength(50, { message: '客户编号长度不能超过50个字符' })
+  customerNumber: string;
+
+  @ApiProperty({
+    description: '门店地址',
+    example: '深圳市南山区科技园南区A座',
+    maxLength: 255,
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255, { message: '门店地址长度不能超过255个字符' })
+  storeAddress?: string;
+
+  @ApiProperty({
+    description: '仓库地址',
+    example: '深圳市南山区科技园南区B座',
+    maxLength: 255,
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255, { message: '仓库地址长度不能超过255个字符' })
+  warehouseAddress?: string;
+}
+
+export class WxUpdateCustomerResponseDto {
+  @ApiProperty({ description: '响应码', example: 200 })
+  code: number;
+
+  @ApiProperty({ description: '响应消息', example: '客户信息更新成功' })
+  message: string;
+
+  @ApiProperty({
+    description: '更新后的客户数据',
+    type: 'object',
+    properties: {
+      id: { type: 'number', example: 1 },
+      customerNumber: { type: 'string', example: 'C001' },
+      customerName: { type: 'string', example: '深圳科技有限公司' },
+      storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座' },
+      warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座' },
+      storeLongitude: { type: 'number', example: 113.9547 },
+      storeLatitude: { type: 'number', example: 22.5431 },
+      warehouseLongitude: { type: 'number', example: 113.9557 },
+      warehouseLatitude: { type: 'number', example: 22.5441 },
+      updateBy: { type: 'string', example: '张三' },
+      updatedAt: { type: 'string', example: '2025-01-09T10:30:00.000Z' }
+    }
+  })
+  data: {
+    id: number;
+    customerNumber: string;
+    customerName: string;
+    storeAddress?: string;
+    warehouseAddress?: string;
+    storeLongitude?: number;
+    storeLatitude?: number;
+    warehouseLongitude?: number;
+    warehouseLatitude?: number;
+    updateBy?: string;
+    updatedAt: Date;
+  };
+}

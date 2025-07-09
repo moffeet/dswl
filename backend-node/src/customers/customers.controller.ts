@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, HttpStatus, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
 import { CustomerSyncService } from './sync.service';
@@ -7,8 +7,10 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto, CustomerListQueryDto } from './dto/search-customer.dto';
 import { BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
+import { WxUpdateCustomerDto, WxUpdateCustomerResponseDto } from './dto/wx-update-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 
@@ -747,4 +749,181 @@ export class CustomersController {
     }
   }
 
+  // ==================== 小程序接口 ====================
+
+  @Public()
+  @Get('wx/search')
+  @ApiOperation({
+    summary: '小程序司机查询客户信息',
+    description: '司机通过客户编号查询客户信息，返回客户名、编号、地址、经纬度等信息'
+  })
+  @ApiQuery({
+    name: 'customerNumber',
+    required: true,
+    description: '客户编号',
+    example: 'C001'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '查询成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '查询成功' },
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1 },
+            customerNumber: { type: 'string', example: 'C001' },
+            customerName: { type: 'string', example: '深圳科技有限公司' },
+            storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座' },
+            warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座' },
+            storeLongitude: { type: 'number', example: 113.9547 },
+            storeLatitude: { type: 'number', example: 22.5431 },
+            warehouseLongitude: { type: 'number', example: 113.9557 },
+            warehouseLatitude: { type: 'number', example: 22.5441 }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: '客户不存在' })
+  @ApiResponse({ status: 400, description: '参数错误' })
+  async wxSearchCustomer(@Query('customerNumber') customerNumber: string) {
+    try {
+      this.logger.log(`小程序司机查询客户 - 客户编号: ${customerNumber}`);
+
+      if (!customerNumber) {
+        return {
+          code: RESPONSE_CODES.PARAM_ERROR,
+          message: '客户编号不能为空',
+          data: null
+        };
+      }
+
+      const customer = await this.customersService.findByCustomerNumber(customerNumber);
+
+      if (!customer) {
+        return {
+          code: 404,
+          message: '客户不存在',
+          data: null
+        };
+      }
+
+      // 返回司机需要的客户信息
+      const customerInfo = {
+        id: customer.id,
+        customerNumber: customer.customerNumber,
+        customerName: customer.customerName,
+        storeAddress: customer.storeAddress,
+        warehouseAddress: customer.warehouseAddress,
+        storeLongitude: customer.storeLongitude,
+        storeLatitude: customer.storeLatitude,
+        warehouseLongitude: customer.warehouseLongitude,
+        warehouseLatitude: customer.warehouseLatitude
+      };
+
+      this.logger.log(`小程序司机查询客户成功 - 客户: ${customer.customerName}`);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '查询成功',
+        data: customerInfo
+      };
+    } catch (error) {
+      this.logger.error(`小程序司机查询客户失败: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: error.message,
+        data: null
+      };
+    }
+  }
+
+  @Public()
+  @Patch('wx/update')
+  @ApiOperation({
+    summary: '小程序销售修改客户地址',
+    description: '销售通过客户编号修改客户的门店地址和仓库地址，系统自动获取经纬度信息'
+  })
+  @ApiBody({
+    description: '客户地址更新数据',
+    type: WxUpdateCustomerDto
+  })
+  @ApiResponse({
+    status: 200,
+    description: '更新成功',
+    type: WxUpdateCustomerResponseDto
+  })
+  @ApiResponse({ status: 404, description: '客户不存在' })
+  @ApiResponse({ status: 403, description: '权限不足' })
+  @ApiResponse({ status: 400, description: '参数错误' })
+  async wxUpdateCustomer(@Body() updateDto: WxUpdateCustomerDto) {
+    try {
+      this.logger.log(`小程序销售修改客户 - 微信ID: ${updateDto.wechatId}, 客户编号: ${updateDto.customerNumber}`);
+
+      // 验证用户存在且为销售角色
+      const wxUser = await this.customersService.findWxUserByWechatId(updateDto.wechatId);
+      if (!wxUser) {
+        return {
+          code: 404,
+          message: '用户不存在',
+          data: null
+        };
+      }
+
+      if (wxUser.role !== '销售') {
+        return {
+          code: RESPONSE_CODES.PARAM_ERROR,
+          message: '只有销售角色可以修改客户地址',
+          data: null
+        };
+      }
+
+      // 更新客户地址
+      const updatedCustomer = await this.customersService.wxUpdateCustomerAddress(
+        updateDto.wechatId,
+        updateDto.customerNumber,
+        {
+          storeAddress: updateDto.storeAddress,
+          warehouseAddress: updateDto.warehouseAddress
+        }
+      );
+
+      // 返回更新后的客户信息
+      const customerInfo = {
+        id: updatedCustomer.id,
+        customerNumber: updatedCustomer.customerNumber,
+        customerName: updatedCustomer.customerName,
+        storeAddress: updatedCustomer.storeAddress,
+        warehouseAddress: updatedCustomer.warehouseAddress,
+        storeLongitude: updatedCustomer.storeLongitude,
+        storeLatitude: updatedCustomer.storeLatitude,
+        warehouseLongitude: updatedCustomer.warehouseLongitude,
+        warehouseLatitude: updatedCustomer.warehouseLatitude,
+        updateBy: updatedCustomer.updateBy,
+        updatedAt: updatedCustomer.updatedAt
+      };
+
+      this.logger.log(`小程序销售修改客户成功 - 客户: ${updatedCustomer.customerName}`);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '客户信息更新成功',
+        data: customerInfo
+      };
+    } catch (error) {
+      this.logger.error(`小程序销售修改客户失败: ${error.message}`, error.stack);
+      return {
+        code: error.status === 404 ? 404 :
+              error.status === 403 ? RESPONSE_CODES.PARAM_ERROR :
+              error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+              RESPONSE_CODES.SERVER_ERROR,
+        message: error.message,
+        data: null
+      };
+    }
+  }
 }
