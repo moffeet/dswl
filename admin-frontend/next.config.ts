@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
       // 可以在这里添加路径别名
     },
   },
+
+  // API 代理配置
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3000/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

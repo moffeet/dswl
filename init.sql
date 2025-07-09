@@ -118,6 +118,27 @@ CREATE TABLE t_wx_users (
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '小程序用户表';
 
+-- 8. 签收单表
+DROP TABLE IF EXISTS t_receipts;
+CREATE TABLE t_receipts (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '签收单ID',
+    wx_user_id BIGINT NOT NULL COMMENT '小程序用户ID',
+    wx_user_name VARCHAR(100) NOT NULL COMMENT '上传人姓名',
+    customer_id BIGINT DEFAULT NULL COMMENT '客户ID（可能为空，如果客户被删除）',
+    customer_name VARCHAR(100) NOT NULL COMMENT '客户名称',
+    customer_address VARCHAR(500) DEFAULT NULL COMMENT '客户地址',
+    upload_location VARCHAR(500) DEFAULT NULL COMMENT '上传地点',
+    upload_longitude DECIMAL(10, 7) DEFAULT NULL COMMENT '上传经度',
+    upload_latitude DECIMAL(10, 7) DEFAULT NULL COMMENT '上传纬度',
+    image_path VARCHAR(500) NOT NULL COMMENT '图片路径',
+    image_url VARCHAR(500) NOT NULL COMMENT '图片访问URL',
+    upload_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
+
+    is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT = '签收单表';
+
 -- 创建索引
 CREATE INDEX idx_users_username ON t_users(username);
 CREATE INDEX idx_roles_code ON t_roles(role_code);
@@ -131,6 +152,10 @@ CREATE INDEX idx_customers_is_deleted ON t_customers(is_deleted);
 CREATE INDEX idx_wx_users_phone ON t_wx_users(phone);
 CREATE INDEX idx_wx_users_is_deleted ON t_wx_users(is_deleted);
 CREATE INDEX idx_wx_users_role ON t_wx_users(role);
+CREATE INDEX idx_receipts_wx_user_id ON t_receipts(wx_user_id);
+CREATE INDEX idx_receipts_customer_id ON t_receipts(customer_id);
+CREATE INDEX idx_receipts_upload_time ON t_receipts(upload_time);
+CREATE INDEX idx_receipts_is_deleted ON t_receipts(is_deleted);
 
 -- 插入菜单权限数据（扁平结构，与静态权限常量一致）
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, path, component, icon, sort_order) VALUES
@@ -213,6 +238,14 @@ INSERT INTO t_wx_users (name, phone, role, wechat_id, mac_address, create_by) VA
 ('王五', '13800138003', '司机', 'wx_wangwu', '00:11:22:33:44:57', 1),
 ('赵六', '13800138004', '销售', 'wx_zhaoliu', '00:11:22:33:44:58', 1),
 ('钱七', '13800138005', '司机', 'wx_qianqi', '00:11:22:33:44:59', 1);
+
+-- 插入签收单测试数据
+INSERT INTO t_receipts (wx_user_id, wx_user_name, customer_id, customer_name, customer_address, upload_location, upload_longitude, upload_latitude, image_path, image_url, upload_time) VALUES
+(1, '张三', 1, '深圳科技有限公司', '深圳市南山区科技园南区A座', '深圳市南山区科技园南区A座附近', 113.9547, 22.5431, 'uploads/receipts/2025/01/09/receipt_1704758400000.jpg', 'http://localhost:3000/uploads/receipts/2025/01/09/receipt_1704758400000.jpg', '2025-01-09 10:30:00'),
+(3, '王五', 2, '广州贸易公司', '广州市天河区珠江新城东塔', '广州市天河区珠江新城东塔附近', 113.3221, 23.1167, 'uploads/receipts/2025/01/09/receipt_1704762000000.jpg', 'http://localhost:3000/uploads/receipts/2025/01/09/receipt_1704762000000.jpg', '2025-01-09 11:30:00'),
+(5, '钱七', 3, '东莞制造企业', '东莞市长安镇工业区1号', '东莞市长安镇工业区1号附近', 113.8059, 22.8169, 'uploads/receipts/2025/01/09/receipt_1704765600000.jpg', 'http://localhost:3000/uploads/receipts/2025/01/09/receipt_1704765600000.jpg', '2025-01-09 12:30:00'),
+(1, '张三', 4, '佛山物流中心', '佛山市禅城区物流园A区', '佛山市禅城区物流园A区附近', 113.1221, 23.0167, 'uploads/receipts/2025/01/08/receipt_1704672000000.jpg', 'http://localhost:3000/uploads/receipts/2025/01/08/receipt_1704672000000.jpg', '2025-01-08 14:00:00'),
+(3, '王五', 5, '惠州电子厂', '惠州市惠城区工业园东区', '惠州市惠城区工业园东区附近', 114.4129, 23.0793, 'uploads/receipts/2025/01/08/receipt_1704675600000.jpg', 'http://localhost:3000/uploads/receipts/2025/01/08/receipt_1704675600000.jpg', '2025-01-08 15:00:00');
 
 -- ========================================
 -- 🎉 数据库初始化完成！

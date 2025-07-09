@@ -4,6 +4,7 @@ import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../permissions/entities/permission.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { WxUser } from '../wx-users/entities/wx-user.entity';
+import { Receipt } from '../receipts/entities/receipt.entity';
 import { Logger } from 'typeorm';
 
 // 自定义数据库日志记录器，添加时间戳
@@ -56,7 +57,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
   username: process.env.DATABASE_USERNAME || 'root',
   password: process.env.DATABASE_PASSWORD || '123456',
   database: process.env.DATABASE_NAME || 'logistics_db',
-  entities: [User, Role, Permission, Customer, WxUser],
+  entities: [User, Role, Permission, Customer, WxUser, Receipt],
   synchronize: false, // 关闭自动同步，使用现有数据库结构
   logging: ['query', 'error', 'warn', 'info', 'log'], // 启用详细日志记录
   logger: new DatabaseLogger(), // 使用自定义日志记录器
