@@ -97,7 +97,7 @@ export class Receipt {
 
   @ApiProperty({
     description: '图片访问URL',
-    example: 'http://localhost:3000/uploads/receipts/2025/01/09/receipt_1704758400000.jpg',
+    example: 'http://localhost:3000/receipts/uploads/receipts/2025/01/09/receipt_1704758400000.jpg',
     maxLength: 500
   })
   @Column({ name: 'image_url', length: 500, comment: '图片访问URL' })

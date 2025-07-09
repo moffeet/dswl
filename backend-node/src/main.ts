@@ -40,10 +40,9 @@ async function bootstrap() {
   // 全局管道
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
-    forbidNonWhitelisted: false, // 临时设置为false以调试
+    forbidNonWhitelisted: false,
     transform: true,
     exceptionFactory: (errors) => {
-      console.log('Validation errors:', JSON.stringify(errors, null, 2));
       return new BadRequestException(errors);
     },
   }));
@@ -70,8 +69,10 @@ async function bootstrap() {
   // 启动服务
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`应用程序运行在: http://localhost:${port}`);
-  console.log(`API文档地址: http://localhost:${port}/api`);
+
+  const logger = new CustomLogger('Bootstrap');
+  logger.log(`应用程序运行在: http://localhost:${port}`);
+  logger.log(`API文档地址: http://localhost:${port}/api`);
 }
 
 bootstrap(); 

@@ -73,7 +73,7 @@ const ReceiptsPage: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [customerSearchText, setCustomerSearchText] = useState('');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
@@ -152,73 +152,32 @@ const ReceiptsPage: React.FC = () => {
     }
   };
 
-  // 批量删除
-  const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) {
-      Message.warning('请选择要删除的签收单');
-      return;
-    }
-
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条签收单吗？`,
-      onOk: async () => {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch('/api/receipts/batch/remove', {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ ids: selectedRowKeys }),
-          });
-
-          const result = await response.json();
-          if (result.code === 200) {
-            Message.success(result.message);
-            setSelectedRowKeys([]);
-            fetchReceipts();
-          } else {
-            Message.error(result.message || '批量删除失败');
-          }
-        } catch (error) {
-          console.error('批量删除失败:', error);
-          Message.error('批量删除失败');
-        }
-      },
-    });
-  };
-
   // 清理旧数据
   const handleCleanup = async () => {
-    Modal.confirm({
-      title: '确认清理',
-      content: '确定要清理3个月前的签收单数据吗？此操作不可恢复！',
-      onOk: async () => {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch('/api/receipts/cleanup/old', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
+    const confirmed = window.confirm('确定要清理3个月前的签收单数据吗？此操作不可恢复！');
+    if (!confirmed) return;
 
-          const result = await response.json();
-          if (result.code === 200) {
-            Message.success(result.message);
-            fetchReceipts();
-          } else {
-            Message.error(result.message || '清理失败');
-          }
-        } catch (error) {
-          console.error('清理失败:', error);
-          Message.error('清理失败');
-        }
-      },
-    });
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/receipts/cleanup/old', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      if (result.code === 200) {
+        Message.success(result.message);
+        fetchReceipts();
+      } else {
+        Message.error(result.message || '清理失败');
+      }
+    } catch (error) {
+      console.error('清理失败:', error);
+      Message.error('清理失败');
+    }
   };
 
   // 搜索
@@ -335,11 +294,10 @@ const ReceiptsPage: React.FC = () => {
             status="danger"
             icon={<IconDelete />}
             onClick={() => {
-              Modal.confirm({
-                title: '确认删除',
-                content: '确定要删除这条签收单吗？',
-                onOk: () => handleDelete(record.id),
-              });
+              const confirmed = window.confirm('确定要删除这条签收单吗？');
+              if (confirmed) {
+                handleDelete(record.id);
+              }
             }}
           >
             删除
@@ -349,13 +307,7 @@ const ReceiptsPage: React.FC = () => {
     },
   ];
 
-  // 行选择配置
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (newSelectedRowKeys: React.Key[]) => {
-      setSelectedRowKeys(newSelectedRowKeys);
-    },
-  };
+
 
   useEffect(() => {
     fetchReceipts();
@@ -376,7 +328,7 @@ const ReceiptsPage: React.FC = () => {
             <Col span={6}>
               <Statistic
                 title="今日上传"
-                value={receipts.filter(r => dayjs(r.uploadTime).isToday()).length}
+                value={receipts.filter(r => dayjs(r.uploadTime).isSame(dayjs(), 'day')).length}
                 prefix={<IconCalendar />}
               />
             </Col>
@@ -411,15 +363,8 @@ const ReceiptsPage: React.FC = () => {
               重置
             </Button>
             <Button
-              status="danger"
-              icon={<IconDelete />}
-              onClick={handleBatchDelete}
-              disabled={selectedRowKeys.length === 0}
-            >
-              批量删除 ({selectedRowKeys.length})
-            </Button>
-            <Button
               type="dashed"
+              icon={<IconDelete />}
               onClick={handleCleanup}
             >
               清理旧数据
@@ -427,7 +372,6 @@ const ReceiptsPage: React.FC = () => {
           </Space>
 
           <Table
-            rowSelection={rowSelection}
             columns={columns}
             data={receipts}
             rowKey="id"

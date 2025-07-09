@@ -1,8 +1,8 @@
-import { 
-  Controller, 
-  Post, 
-  UseInterceptors, 
-  UploadedFile, 
+import {
+  Controller,
+  Post,
+  UseInterceptors,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   BadRequestException,
@@ -11,21 +11,23 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { extname } from 'path';
+import { UploadConfig } from '../config/upload.config';
 
 // 配置文件存储
 const storage = diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = join(process.cwd(), 'uploads');
-    if (!existsSync(uploadDir)) {
-      mkdirSync(uploadDir, { recursive: true });
+    try {
+      const uploadDir = UploadConfig.getUploadRootPath();
+      const actualUploadDir = UploadConfig.ensureDirectoryExists(uploadDir);
+      cb(null, actualUploadDir);
+    } catch (error) {
+      cb(error, null);
     }
-    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + extname(file.originalname));
+    const fileName = UploadConfig.generateUniqueFileName(file.originalname, file.fieldname);
+    cb(null, fileName);
   },
 });
 
@@ -60,12 +62,13 @@ export class UploadController {
       throw new BadRequestException('请选择要上传的文件');
     }
 
+    const relativePath = UploadConfig.getRelativePath(file.path);
     return {
       message: '文件上传成功',
       filename: file.filename,
       originalname: file.originalname,
       size: file.size,
-      url: `/uploads/${file.filename}`,
+      url: UploadConfig.getUrlPath(relativePath),
     };
   }
 
@@ -85,12 +88,15 @@ export class UploadController {
       throw new BadRequestException('请选择要上传的文件');
     }
 
-    const uploadedFiles = files.map(file => ({
-      filename: file.filename,
-      originalname: file.originalname,
-      size: file.size,
-      url: `/uploads/${file.filename}`,
-    }));
+    const uploadedFiles = files.map(file => {
+      const relativePath = UploadConfig.getRelativePath(file.path);
+      return {
+        filename: file.filename,
+        originalname: file.originalname,
+        size: file.size,
+        url: UploadConfig.getUrlPath(relativePath),
+      };
+    });
 
     return {
       message: '文件上传成功',

@@ -6,10 +6,13 @@ import { Role } from '../roles/entities/role.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from '../common/dto/pagination.dto';
+import { CustomLogger } from '../config/logger.config';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new CustomLogger('UsersService');
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -161,7 +164,7 @@ export class UsersService {
 
         await this.userRepository.save(updatedUser);
       } catch (error) {
-        console.error('角色更新失败:', error);
+        this.logger.error('角色更新失败', error.stack);
         // 如果角色更新失败，不影响基本信息更新
       }
     }

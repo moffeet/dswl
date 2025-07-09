@@ -9,6 +9,7 @@ import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { ReceiptQueryDto } from './dto/receipt-query.dto';
 import { UploadReceiptDto } from './dto/upload-receipt.dto';
 import { CustomLogger } from '../config/logger.config';
+import { UploadConfig } from '../config/upload.config';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -96,28 +97,24 @@ export class ReceiptsService {
         throw new BadRequestException('请上传签收单图片');
       }
 
-      // 生成文件路径
-      const uploadDir = path.join('uploads', 'receipts', new Date().getFullYear().toString(), 
-                                 String(new Date().getMonth() + 1).padStart(2, '0'),
-                                 String(new Date().getDate()).padStart(2, '0'));
-      
-      // 确保目录存在
-      const fullUploadDir = path.join(process.cwd(), uploadDir);
-      if (!fs.existsSync(fullUploadDir)) {
-        fs.mkdirSync(fullUploadDir, { recursive: true });
-      }
+      // 生成文件路径 - 使用统一配置
+      const uploadDir = UploadConfig.getReceiptUploadDir();
+
+      // 确保目录存在，如果失败会自动降级到备用路径
+      const actualUploadDir = UploadConfig.ensureDirectoryExists(uploadDir);
 
       // 生成唯一文件名
-      const fileExt = path.extname(file.originalname);
-      const fileName = `receipt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${fileExt}`;
-      const filePath = path.join(uploadDir, fileName);
-      const fullFilePath = path.join(process.cwd(), filePath);
+      const fileName = UploadConfig.generateUniqueFileName(file.originalname, 'receipt');
+      const fullFilePath = path.join(actualUploadDir, fileName);
+
+      // 存储相对路径用于数据库
+      const relativePath = UploadConfig.getRelativePath(fullFilePath);
 
       // 保存文件
       fs.writeFileSync(fullFilePath, file.buffer);
 
       // 生成访问URL
-      const imageUrl = `${baseUrl}/${filePath.replace(/\\/g, '/')}`;
+      const imageUrl = `${baseUrl}${UploadConfig.getUrlPath(relativePath)}`;
 
       // 创建签收单记录
       const createDto: CreateReceiptDto = {
@@ -129,7 +126,7 @@ export class ReceiptsService {
         uploadLocation: uploadDto.uploadLocation,
         uploadLongitude: uploadDto.uploadLongitude,
         uploadLatitude: uploadDto.uploadLatitude,
-        imagePath: filePath,
+        imagePath: relativePath,
         imageUrl: imageUrl,
         uploadTime: new Date()
       };
@@ -306,7 +303,7 @@ export class ReceiptsService {
   }
 
   /**
-   * 定时清理3个月前的签收单（硬删除）
+   * 定时清理3个月前的签收单（删除图片文件，数据库软删除）
    */
   async cleanupOldReceipts(): Promise<{ deletedCount: number }> {
     try {
@@ -316,10 +313,11 @@ export class ReceiptsService {
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-      // 查找需要删除的记录
+      // 查找需要删除的记录（包括未删除的记录）
       const oldReceipts = await this.receiptRepository.find({
         where: {
-          uploadTime: Between(new Date('1970-01-01'), threeMonthsAgo)
+          uploadTime: Between(new Date('1970-01-01'), threeMonthsAgo),
+          isDeleted: 0  // 只处理未删除的记录
         }
       });
 
@@ -331,7 +329,7 @@ export class ReceiptsService {
       // 删除对应的图片文件
       for (const receipt of oldReceipts) {
         try {
-          const fullFilePath = path.join(process.cwd(), receipt.imagePath);
+          const fullFilePath = UploadConfig.getFullPath(receipt.imagePath);
           if (fs.existsSync(fullFilePath)) {
             fs.unlinkSync(fullFilePath);
             this.logger.log(`删除图片文件: ${receipt.imagePath}`);
@@ -341,10 +339,9 @@ export class ReceiptsService {
         }
       }
 
-      // 硬删除数据库记录
-      await this.receiptRepository.delete({
-        uploadTime: Between(new Date('1970-01-01'), threeMonthsAgo)
-      });
+      // 软删除数据库记录
+      const receiptIds = oldReceipts.map(receipt => receipt.id);
+      await this.receiptRepository.update(receiptIds, { isDeleted: 1 });
 
       this.logger.log(`清理签收单完成 - 删除数量: ${oldReceipts.length}`);
       return { deletedCount: oldReceipts.length };

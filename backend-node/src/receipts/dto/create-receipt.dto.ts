@@ -104,7 +104,7 @@ export class CreateReceiptDto {
 
   @ApiProperty({
     description: '图片访问URL',
-    example: 'http://localhost:3000/uploads/receipts/2025/01/09/receipt_1704758400000.jpg',
+    example: 'http://localhost:3000/receipts/uploads/receipts/2025/01/09/receipt_1704758400000.jpg',
     maxLength: 500
   })
   @IsNotEmpty({ message: '图片访问URL不能为空' })

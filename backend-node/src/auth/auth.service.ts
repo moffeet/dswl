@@ -7,10 +7,13 @@ import { User } from '../users/entities/user.entity';
 import { BlacklistService } from './blacklist.service';
 import { IpLimitService } from './ip-limit.service';
 import { CaptchaService } from './captcha.service';
+import { CustomLogger } from '../config/logger.config';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new CustomLogger('AuthService');
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -30,28 +33,28 @@ export class AuthService {
 
     // 🔒 安全改进：检查是否为加密数据
     if (loginDto._encrypted && loginDto.timestamp && loginDto.signature) {
-      console.log('检测到加密登录数据，开始解密处理');
-      
+      this.logger.log('检测到加密登录数据，开始解密处理');
+
       // 导入解密工具
       const { decryptPassword, validateTimestamp, validateSignature } = await import('./utils/crypto.util');
-      
+
       // 验证签名
       if (!validateSignature(loginDto.username, loginDto.password, loginDto.timestamp, loginDto.signature)) {
         throw new UnauthorizedException('数据签名验证失败');
       }
-      
+
       // 验证时间戳（防重放攻击）
       if (!validateTimestamp(loginDto.timestamp)) {
         throw new UnauthorizedException('请求已过期，请重新登录');
       }
-      
+
       try {
         // 解密密码
         const decryptedData = decryptPassword(loginDto.password);
         actualPassword = decryptedData.password;
-        console.log('密码解密成功');
+        this.logger.log('密码解密成功');
       } catch (error) {
-        console.error('密码解密失败:', error);
+        this.logger.error('密码解密失败', error.stack);
         throw new UnauthorizedException('密码解密失败');
       }
     } else {
@@ -167,7 +170,7 @@ export class AuthService {
       await this.usersService.updateLoginInfo(userId, updateData);
     } catch (error) {
       // 记录登录信息失败不影响登录流程
-      console.error('更新登录信息失败:', error);
+      this.logger.error('更新登录信息失败', error.stack);
     }
   }
 

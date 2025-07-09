@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { UploadConfig } from './config/upload.config';
 
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
@@ -28,8 +29,16 @@ import { databaseConfig } from './config/database.config';
     // 静态文件服务
     ServeStaticModule.forRoot(
       {
-        rootPath: join(__dirname, '..', 'uploads'),
-        serveRoot: '/uploads',
+        rootPath: (() => {
+          try {
+            const uploadDir = UploadConfig.getUploadRootPath();
+            return UploadConfig.ensureDirectoryExists(uploadDir);
+          } catch (error) {
+            // 静态文件服务配置失败时使用默认路径
+            return join(__dirname, '..', 'uploads');
+          }
+        })(),
+        serveRoot: '/receipts/uploads',
       },
       {
         rootPath: join(__dirname, '..', 'public'),
