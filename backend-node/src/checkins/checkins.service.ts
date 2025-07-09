@@ -1,8 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like, In } from 'typeorm';
 import { Checkin } from './entities/checkin.entity';
-import { WxUser, WxUserRole } from '../wx-users/entities/wx-user.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { UploadCheckinDto } from './dto/upload-checkin.dto';
 import { CheckinQueryDto } from './dto/checkin-query.dto';
@@ -17,8 +16,6 @@ export class CheckinsService {
   constructor(
     @InjectRepository(Checkin)
     private checkinRepository: Repository<Checkin>,
-    @InjectRepository(WxUser)
-    private wxUserRepository: Repository<WxUser>,
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
   ) {}
@@ -27,18 +24,6 @@ export class CheckinsService {
    * 小程序司机上传打卡
    */
   async uploadCheckin(uploadDto: UploadCheckinDto, file: Express.Multer.File, baseUrl: string): Promise<Checkin> {
-    // 1. 验证用户存在且为司机角色
-    const wxUser = await this.wxUserRepository.findOne({
-      where: { wechatId: uploadDto.wechatId, isDeleted: 0 }
-    });
-
-    if (!wxUser) {
-      throw new NotFoundException('用户不存在');
-    }
-
-    if (wxUser.role !== WxUserRole.DRIVER) {
-      throw new ForbiddenException('只有司机角色可以打卡');
-    }
 
     // 2. 查找客户信息（可选）
     let customer: Customer | null = null;
@@ -76,8 +61,8 @@ export class CheckinsService {
 
     // 5. 创建打卡记录
     const checkin = this.checkinRepository.create({
-      wxUserId: wxUser.id,
-      wxUserName: wxUser.name,
+      wxUserId: null, // 不再关联具体用户ID
+      wxUserName: uploadDto.wxUserName,
       customerId: customer?.id,
       customerName: uploadDto.customerName,
       customerAddress: uploadDto.customerAddress,
@@ -91,7 +76,7 @@ export class CheckinsService {
 
     const savedCheckin = await this.checkinRepository.save(checkin);
 
-    this.logger.log(`打卡成功 - 用户: ${wxUser.name}, 客户: ${uploadDto.customerName}, ID: ${savedCheckin.id}`);
+    this.logger.log(`打卡成功 - 用户: ${uploadDto.wxUserName}, 客户: ${uploadDto.customerName}, ID: ${savedCheckin.id}`);
 
     return savedCheckin;
   }

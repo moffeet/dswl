@@ -73,25 +73,7 @@ export class ReceiptsService {
    */
   async uploadReceipt(uploadDto: UploadReceiptDto, file: Express.Multer.File, baseUrl: string): Promise<Receipt> {
     try {
-      this.logger.log(`小程序用户上传签收单 - 微信ID: ${uploadDto.wechatId}, MAC: ${uploadDto.macAddress}`);
-
-      // 验证小程序用户
-      const wxUser = await this.wxUserRepository.findOne({
-        where: { 
-          wechatId: uploadDto.wechatId,
-          macAddress: uploadDto.macAddress,
-          isDeleted: 0 
-        }
-      });
-
-      if (!wxUser) {
-        throw new ForbiddenException('用户验证失败，请重新登录');
-      }
-
-      // 检查用户角色是否为司机
-      if (wxUser.role !== '司机') {
-        throw new ForbiddenException('只有司机角色才能上传签收单');
-      }
+      this.logger.log(`小程序用户上传签收单 - 上传人: ${uploadDto.wxUserName}`);
 
       if (!file) {
         throw new BadRequestException('请上传签收单图片');
@@ -174,8 +156,8 @@ export class ReceiptsService {
 
       // 创建签收单记录
       const createDto: CreateReceiptDto = {
-        wxUserId: wxUser.id,
-        wxUserName: wxUser.name,
+        wxUserId: null, // 不再关联具体用户ID
+        wxUserName: uploadDto.wxUserName,
         customerId: uploadDto.customerId,
         customerName: uploadDto.customerName,
         customerAddress: uploadDto.customerAddress,
@@ -189,7 +171,7 @@ export class ReceiptsService {
 
       try {
         const receipt = await this.create(createDto);
-        this.logger.log(`签收单上传成功 - ID: ${receipt.id}, 用户: ${wxUser.name}, 文件: ${fileName}`);
+        this.logger.log(`签收单上传成功 - ID: ${receipt.id}, 用户: ${uploadDto.wxUserName}, 文件: ${fileName}`);
         return receipt;
       } catch (dbError) {
         // 如果数据库保存失败，清理已上传的文件

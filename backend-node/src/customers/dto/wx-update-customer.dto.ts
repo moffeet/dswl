@@ -3,14 +3,14 @@ import { IsString, IsOptional, IsNotEmpty, MaxLength } from 'class-validator';
 
 export class WxUpdateCustomerDto {
   @ApiProperty({
-    description: '微信用户ID',
-    example: 'wx_zhangsan',
+    description: '操作人姓名',
+    example: '张三',
     maxLength: 100
   })
   @IsString()
-  @IsNotEmpty({ message: '微信用户ID不能为空' })
-  @MaxLength(100, { message: '微信用户ID长度不能超过100个字符' })
-  wechatId: string;
+  @IsNotEmpty({ message: '操作人姓名不能为空' })
+  @MaxLength(100, { message: '操作人姓名长度不能超过100个字符' })
+  operatorName: string;
 
   @ApiProperty({
     description: '客户编号',

@@ -55,8 +55,8 @@ export class CheckinsController {
     },
   }))
   @ApiOperation({
-    summary: '小程序司机上传打卡',
-    description: '小程序司机上传打卡图片和相关信息，仅司机角色可操作'
+    summary: '小程序上传打卡',
+    description: '小程序用户上传打卡图片和相关信息'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -69,8 +69,6 @@ export class CheckinsController {
     type: UploadCheckinResponseDto
   })
   @ApiResponse({ status: 400, description: '参数错误' })
-  @ApiResponse({ status: 403, description: '权限不足' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
   async uploadCheckin(
     @Body() uploadDto: UploadCheckinDto,
     @UploadedFile() file: Express.Multer.File,
@@ -78,7 +76,7 @@ export class CheckinsController {
   ) {
     const startTime = Date.now();
     try {
-      this.logger.log(`开始上传打卡 - 微信ID: ${uploadDto.wechatId}, 文件大小: ${file?.size || 0} bytes`);
+      this.logger.log(`开始上传打卡 - 用户: ${uploadDto.wxUserName}, 文件大小: ${file?.size || 0} bytes`);
 
       if (!file) {
         throw new BadRequestException('请上传打卡图片');
@@ -128,9 +126,7 @@ export class CheckinsController {
       }
       
       return {
-        code: error.status === 403 ? RESPONSE_CODES.PARAM_ERROR :
-              error.status === 404 ? RESPONSE_CODES.PARAM_ERROR :
-              error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null

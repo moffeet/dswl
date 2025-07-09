@@ -8,24 +8,14 @@ import { Transform, Type } from 'class-transformer';
  */
 export class UploadReceiptDto {
   @ApiProperty({
-    description: '小程序用户微信ID',
-    example: 'wx_zhangsan',
+    description: '上传人姓名',
+    example: '张三',
     maxLength: 100
   })
-  @IsNotEmpty({ message: '微信ID不能为空' })
-  @IsString({ message: '微信ID必须是字符串' })
-  @MaxLength(100, { message: '微信ID长度不能超过100个字符' })
-  wechatId: string;
-
-  @ApiProperty({
-    description: 'MAC地址',
-    example: '00:11:22:33:44:55',
-    maxLength: 50
-  })
-  @IsNotEmpty({ message: 'MAC地址不能为空' })
-  @IsString({ message: 'MAC地址必须是字符串' })
-  @MaxLength(50, { message: 'MAC地址长度不能超过50个字符' })
-  macAddress: string;
+  @IsNotEmpty({ message: '上传人姓名不能为空' })
+  @IsString({ message: '上传人姓名必须是字符串' })
+  @MaxLength(100, { message: '上传人姓名长度不能超过100个字符' })
+  wxUserName: string;
 
   @ApiProperty({
     description: '客户ID（可选）',

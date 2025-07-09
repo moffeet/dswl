@@ -464,12 +464,12 @@ export class CustomersService {
 
   /**
    * 小程序销售更新客户地址信息
-   * @param wechatId 微信用户ID
+   * @param operatorName 操作人姓名
    * @param customerNumber 客户编号
    * @param updateData 更新数据
    * @returns 更新后的客户信息
    */
-  async wxUpdateCustomerAddress(wechatId: string, customerNumber: string, updateData: { storeAddress?: string; warehouseAddress?: string }): Promise<Customer> {
+  async wxUpdateCustomerAddress(operatorName: string, customerNumber: string, updateData: { storeAddress?: string; warehouseAddress?: string }): Promise<Customer> {
     // 1. 验证客户存在
     const customer = await this.findByCustomerNumber(customerNumber);
     if (!customer) {
@@ -478,7 +478,7 @@ export class CustomersService {
 
     // 2. 准备更新数据
     const updateFields: any = {
-      updateBy: wechatId, // 使用微信ID作为更新人
+      updateBy: operatorName, // 使用操作人姓名作为更新人
       updatedAt: new Date()
     };
 
@@ -523,7 +523,7 @@ export class CustomersService {
     // 5. 返回更新后的客户信息
     const updatedCustomer = await this.findOne(customer.id);
 
-    this.logger.log(`小程序销售更新客户成功 - 微信ID: ${wechatId}, 客户: ${customer.customerName}, 客户编号: ${customerNumber}`);
+    this.logger.log(`小程序销售更新客户成功 - 操作人: ${operatorName}, 客户: ${customer.customerName}, 客户编号: ${customerNumber}`);
 
     return updatedCustomer;
   }

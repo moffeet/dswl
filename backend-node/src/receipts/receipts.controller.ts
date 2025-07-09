@@ -59,7 +59,7 @@ export class ReceiptsController {
   }))
   @ApiOperation({
     summary: '小程序用户上传签收单',
-    description: '小程序用户上传签收单图片和相关信息，仅司机角色可操作'
+    description: '小程序用户上传签收单图片和相关信息'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -72,7 +72,6 @@ export class ReceiptsController {
     type: UploadReceiptResponseDto
   })
   @ApiResponse({ status: 400, description: '参数错误' })
-  @ApiResponse({ status: 403, description: '权限不足' })
   async uploadReceipt(
     @Body() uploadDto: UploadReceiptDto,
     @UploadedFile() file: Express.Multer.File,
@@ -80,7 +79,7 @@ export class ReceiptsController {
   ) {
     const startTime = Date.now();
     try {
-      this.logger.log(`开始上传签收单 - 微信ID: ${uploadDto.wechatId}, 文件大小: ${file?.size || 0} bytes`);
+      this.logger.log(`开始上传签收单 - 用户: ${uploadDto.wxUserName}, 文件大小: ${file?.size || 0} bytes`);
 
       if (!file) {
         throw new BadRequestException('请上传签收单图片');
@@ -129,8 +128,7 @@ export class ReceiptsController {
       }
       
       return {
-        code: error.status === 403 ? RESPONSE_CODES.PARAM_ERROR :
-              error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null

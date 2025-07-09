@@ -13,6 +13,7 @@ import { CustomersModule } from './customers/customers.module';
 import { WxUsersModule } from './wx-users/wx-users.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 import { CheckinsModule } from './checkins/checkins.module';
+import { MiniprogramModule } from './miniprogram/miniprogram.module';
 import { HealthController } from './common/health.controller';
 import { databaseConfig } from './config/database.config';
 
@@ -56,6 +57,9 @@ import { databaseConfig } from './config/database.config';
     WxUsersModule,
     ReceiptsModule,
     CheckinsModule,
+
+    // 小程序模块
+    MiniprogramModule,
   ],
   controllers: [HealthController],
 })

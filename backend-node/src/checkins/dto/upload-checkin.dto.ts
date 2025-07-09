@@ -4,14 +4,14 @@ import { Transform } from 'class-transformer';
 
 export class UploadCheckinDto {
   @ApiProperty({
-    description: '微信用户ID',
-    example: 'wx_zhangsan',
+    description: '打卡人姓名',
+    example: '张三',
     maxLength: 100
   })
   @IsString()
-  @IsNotEmpty({ message: '微信用户ID不能为空' })
-  @MaxLength(100, { message: '微信用户ID长度不能超过100个字符' })
-  wechatId: string;
+  @IsNotEmpty({ message: '打卡人姓名不能为空' })
+  @MaxLength(100, { message: '打卡人姓名长度不能超过100个字符' })
+  wxUserName: string;
 
   @ApiProperty({
     description: '客户名称',
