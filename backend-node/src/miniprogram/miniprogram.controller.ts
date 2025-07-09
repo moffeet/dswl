@@ -8,7 +8,8 @@ import {
   UseInterceptors,
   UploadedFile,
   Req,
-  BadRequestException
+  BadRequestException,
+  UseGuards
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,11 +17,13 @@ import {
   ApiResponse,
   ApiQuery,
   ApiBody,
-  ApiConsumes
+  ApiConsumes,
+  ApiHeader
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
-import { Public } from '../auth/decorators/public.decorator';
+import { RequireSignature } from '../auth/decorators/require-signature.decorator';
+import { SignatureGuard } from '../auth/guards/signature.guard';
 import { RESPONSE_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 
@@ -36,7 +39,7 @@ import { WxUpdateCustomerDto } from '../customers/dto/wx-update-customer.dto';
 
 @ApiTags('📱 小程序接口')
 @Controller('miniprogram')
-@Public() // 所有小程序接口都是公开的
+@UseGuards(SignatureGuard)
 export class MiniprogramController {
   private readonly logger = new CustomLogger('MiniprogramController');
 
@@ -49,15 +52,40 @@ export class MiniprogramController {
   // ==================== 司机页面 ====================
 
   @Get('customers/search')
+  @RequireSignature()
   @ApiOperation({
     summary: '司机查询客户信息',
-    description: '司机通过客户编号查询客户信息，返回客户名、编号、地址、经纬度等信息'
+    description: '司机通过客户编号查询客户信息，返回客户名、编号、地址、经纬度等信息。需要签名校验。'
   })
   @ApiQuery({
     name: 'customerNumber',
     required: true,
     description: '客户编号',
     example: 'C001'
+  })
+  @ApiQuery({
+    name: 'wxUserId',
+    required: true,
+    description: '小程序用户ID',
+    example: 1
+  })
+  @ApiQuery({
+    name: 'timestamp',
+    required: true,
+    description: '时间戳（毫秒）',
+    example: '1704387123456'
+  })
+  @ApiQuery({
+    name: 'nonce',
+    required: true,
+    description: '随机数（防重放攻击）',
+    example: 'abc123def456'
+  })
+  @ApiQuery({
+    name: 'signature',
+    required: true,
+    description: '签名值（HMAC-SHA256）',
+    example: 'a1b2c3d4e5f6...'
   })
   @ApiResponse({
     status: 200,
@@ -141,6 +169,7 @@ export class MiniprogramController {
   // ==================== 打卡/签收单上传 ====================
 
   @Post('receipts/upload')
+  @RequireSignature()
   @UseInterceptors(FileInterceptor('file', {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
@@ -155,7 +184,7 @@ export class MiniprogramController {
   }))
   @ApiOperation({
     summary: '上传签收单',
-    description: '小程序用户上传签收单图片和相关信息'
+    description: '小程序用户上传签收单图片和相关信息。需要签名校验。'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -232,6 +261,7 @@ export class MiniprogramController {
   }
 
   @Post('checkins/upload')
+  @RequireSignature()
   @UseInterceptors(FileInterceptor('file', {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
@@ -246,7 +276,7 @@ export class MiniprogramController {
   }))
   @ApiOperation({
     summary: '上传打卡',
-    description: '小程序用户上传打卡图片和相关信息'
+    description: '小程序用户上传打卡图片和相关信息。需要签名校验。'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -326,9 +356,10 @@ export class MiniprogramController {
   // ==================== 销售页面 ====================
 
   @Patch('customers/update')
+  @RequireSignature()
   @ApiOperation({
     summary: '修改客户地址',
-    description: '通过客户编号修改客户的门店地址和仓库地址，系统自动获取经纬度信息'
+    description: '通过客户编号修改客户的门店地址和仓库地址，系统自动获取经纬度信息。需要签名校验。'
   })
   @ApiBody({
     description: '客户地址更新数据',

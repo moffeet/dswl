@@ -5,12 +5,16 @@ import { MiniprogramController } from './miniprogram.controller';
 import { CustomersModule } from '../customers/customers.module';
 import { ReceiptsModule } from '../receipts/receipts.module';
 import { CheckinsModule } from '../checkins/checkins.module';
+import { AuthModule } from '../auth/auth.module';
+import { WxUsersModule } from '../wx-users/wx-users.module';
 
 @Module({
   imports: [
     CustomersModule,
     ReceiptsModule,
-    CheckinsModule
+    CheckinsModule,
+    AuthModule,
+    WxUsersModule
   ],
   controllers: [MiniprogramController],
   providers: [],
