@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小程序接口测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background: #5a6fd8;
+        }
+        
+        .response {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .response pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .method-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .get { background: #61affe; color: white; }
+        .post { background: #49cc90; color: white; }
+        .patch { background: #fca130; color: white; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .signature-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .signature-section h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .readonly {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 小程序接口测试工具</h1>
+            <p>物流配送管理系统 - 小程序接口签名验证测试</p>
+            <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; font-size: 14px;">
+                <strong>使用说明：</strong>
+                1. 选择测试用户 → 2. 生成时间戳和随机数 → 3. 为每个接口生成签名 → 4. 测试接口
+                <br>
+                <strong>注意：</strong>签名有效期5分钟，nonce不能重复使用
+            </div>
+        </div>
+
+        <!-- 签名配置区域 -->
+        <div class="test-section">
+            <h3>🔐 签名配置</h3>
+            <div class="signature-section">
+                <h4>签名参数配置</h4>
+                <div class="grid">
+                    <div class="form-group">
+                        <label>选择测试用户:</label>
+                        <select id="userSelect" onchange="selectUser()">
+                            <option value="">请选择用户</option>
+                            <option value="1">张三 (ID: 1, 司机)</option>
+                            <option value="2">李四 (ID: 2, 销售)</option>
+                            <option value="3">王五 (ID: 3, 司机)</option>
+                            <option value="4">赵六 (ID: 4, 销售)</option>
+                            <option value="5">钱七 (ID: 5, 司机)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>小程序用户ID (wxUserId) <span style="color: red;">*</span>:</label>
+                        <input type="number" id="wxUserId" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>用户签名密钥 (secretKey) <span style="color: red;">*</span>:</label>
+                        <input type="text" id="secretKey" placeholder="请输入用户的签名密钥">
+                    </div>
+                    <div class="form-group">
+                        <label>时间戳 (timestamp):</label>
+                        <input type="text" id="timestamp" class="readonly" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>随机数 (nonce):</label>
+                        <input type="text" id="nonce" class="readonly" readonly>
+                    </div>
+                </div>
+                <button onclick="generateTimestampAndNonce()">生成时间戳和随机数</button>
+                <button onclick="getUserSecretKey()" style="background: #28a745;">获取用户密钥</button>
+                <button onclick="loadPresetKeys()" style="background: #17a2b8;">加载预设密钥</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- 客户搜索接口 -->
+            <div class="test-section">
+                <h3><span class="method-badge get">GET</span>司机查询客户信息</h3>
+                <div class="form-group">
+                    <label>客户编号 <span style="color: red;">*</span>:</label>
+                    <input type="text" id="customerNumber" placeholder="如: C001" value="C001">
+                    <small style="color: #666; font-size: 12px;">可用测试数据: C001(深圳科技), C002(广州贸易), C003(东莞制造), C004(佛山物流), C005(惠州电子)</small>
+                </div>
+                <div class="signature-section">
+                    <h4>自动生成的签名参数</h4>
+                    <div class="form-group">
+                        <label>签名 (signature):</label>
+                        <input type="text" id="customerSearchSignature" class="readonly" readonly>
+                    </div>
+                </div>
+                <button onclick="generateCustomerSearchSignature()">生成签名</button>
+                <button onclick="testCustomerSearch()">测试接口</button>
+                <div id="customerSearchResponse" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- 签收单上传接口 -->
+            <div class="test-section">
+                <h3><span class="method-badge post">POST</span>上传签收单</h3>
+                <div class="form-group">
+                    <label>上传人姓名 <span style="color: red;">*</span>:</label>
+                    <input type="text" id="wxUserName" placeholder="如: 张三" value="张三">
+                </div>
+                <div class="form-group">
+                    <label>客户名称 <span style="color: red;">*</span>:</label>
+                    <input type="text" id="receiptCustomerName" placeholder="如: 深圳科技有限公司" value="深圳科技有限公司">
+                </div>
+                <div class="form-group">
+                    <label>客户地址:</label>
+                    <input type="text" id="customerAddress" placeholder="如: 深圳市南山区科技园南区A座" value="深圳市南山区科技园南区A座">
+                </div>
+                <div class="form-group">
+                    <label>上传图片 <span style="color: red;">*</span>:</label>
+                    <input type="file" id="receiptFile" accept="image/*">
+                </div>
+                <div class="signature-section">
+                    <h4>自动生成的签名参数</h4>
+                    <div class="form-group">
+                        <label>签名 (signature):</label>
+                        <input type="text" id="receiptUploadSignature" class="readonly" readonly>
+                    </div>
+                </div>
+                <button onclick="generateReceiptUploadSignature()">生成签名</button>
+                <button onclick="testReceiptUpload()">测试接口</button>
+                <div id="receiptUploadResponse" class="response" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- 打卡上传接口 -->
+            <div class="test-section">
+                <h3><span class="method-badge post">POST</span>上传打卡</h3>
+                <div class="form-group">
+                    <label>上传人姓名 <span style="color: red;">*</span>:</label>
+                    <input type="text" id="checkinUserName" placeholder="如: 张三" value="张三">
+                </div>
+                <div class="form-group">
+                    <label>客户名称 <span style="color: red;">*</span>:</label>
+                    <input type="text" id="checkinCustomerName" placeholder="如: 深圳科技有限公司" value="深圳科技有限公司">
+                </div>
+                <div class="form-group">
+                    <label>上传图片 <span style="color: red;">*</span>:</label>
+                    <input type="file" id="checkinFile" accept="image/*">
+                </div>
+                <div class="signature-section">
+                    <h4>自动生成的签名参数</h4>
+                    <div class="form-group">
+                        <label>签名 (signature):</label>
+                        <input type="text" id="checkinUploadSignature" class="readonly" readonly>
+                    </div>
+                </div>
+                <button onclick="generateCheckinUploadSignature()">生成签名</button>
+                <button onclick="testCheckinUpload()">测试接口</button>
+                <div id="checkinUploadResponse" class="response" style="display: none;"></div>
+            </div>
+
+            <!-- 客户信息更新接口 -->
+            <div class="test-section">
+                <h3><span class="method-badge patch">PATCH</span>修改客户地址</h3>
+                <div class="form-group">
+                    <label>操作人姓名 <span style="color: red;">*</span>:</label>
+                    <input type="text" id="operatorName" placeholder="如: 张三" value="张三">
+                </div>
+                <div class="form-group">
+                    <label>客户编号 <span style="color: red;">*</span>:</label>
+                    <input type="text" id="updateCustomerNumber" placeholder="如: C001" value="C001">
+                </div>
+                <div class="form-group">
+                    <label>门店地址:</label>
+                    <input type="text" id="storeAddress" placeholder="如: 深圳市南山区科技园南区A座" value="深圳市南山区科技园南区A座">
+                </div>
+                <div class="form-group">
+                    <label>仓库地址:</label>
+                    <input type="text" id="warehouseAddress" placeholder="如: 深圳市南山区科技园南区B座" value="深圳市南山区科技园南区B座">
+                </div>
+                <div class="signature-section">
+                    <h4>自动生成的签名参数</h4>
+                    <div class="form-group">
+                        <label>签名 (signature):</label>
+                        <input type="text" id="customerUpdateSignature" class="readonly" readonly>
+                    </div>
+                </div>
+                <button onclick="generateCustomerUpdateSignature()">生成签名</button>
+                <button onclick="testCustomerUpdate()">测试接口</button>
+                <div id="customerUpdateResponse" class="response" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 快速操作</h3>
+            <button onclick="clearAllResponses()" style="background: #6c757d;">清空所有响应</button>
+            <button onclick="window.open('http://localhost:3000/api', '_blank')" style="background: #28a745;">打开 Swagger 文档</button>
+            <button onclick="copySignatureExample()" style="background: #17a2b8;">复制签名示例代码</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        const baseURL = 'http://localhost:3000';
+
+        // 显示响应结果
+        function showResponse(elementId, response) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.innerHTML = `<pre>${JSON.stringify(response, null, 2)}</pre>`;
+        }
+
+        // 生成随机nonce
+        function generateNonce(length = 16) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // 生成时间戳和随机数
+        function generateTimestampAndNonce() {
+            document.getElementById('timestamp').value = Date.now().toString();
+            document.getElementById('nonce').value = generateNonce();
+        }
+
+        // 生成签名
+        function generateSignature(params, secretKey) {
+            // 1. 过滤掉signature参数
+            const filteredParams = { ...params };
+            delete filteredParams.signature;
+
+            // 2. 按参数名字典序排序
+            const sortedKeys = Object.keys(filteredParams).sort();
+            
+            // 3. 拼接参数字符串
+            const paramString = sortedKeys
+                .map(key => {
+                    const value = filteredParams[key];
+                    if (value === null || value === undefined || value === '') {
+                        return `${key}=`;
+                    }
+                    if (typeof value === 'object') {
+                        return `${key}=${JSON.stringify(value)}`;
+                    }
+                    return `${key}=${value}`;
+                })
+                .join('&');
+
+            console.log('参数字符串:', paramString);
+
+            // 4. 生成签名
+            return CryptoJS.HmacSHA256(paramString, secretKey).toString();
+        }
+
+        // 预设的用户签名密钥（开发环境使用）
+        const presetKeys = {
+            1: '3f6de2a6666ac0cb652a59c3e1a9eddc81a4e0526b3cce46e759140df13e2820', // 张三
+            2: '592c675f7e2b4c7ec0dbb923d18102ec2333e28a695987ccd8f1c710717f0abf', // 李四
+            3: 'ddc66772dae3e3b7360de8125fffa8485f728311122df784a2298126eef64450', // 王五
+            4: '969236360ddc46ed579c296ace70dd4a016c28ea621f99eba537bbbc20d799d3', // 赵六
+            5: '1aaadc341721a34009a606b46e7ef95acf830cebb1aada7afebc163c84ebf58d'  // 钱七
+        };
+
+        // 选择用户
+        function selectUser() {
+            const userSelect = document.getElementById('userSelect');
+            const selectedUserId = userSelect.value;
+
+            if (selectedUserId) {
+                document.getElementById('wxUserId').value = selectedUserId;
+                // 自动加载预设密钥
+                if (presetKeys[selectedUserId]) {
+                    document.getElementById('secretKey').value = presetKeys[selectedUserId];
+                }
+            }
+        }
+
+        // 加载预设密钥
+        function loadPresetKeys() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            if (!wxUserId) {
+                alert('请先输入或选择用户ID');
+                return;
+            }
+
+            if (presetKeys[wxUserId]) {
+                document.getElementById('secretKey').value = presetKeys[wxUserId];
+                alert('预设密钥加载成功！');
+            } else {
+                alert('没有找到该用户的预设密钥，请使用"获取用户密钥"功能');
+            }
+        }
+
+        // 获取用户签名密钥
+        async function getUserSecretKey() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            if (!wxUserId) {
+                alert('请先输入小程序用户ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${baseURL}/api/auth/user-signature-key/${wxUserId}`);
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    document.getElementById('secretKey').value = data.data.secretKey;
+                    alert('获取用户密钥成功！');
+                } else {
+                    alert(`获取用户密钥失败: ${data.message}`);
+                }
+            } catch (error) {
+                alert(`获取用户密钥失败: ${error.message}`);
+            }
+        }
+
+        // 生成客户搜索签名
+        function generateCustomerSearchSignature() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const customerNumber = document.getElementById('customerNumber').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const secretKey = document.getElementById('secretKey').value;
+
+            if (!wxUserId || !customerNumber || !timestamp || !nonce || !secretKey) {
+                alert('请填写所有必需参数');
+                return;
+            }
+
+            const params = {
+                wxUserId: parseInt(wxUserId),
+                customerNumber,
+                timestamp,
+                nonce
+            };
+
+            const signature = generateSignature(params, secretKey);
+            document.getElementById('customerSearchSignature').value = signature;
+        }
+
+        // 测试客户搜索接口
+        async function testCustomerSearch() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const customerNumber = document.getElementById('customerNumber').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const signature = document.getElementById('customerSearchSignature').value;
+
+            if (!signature) {
+                alert('请先生成签名');
+                return;
+            }
+
+            const params = new URLSearchParams({
+                wxUserId,
+                customerNumber,
+                timestamp,
+                nonce,
+                signature
+            });
+
+            try {
+                const response = await fetch(`${baseURL}/api/miniprogram/customers/search?${params}`);
+                const data = await response.json();
+                showResponse('customerSearchResponse', data);
+            } catch (error) {
+                showResponse('customerSearchResponse', { error: error.message });
+            }
+        }
+
+        // 生成签收单上传签名
+        function generateReceiptUploadSignature() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const wxUserName = document.getElementById('wxUserName').value;
+            const customerName = document.getElementById('receiptCustomerName').value;
+            const customerAddress = document.getElementById('customerAddress').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const secretKey = document.getElementById('secretKey').value;
+
+            if (!wxUserId || !wxUserName || !customerName || !timestamp || !nonce || !secretKey) {
+                alert('请填写所有必需参数');
+                return;
+            }
+
+            const params = {
+                wxUserId: parseInt(wxUserId),
+                wxUserName,
+                customerName,
+                customerAddress: customerAddress || '',
+                timestamp,
+                nonce
+            };
+
+            const signature = generateSignature(params, secretKey);
+            document.getElementById('receiptUploadSignature').value = signature;
+        }
+
+        // 测试签收单上传接口
+        async function testReceiptUpload() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const wxUserName = document.getElementById('wxUserName').value;
+            const customerName = document.getElementById('receiptCustomerName').value;
+            const customerAddress = document.getElementById('customerAddress').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const signature = document.getElementById('receiptUploadSignature').value;
+            const fileInput = document.getElementById('receiptFile');
+
+            if (!signature) {
+                alert('请先生成签名');
+                return;
+            }
+
+            if (!fileInput.files[0]) {
+                alert('请选择要上传的图片文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('wxUserId', wxUserId);
+            formData.append('wxUserName', wxUserName);
+            formData.append('customerName', customerName);
+            if (customerAddress) formData.append('customerAddress', customerAddress);
+            formData.append('timestamp', timestamp);
+            formData.append('nonce', nonce);
+            formData.append('signature', signature);
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${baseURL}/api/miniprogram/receipts/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                showResponse('receiptUploadResponse', data);
+            } catch (error) {
+                showResponse('receiptUploadResponse', { error: error.message });
+            }
+        }
+
+        // 生成打卡上传签名
+        function generateCheckinUploadSignature() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const wxUserName = document.getElementById('checkinUserName').value;
+            const customerName = document.getElementById('checkinCustomerName').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const secretKey = document.getElementById('secretKey').value;
+
+            if (!wxUserId || !wxUserName || !customerName || !timestamp || !nonce || !secretKey) {
+                alert('请填写所有必需参数');
+                return;
+            }
+
+            const params = {
+                wxUserId: parseInt(wxUserId),
+                wxUserName,
+                customerName,
+                timestamp,
+                nonce
+            };
+
+            const signature = generateSignature(params, secretKey);
+            document.getElementById('checkinUploadSignature').value = signature;
+        }
+
+        // 测试打卡上传接口
+        async function testCheckinUpload() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const wxUserName = document.getElementById('checkinUserName').value;
+            const customerName = document.getElementById('checkinCustomerName').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const signature = document.getElementById('checkinUploadSignature').value;
+            const fileInput = document.getElementById('checkinFile');
+
+            if (!signature) {
+                alert('请先生成签名');
+                return;
+            }
+
+            if (!fileInput.files[0]) {
+                alert('请选择要上传的图片文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('wxUserId', wxUserId);
+            formData.append('wxUserName', wxUserName);
+            formData.append('customerName', customerName);
+            formData.append('timestamp', timestamp);
+            formData.append('nonce', nonce);
+            formData.append('signature', signature);
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${baseURL}/api/miniprogram/checkins/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                showResponse('checkinUploadResponse', data);
+            } catch (error) {
+                showResponse('checkinUploadResponse', { error: error.message });
+            }
+        }
+
+        // 生成客户信息更新签名
+        function generateCustomerUpdateSignature() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const operatorName = document.getElementById('operatorName').value;
+            const customerNumber = document.getElementById('updateCustomerNumber').value;
+            const storeAddress = document.getElementById('storeAddress').value;
+            const warehouseAddress = document.getElementById('warehouseAddress').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const secretKey = document.getElementById('secretKey').value;
+
+            if (!wxUserId || !operatorName || !customerNumber || !timestamp || !nonce || !secretKey) {
+                alert('请填写所有必需参数');
+                return;
+            }
+
+            const params = {
+                wxUserId: parseInt(wxUserId),
+                operatorName,
+                customerNumber,
+                timestamp,
+                nonce
+            };
+
+            // 只有非空的地址才加入签名参数
+            if (storeAddress) params.storeAddress = storeAddress;
+            if (warehouseAddress) params.warehouseAddress = warehouseAddress;
+
+            const signature = generateSignature(params, secretKey);
+            document.getElementById('customerUpdateSignature').value = signature;
+        }
+
+        // 测试客户信息更新接口
+        async function testCustomerUpdate() {
+            const wxUserId = document.getElementById('wxUserId').value;
+            const operatorName = document.getElementById('operatorName').value;
+            const customerNumber = document.getElementById('updateCustomerNumber').value;
+            const storeAddress = document.getElementById('storeAddress').value;
+            const warehouseAddress = document.getElementById('warehouseAddress').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const nonce = document.getElementById('nonce').value;
+            const signature = document.getElementById('customerUpdateSignature').value;
+
+            if (!signature) {
+                alert('请先生成签名');
+                return;
+            }
+
+            const requestBody = {
+                wxUserId: parseInt(wxUserId),
+                operatorName,
+                customerNumber,
+                timestamp,
+                nonce,
+                signature
+            };
+
+            // 只有非空的地址才加入请求体
+            if (storeAddress) requestBody.storeAddress = storeAddress;
+            if (warehouseAddress) requestBody.warehouseAddress = warehouseAddress;
+
+            try {
+                const response = await fetch(`${baseURL}/api/miniprogram/customers/update`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                const data = await response.json();
+                showResponse('customerUpdateResponse', data);
+            } catch (error) {
+                showResponse('customerUpdateResponse', { error: error.message });
+            }
+        }
+
+        // 清空所有响应
+        function clearAllResponses() {
+            const responses = document.querySelectorAll('.response');
+            responses.forEach(response => {
+                response.style.display = 'none';
+            });
+        }
+
+        // 复制签名示例代码
+        function copySignatureExample() {
+            const exampleCode = `
+// 小程序签名生成示例代码 (JavaScript)
+const crypto = require('crypto');
+
+function generateSignature(params, secretKey) {
+    // 1. 过滤掉signature参数
+    const filteredParams = { ...params };
+    delete filteredParams.signature;
+
+    // 2. 按参数名字典序排序
+    const sortedKeys = Object.keys(filteredParams).sort();
+
+    // 3. 拼接参数字符串
+    const paramString = sortedKeys
+        .map(key => {
+            const value = filteredParams[key];
+            if (value === null || value === undefined || value === '') {
+                return \`\${key}=\`;
+            }
+            if (typeof value === 'object') {
+                return \`\${key}=\${JSON.stringify(value)}\`;
+            }
+            return \`\${key}=\${value}\`;
+        })
+        .join('&');
+
+    // 4. 生成签名
+    return crypto
+        .createHmac('sha256', secretKey)
+        .update(paramString)
+        .digest('hex');
+}
+
+function generateNonce(length = 16) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// 使用示例
+const params = {
+    wxUserId: 1,
+    customerNumber: 'C001',
+    timestamp: Date.now().toString(),
+    nonce: generateNonce()
+};
+
+const secretKey = 'your_user_secret_key_here';
+params.signature = generateSignature(params, secretKey);
+
+console.log('签名参数:', params);
+            `;
+
+            navigator.clipboard.writeText(exampleCode).then(() => {
+                alert('签名示例代码已复制到剪贴板！');
+            }).catch(() => {
+                // 如果复制失败，显示代码
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(`<pre>${exampleCode}</pre>`);
+            });
+        }
+
+        // 页面加载完成后自动生成时间戳和随机数
+        window.onload = function() {
+            generateTimestampAndNonce();
+            // 默认选择第一个用户
+            document.getElementById('userSelect').value = '1';
+            selectUser();
+            console.log('小程序接口测试工具已加载');
+            console.log('基础URL:', baseURL);
+        };
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Request, Res } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request, Res, Param, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -7,6 +7,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { PermissionCheckService } from './permission-check.service';
 import { CaptchaService } from './captcha.service';
+import { SignatureService } from './signature.service';
+import { WxUsersService } from '../wx-users/wx-users.service';
 
 @ApiTags('认证管理')
 @Controller('auth')
@@ -14,7 +16,9 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly permissionCheckService: PermissionCheckService,
-    private readonly captchaService: CaptchaService
+    private readonly captchaService: CaptchaService,
+    private readonly signatureService: SignatureService,
+    private readonly wxUsersService: WxUsersService
   ) {}
 
   @ApiOperation({ 
@@ -516,5 +520,75 @@ export class AuthController {
       message: '验证码生成成功',
       data: captcha
     });
+  }
+
+  @ApiOperation({
+    summary: '获取用户签名密钥',
+    description: `
+🔑 **获取用户签名密钥接口**
+
+## 📋 功能说明
+- 获取指定小程序用户的签名密钥
+- 用于开发调试和测试签名生成
+- 仅供开发环境使用
+
+## 🎯 使用场景
+- 开发人员测试小程序接口签名
+- 调试签名生成算法
+- 验证签名计算是否正确
+
+## ⚠️ 安全提醒
+- 此接口仅供开发调试使用
+- 生产环境应禁用或限制访问
+- 签名密钥应妥善保管
+    `
+  })
+  @ApiResponse({
+    status: 200,
+    description: '✅ 获取成功',
+    example: {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '获取成功',
+      data: {
+        userId: 1,
+        secretKey: 'a1b2c3d4e5f6...'
+      }
+    }
+  })
+  @ApiResponse({
+    status: 404,
+    description: '❌ 用户不存在'
+  })
+  @Get('user-signature-key/:userId')
+  async getUserSignatureKey(@Param('userId', ParseIntPipe) userId: number) {
+    try {
+      // 验证用户是否存在
+      const user = await this.wxUsersService.findOne(userId);
+      if (!user) {
+        return {
+          code: RESPONSE_CODES.PARAM_ERROR,
+          message: '用户不存在',
+          data: null
+        };
+      }
+
+      // 获取用户签名密钥
+      const secretKey = this.signatureService.getUserSignatureKey(userId);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '获取成功',
+        data: {
+          userId,
+          secretKey
+        }
+      };
+    } catch (error) {
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: error.message,
+        data: null
+      };
+    }
   }
 }
