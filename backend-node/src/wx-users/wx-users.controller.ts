@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
+import { Public } from '../auth/decorators/public.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -22,15 +23,109 @@ import { WxUsersService } from './wx-users.service';
 import { CreateWxUserDto } from './dto/create-wx-user.dto';
 import { UpdateWxUserDto } from './dto/update-wx-user.dto';
 import { WxUserQueryDto } from './dto/wx-user-query.dto';
+import { WxLoginDto, WxLoginResponseDto } from './dto/wx-login.dto';
 import { RESPONSE_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtService } from '@nestjs/jwt';
 
 @ApiTags('📱 小程序用户管理')
 @Controller('wx-users')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class WxUsersController {
-  constructor(private readonly wxUsersService: WxUsersService) {}
+  constructor(
+    private readonly wxUsersService: WxUsersService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  @Public()
+  @Post('login')
+  @ApiOperation({
+    summary: '小程序用户登录',
+    description: '小程序传入微信openid和手机号进行登录，自动绑定用户并验证MAC地址'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '登录成功',
+    type: WxLoginResponseDto
+  })
+  @ApiResponse({ status: 400, description: '登录失败' })
+  @ApiResponse({ status: 401, description: 'MAC地址验证失败' })
+  @ApiResponse({ status: 404, description: '用户不存在' })
+  async login(@Body() loginDto: WxLoginDto) {
+    try {
+      // 1. 根据手机号查找用户
+      let user = await this.wxUsersService.findByPhone(loginDto.phone);
+
+      if (!user) {
+        return {
+          code: 404,
+          message: '用户不存在，请联系管理员创建账户',
+          data: null
+        };
+      }
+
+      // 2. 更新用户的微信ID（如果还没有绑定）
+      if (!user.wechatId) {
+        await this.wxUsersService.updateWechatInfo(user.id, loginDto.wechatId, loginDto.macAddress);
+        user = await this.wxUsersService.findOne(user.id); // 重新获取更新后的用户信息
+      } else {
+        // 如果已经绑定了微信ID，验证是否匹配
+        if (user.wechatId !== loginDto.wechatId) {
+          return {
+            code: 400,
+            message: '微信账号不匹配，请使用正确的微信账号登录',
+            data: null
+          };
+        }
+      }
+
+      // 3. 验证MAC地址
+      if (loginDto.macAddress) {
+        const macValid = await this.wxUsersService.validateMacAddress(user.id, loginDto.macAddress);
+        if (!macValid) {
+          return {
+            code: 401,
+            message: 'MAC地址验证失败，请使用注册设备登录',
+            data: null
+          };
+        }
+      }
+
+      // 4. 生成JWT token
+      const payload = {
+        sub: user.id,
+        username: user.name,
+        phone: user.phone,
+        role: user.role,
+        userType: 'wx-user'
+      };
+
+      const accessToken = this.jwtService.sign(payload);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '登录成功',
+        data: {
+          accessToken,
+          user: {
+            id: user.id,
+            name: user.name,
+            phone: user.phone,
+            role: user.role,
+            wechatId: user.wechatId
+          }
+        }
+      };
+
+    } catch (error) {
+      return {
+        code: 400,
+        message: error.message || '登录失败',
+        data: null
+      };
+    }
+  }
 
   @Post()
   @ApiOperation({

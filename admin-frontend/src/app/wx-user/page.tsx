@@ -423,19 +423,7 @@ export default function WxUserManage() {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            label="微信ID"
-            field="wechatId"
-          >
-            <Input placeholder="请输入微信ID（可选）" />
-          </Form.Item>
-
-          <Form.Item
-            label="MAC地址"
-            field="macAddress"
-          >
-            <Input placeholder="请输入MAC地址（可选）" />
-          </Form.Item>
+          {/* 微信ID和MAC地址在小程序登录时自动获取，不在管理后台手动输入 */}
 
           <Form.Item>
             <div style={{ textAlign: 'right' }}>

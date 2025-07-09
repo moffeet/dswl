@@ -1,6 +1,6 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository } from 'typeorm';
 import { WxUser } from './entities/wx-user.entity';
 import { CreateWxUserDto } from './dto/create-wx-user.dto';
 import { UpdateWxUserDto } from './dto/update-wx-user.dto';
@@ -87,11 +87,61 @@ export class WxUsersService {
 
   async remove(id: number, deletedBy?: number): Promise<void> {
     const wxUser = await this.findOne(id);
-    
+
     // 软删除
     await this.wxUserRepository.update(id, {
       isDeleted: 1,
       updateBy: deletedBy
     });
+  }
+
+  /**
+   * 通过微信openid查找用户
+   */
+  async findByWechatId(wechatId: string): Promise<WxUser | null> {
+    const wxUser = await this.wxUserRepository.findOne({
+      where: { wechatId, isDeleted: 0 }
+    });
+    return wxUser;
+  }
+
+  /**
+   * 通过手机号查找用户
+   */
+  async findByPhone(phone: string): Promise<WxUser | null> {
+    const wxUser = await this.wxUserRepository.findOne({
+      where: { phone, isDeleted: 0 }
+    });
+    return wxUser;
+  }
+
+  /**
+   * 更新用户的微信ID和MAC地址
+   */
+  async updateWechatInfo(id: number, wechatId: string, macAddress?: string): Promise<WxUser> {
+    const updateData: any = { wechatId };
+
+    if (macAddress) {
+      updateData.macAddress = macAddress;
+    }
+
+    await this.wxUserRepository.update(id, updateData);
+    return await this.findOne(id);
+  }
+
+  /**
+   * 验证MAC地址
+   */
+  async validateMacAddress(userId: number, macAddress: string): Promise<boolean> {
+    const user = await this.findOne(userId);
+
+    // 如果数据库中没有MAC地址，允许登录并更新
+    if (!user.macAddress) {
+      await this.wxUserRepository.update(userId, { macAddress });
+      return true;
+    }
+
+    // 如果MAC地址不匹配，拒绝登录
+    return user.macAddress === macAddress;
   }
 }
