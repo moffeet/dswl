@@ -97,11 +97,23 @@ export class ReceiptsService {
         throw new BadRequestException('请上传签收单图片');
       }
 
+      // 额外的文件验证
+      if (!file.buffer || file.buffer.length === 0) {
+        throw new BadRequestException('上传的文件为空');
+      }
+
       // 生成文件路径 - 使用统一配置
       const uploadDir = UploadConfig.getReceiptUploadDir();
 
       // 确保目录存在，如果失败会自动降级到备用路径
-      const actualUploadDir = UploadConfig.ensureDirectoryExists(uploadDir);
+      let actualUploadDir: string;
+      try {
+        actualUploadDir = UploadConfig.ensureDirectoryExists(uploadDir);
+        this.logger.log(`使用上传目录: ${actualUploadDir}`);
+      } catch (dirError) {
+        this.logger.error(`创建上传目录失败: ${dirError.message}`);
+        throw new BadRequestException('服务器存储配置错误，请联系管理员');
+      }
 
       // 生成唯一文件名
       const fileName = UploadConfig.generateUniqueFileName(file.originalname, 'receipt');
@@ -110,8 +122,52 @@ export class ReceiptsService {
       // 存储相对路径用于数据库
       const relativePath = UploadConfig.getRelativePath(fullFilePath);
 
-      // 保存文件
-      fs.writeFileSync(fullFilePath, file.buffer);
+      // 保存文件 - 添加重试机制
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          this.logger.log(`尝试保存文件 (第${retryCount + 1}次): ${fullFilePath}`);
+          
+          // 使用同步写入避免异步问题
+          fs.writeFileSync(fullFilePath, file.buffer);
+          
+          // 验证文件是否成功写入
+          if (!fs.existsSync(fullFilePath)) {
+            throw new Error('文件写入后验证失败');
+          }
+          
+          const fileStats = fs.statSync(fullFilePath);
+          if (fileStats.size !== file.buffer.length) {
+            throw new Error(`文件大小不匹配: 期望 ${file.buffer.length}, 实际 ${fileStats.size}`);
+          }
+          
+          this.logger.log(`文件保存成功: ${fullFilePath}, 大小: ${fileStats.size}`);
+          break;
+          
+        } catch (fileError) {
+          retryCount++;
+          this.logger.warn(`文件保存失败 (第${retryCount}次): ${fileError.message}`);
+          
+          if (retryCount >= maxRetries) {
+            this.logger.error(`文件保存失败，已重试 ${maxRetries} 次`);
+            throw new BadRequestException('文件保存失败，请重试');
+          }
+          
+          // 清理可能的部分文件
+          try {
+            if (fs.existsSync(fullFilePath)) {
+              fs.unlinkSync(fullFilePath);
+            }
+          } catch (cleanupError) {
+            this.logger.warn(`清理失败的文件时出错: ${cleanupError.message}`);
+          }
+          
+          // 等待一秒后重试
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
 
       // 生成访问URL
       const imageUrl = `${baseUrl}${UploadConfig.getUrlPath(relativePath)}`;
@@ -131,10 +187,23 @@ export class ReceiptsService {
         uploadTime: new Date()
       };
 
-      const receipt = await this.create(createDto);
-      this.logger.log(`签收单上传成功 - ID: ${receipt.id}, 用户: ${wxUser.name}`);
-
-      return receipt;
+      try {
+        const receipt = await this.create(createDto);
+        this.logger.log(`签收单上传成功 - ID: ${receipt.id}, 用户: ${wxUser.name}, 文件: ${fileName}`);
+        return receipt;
+      } catch (dbError) {
+        // 如果数据库保存失败，清理已上传的文件
+        try {
+          if (fs.existsSync(fullFilePath)) {
+            fs.unlinkSync(fullFilePath);
+            this.logger.log(`清理文件: ${fullFilePath}`);
+          }
+        } catch (cleanupError) {
+          this.logger.warn(`清理文件失败: ${cleanupError.message}`);
+        }
+        throw dbError;
+      }
+      
     } catch (error) {
       this.logger.error(`上传签收单失败: ${error.message}`, error.stack);
       throw error;

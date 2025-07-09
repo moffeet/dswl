@@ -48,6 +48,7 @@ export class ReceiptsController {
   @UseInterceptors(FileInterceptor('file', {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
+      files: 1, // 限制文件数量
     },
     fileFilter: (req, file, callback) => {
       if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
@@ -77,15 +78,30 @@ export class ReceiptsController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: Request
   ) {
+    const startTime = Date.now();
     try {
-      this.logger.log(`小程序用户上传签收单 - 微信ID: ${uploadDto.wechatId}`);
+      this.logger.log(`开始上传签收单 - 微信ID: ${uploadDto.wechatId}, 文件大小: ${file?.size || 0} bytes`);
+
+      if (!file) {
+        throw new BadRequestException('请上传签收单图片');
+      }
+
+      // 检查文件大小
+      if (file.size > 10 * 1024 * 1024) {
+        throw new BadRequestException('文件大小不能超过10MB');
+      }
 
       // 构建基础URL
       const protocol = req.protocol;
       const host = req.get('host');
       const baseUrl = `${protocol}://${host}`;
 
+      this.logger.log(`开始处理文件 - 文件名: ${file.originalname}, 大小: ${file.size}`);
+      
       const receipt = await this.receiptsService.uploadReceipt(uploadDto, file, baseUrl);
+
+      const duration = Date.now() - startTime;
+      this.logger.log(`签收单上传成功 - 耗时: ${duration}ms, ID: ${receipt.id}`);
 
       return {
         code: RESPONSE_CODES.SUCCESS,
@@ -99,7 +115,19 @@ export class ReceiptsController {
         }
       };
     } catch (error) {
-      this.logger.error(`上传签收单失败: ${error.message}`, error.stack);
+      const duration = Date.now() - startTime;
+      this.logger.error(`上传签收单失败 - 耗时: ${duration}ms, 错误: ${error.message}`, error.stack);
+      
+      // 检查是否是网络连接问题
+      if (error.message.includes('aborted') || error.code === 'ECONNRESET') {
+        this.logger.error('检测到网络连接中断，可能是客户端提前关闭连接');
+        return {
+          code: RESPONSE_CODES.SERVER_ERROR,
+          message: '网络连接中断，请重试',
+          data: null
+        };
+      }
+      
       return {
         code: error.status === 403 ? RESPONSE_CODES.PARAM_ERROR :
               error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :

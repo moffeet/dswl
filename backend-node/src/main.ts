@@ -11,7 +11,22 @@ dotenv.config();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: new CustomLogger('Bootstrap'),
+    bodyParser: true,
+    // 增加请求体解析限制
+    rawBody: true,
   });
+
+  // 配置Express应用的超时和限制
+  const server = app.getHttpServer();
+  
+  // 增加请求超时时间（60秒）
+  server.setTimeout(60000);
+  
+  // 增加保持连接超时时间
+  server.keepAliveTimeout = 65000;
+  
+  // 增加头部超时时间
+  server.headersTimeout = 66000;
 
   // CORS配置
   app.enableCors({
@@ -32,6 +47,8 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    // 增加预检请求缓存时间
+    maxAge: 86400, // 24小时
   });
 
   // 设置全局API前缀
@@ -42,6 +59,10 @@ async function bootstrap() {
     whitelist: true,
     forbidNonWhitelisted: false,
     transform: true,
+    // 增加验证选项
+    transformOptions: {
+      enableImplicitConversion: true,
+    },
     exceptionFactory: (errors) => {
       return new BadRequestException(errors);
     },
@@ -63,16 +84,24 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
+      // 增加Swagger UI的请求超时
+      requestTimeout: 60000,
     },
   });
 
   // 启动服务
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0'); // 绑定到所有网络接口
 
   const logger = new CustomLogger('Bootstrap');
   logger.log(`应用程序运行在: http://localhost:${port}`);
   logger.log(`API文档地址: http://localhost:${port}/api`);
+  logger.log(`环境: ${process.env.NODE_ENV || 'development'}`);
+  logger.log(`超时配置: 服务器超时 60s, Keep-Alive 65s, Headers 66s`);
 }
 
-bootstrap(); 
+bootstrap().catch(error => {
+  const logger = new CustomLogger('Bootstrap');
+  logger.error('应用启动失败:', error);
+  process.exit(1);
+}); 
