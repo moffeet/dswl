@@ -95,4 +95,44 @@ export class CaptchaService {
     this.cleanExpiredCaptchas();
     return this.captchaStore.size;
   }
+
+  /**
+   * 开发环境专用：获取验证码文本内容
+   * ⚠️ 仅用于开发测试，生产环境不应使用
+   */
+  getCaptchaText(id: string): string | null {
+    // 仅在开发环境下提供
+    if (process.env.NODE_ENV === 'production') {
+      return null;
+    }
+    
+    const stored = this.captchaStore.get(id);
+    if (!stored || Date.now() > stored.expires) {
+      return null;
+    }
+    
+    return stored.text;
+  }
+
+  /**
+   * 开发环境专用：获取所有当前有效的验证码
+   * ⚠️ 仅用于开发测试，生产环境不应使用
+   */
+  getAllCaptchas(): Array<{id: string, text: string, expires: number}> {
+    // 仅在开发环境下提供
+    if (process.env.NODE_ENV === 'production') {
+      return [];
+    }
+    
+    this.cleanExpiredCaptchas();
+    const result = [];
+    for (const [id, data] of this.captchaStore.entries()) {
+      result.push({
+        id,
+        text: data.text,
+        expires: data.expires
+      });
+    }
+    return result;
+  }
 }

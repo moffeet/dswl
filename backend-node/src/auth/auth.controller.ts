@@ -523,6 +523,106 @@ export class AuthController {
   }
 
   @ApiOperation({
+    summary: '🔧 开发环境：获取验证码文本',
+    description: `
+🛠️ **开发环境专用接口**
+
+## ⚠️ 重要说明
+- **仅在开发环境下可用**
+- 生产环境会返回空值，确保安全
+- 用于开发调试，避免手动查看SVG验证码
+
+## 📋 功能说明
+- 根据验证码ID直接获取文本内容
+- 简化开发测试流程
+- 验证码仍然有5分钟有效期
+
+## 🎯 使用方法
+1. 先调用 GET /auth/captcha 获取验证码ID
+2. 再调用此接口 GET /auth/captcha/:id/text 获取文本内容
+3. 使用获取的文本进行登录
+    `
+  })
+  @ApiResponse({
+    status: 200,
+    description: '✅ 获取成功',
+    example: {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '验证码文本获取成功',
+      data: {
+        id: 'abc123def456',
+        text: 'A1B2'
+      }
+    }
+  })
+  @ApiResponse({
+    status: 404,
+    description: '❌ 验证码不存在或已过期'
+  })
+  @Get('captcha/:id/text')
+  async getCaptchaText(@Param('id') id: string, @Res() res: Response) {
+    const text = this.captchaService.getCaptchaText(id);
+    
+    if (!text) {
+      return res.status(404).json({
+        code: 404,
+        message: '验证码不存在、已过期或当前为生产环境'
+      });
+    }
+
+    return res.json({
+      code: RESPONSE_CODES.SUCCESS,
+      message: '验证码文本获取成功',
+      data: {
+        id,
+        text
+      }
+    });
+  }
+
+  @ApiOperation({
+    summary: '🔧 开发环境：获取所有验证码',
+    description: `
+🛠️ **开发环境专用接口**
+
+## ⚠️ 重要说明
+- **仅在开发环境下可用**
+- 生产环境会返回空数组，确保安全
+- 显示当前所有有效的验证码
+
+## 📋 功能说明
+- 查看当前系统中所有有效的验证码
+- 包含ID、文本内容和过期时间
+- 方便开发调试和测试
+    `
+  })
+  @ApiResponse({
+    status: 200,
+    description: '✅ 获取成功',
+    example: {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '验证码列表获取成功',
+      data: [
+        {
+          id: 'abc123def456',
+          text: 'A1B2',
+          expires: 1704387123456
+        }
+      ]
+    }
+  })
+  @Get('captcha/dev/all')
+  async getAllCaptchas(@Res() res: Response) {
+    const captchas = this.captchaService.getAllCaptchas();
+
+    return res.json({
+      code: RESPONSE_CODES.SUCCESS,
+      message: '验证码列表获取成功',
+      data: captchas
+    });
+  }
+
+  @ApiOperation({
     summary: '获取用户签名密钥（仅开发环境）',
     description: `
 🔑 **获取用户签名密钥接口 - 开发调试专用**
