@@ -3,7 +3,8 @@ import { SetMetadata } from '@nestjs/common';
 export const REQUIRE_SIGNATURE_KEY = 'requireSignature';
 
 /**
- * 标记需要签名校验的接口
- * 使用此装饰器的接口将自动进行签名校验
+ * 标记是否需要签名校验的接口
+ * @param required 是否需要签名校验，默认为 true
+ * 使用此装饰器的接口将根据参数决定是否进行签名校验
  */
-export const RequireSignature = () => SetMetadata(REQUIRE_SIGNATURE_KEY, true);
+export const RequireSignature = (required: boolean = true) => SetMetadata(REQUIRE_SIGNATURE_KEY, required);

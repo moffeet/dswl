@@ -44,4 +44,13 @@ Thumbs.db
 # 调试日志
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log* 
+yarn-error.log*
+
+# 开发环境敏感文件
+dev-keys.json
+dev-config.json
+*.key
+*.secret
+
+# 测试文件
+test-signature.js

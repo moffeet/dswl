@@ -271,4 +271,67 @@ export class SignatureService {
   getCurrentTimestamp(): string {
     return Date.now().toString();
   }
+
+
+
+  /**
+   * 生成JWT Token
+   * @param payload Token载荷
+   * @param secretKey 签名密钥
+   * @returns JWT字符串
+   */
+  generateJWT(payload: any, secretKey: string): string {
+    // 简单的JWT实现（生产环境建议使用专业的JWT库）
+    const header = {
+      alg: 'HS256',
+      typ: 'JWT'
+    };
+
+    const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+
+    const signature = createHmac('sha256', secretKey)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest('base64url');
+
+    return `${encodedHeader}.${encodedPayload}.${signature}`;
+  }
+
+  /**
+   * 验证JWT Token
+   * @param token JWT字符串
+   * @param secretKey 签名密钥
+   * @returns 验证结果和载荷
+   */
+  verifyJWT(token: string, secretKey: string): { isValid: boolean; payload?: any; error?: string } {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return { isValid: false, error: 'Invalid token format' };
+      }
+
+      const [encodedHeader, encodedPayload, signature] = parts;
+
+      // 验证签名
+      const expectedSignature = createHmac('sha256', secretKey)
+        .update(`${encodedHeader}.${encodedPayload}`)
+        .digest('base64url');
+
+      if (signature !== expectedSignature) {
+        return { isValid: false, error: 'Invalid signature' };
+      }
+
+      // 解析载荷
+      const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString());
+
+      // 检查过期时间
+      if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+        return { isValid: false, error: 'Token expired' };
+      }
+
+      return { isValid: true, payload };
+    } catch (error) {
+      return { isValid: false, error: error.message };
+    }
+  }
 }

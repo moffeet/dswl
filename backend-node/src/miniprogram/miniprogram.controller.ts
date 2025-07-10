@@ -31,6 +31,8 @@ import { CustomLogger } from '../config/logger.config';
 import { CustomersService } from '../customers/customers.service';
 import { ReceiptsService } from '../receipts/receipts.service';
 import { CheckinsService } from '../checkins/checkins.service';
+import { WxUsersService } from '../wx-users/wx-users.service';
+import { SignatureService } from '../auth/signature.service';
 
 // 导入DTO
 import { UploadReceiptDto } from '../receipts/dto/upload-receipt.dto';
@@ -47,7 +49,11 @@ export class MiniprogramController {
     private readonly customersService: CustomersService,
     private readonly receiptsService: ReceiptsService,
     private readonly checkinsService: CheckinsService,
+    private readonly wxUsersService: WxUsersService,
+    private readonly signatureService: SignatureService,
   ) {}
+
+
 
   // ==================== 司机页面 ====================
 
@@ -55,7 +61,30 @@ export class MiniprogramController {
   @RequireSignature()
   @ApiOperation({
     summary: '司机查询客户信息',
-    description: '司机通过客户编号查询客户信息，返回客户名、编号、地址、经纬度等信息。需要签名校验。'
+    description: `
+🔍 **司机查询客户信息接口**
+
+## 📋 功能说明
+- 司机通过客户编号查询客户信息
+- 返回客户名、编号、地址、经纬度等信息
+- 需要应用级签名校验
+
+## 🔒 签名机制
+- 使用小程序内置的应用密钥生成签名
+- 签名参数：userId + customerNumber + timestamp + nonce
+- 签名算法：HMAC-SHA256
+
+## 📝 签名生成示例
+\`\`\`javascript
+const params = {
+  userId: 1,
+  customerNumber: "C001",
+  timestamp: Date.now().toString(),
+  nonce: generateNonce()
+};
+const signature = HMAC_SHA256(sortedParams, APP_SECRET);
+\`\`\`
+    `
   })
   @ApiQuery({
     name: 'customerNumber',
@@ -84,7 +113,7 @@ export class MiniprogramController {
   @ApiQuery({
     name: 'signature',
     required: true,
-    description: '签名值（HMAC-SHA256）',
+    description: '签名值（使用应用密钥生成的HMAC-SHA256）',
     example: 'a1b2c3d4e5f6...'
   })
   @ApiResponse({

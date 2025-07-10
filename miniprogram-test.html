@@ -146,9 +146,9 @@
             <p>物流配送管理系统 - 小程序接口签名验证测试</p>
             <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; font-size: 14px;">
                 <strong>使用说明：</strong>
-                1. 选择测试用户 → 2. 生成时间戳和随机数 → 3. 为每个接口生成签名 → 4. 测试接口
+                1. 选择测试用户（自动使用应用密钥） → 2. 生成时间戳和随机数 → 3. 为每个接口生成签名 → 4. 测试接口
                 <br>
-                <strong>注意：</strong>签名有效期5分钟，nonce不能重复使用
+                <strong>签名机制：</strong>使用应用级密钥，简单安全 | <strong>注意：</strong>签名有效期5分钟，nonce不能重复使用
             </div>
         </div>
 
@@ -187,8 +187,7 @@
                     </div>
                 </div>
                 <button onclick="generateTimestampAndNonce()">生成时间戳和随机数</button>
-                <button onclick="getUserSecretKey()" style="background: #28a745;">获取用户密钥</button>
-                <button onclick="loadPresetKeys()" style="background: #17a2b8;">加载预设密钥</button>
+                <button onclick="loadAppSecret()" style="background: #28a745;">🔑 使用应用密钥</button>
             </div>
         </div>
 
@@ -369,13 +368,16 @@
             return CryptoJS.HmacSHA256(paramString, secretKey).toString();
         }
 
-        // 预设的用户签名密钥（开发环境使用）
-        const presetKeys = {
-            1: '3f6de2a6666ac0cb652a59c3e1a9eddc81a4e0526b3cce46e759140df13e2820', // 张三
-            2: '592c675f7e2b4c7ec0dbb923d18102ec2333e28a695987ccd8f1c710717f0abf', // 李四
-            3: 'ddc66772dae3e3b7360de8125fffa8485f728311122df784a2298126eef64450', // 王五
-            4: '969236360ddc46ed579c296ace70dd4a016c28ea621f99eba537bbbc20d799d3', // 赵六
-            5: '1aaadc341721a34009a606b46e7ef95acf830cebb1aada7afebc163c84ebf58d'  // 钱七
+        // 应用级密钥（小程序内置）
+        const APP_SECRET = 'miniprogram-app-secret-2024';
+
+        // 用户信息映射（仅用于显示）
+        const userInfo = {
+            1: { name: '张三', role: '司机' },
+            2: { name: '李四', role: '销售' },
+            3: { name: '王五', role: '司机' },
+            4: { name: '赵六', role: '销售' },
+            5: { name: '钱七', role: '司机' }
         };
 
         // 选择用户
@@ -385,51 +387,56 @@
 
             if (selectedUserId) {
                 document.getElementById('wxUserId').value = selectedUserId;
-                // 自动加载预设密钥
-                if (presetKeys[selectedUserId]) {
-                    document.getElementById('secretKey').value = presetKeys[selectedUserId];
-                }
+                // 使用应用密钥
+                document.getElementById('secretKey').value = APP_SECRET;
+
+                // 获取用户信息用于显示
+                const user = userInfo[selectedUserId] || { name: `用户${selectedUserId}`, role: '未知' };
+                showSuccessMessage(`✅ 已选择用户：${user.name} (${user.role})，使用应用密钥`);
             }
         }
 
-        // 加载预设密钥
-        function loadPresetKeys() {
-            const wxUserId = document.getElementById('wxUserId').value;
-            if (!wxUserId) {
-                alert('请先输入或选择用户ID');
-                return;
-            }
-
-            if (presetKeys[wxUserId]) {
-                document.getElementById('secretKey').value = presetKeys[wxUserId];
-                alert('预设密钥加载成功！');
-            } else {
-                alert('没有找到该用户的预设密钥，请使用"获取用户密钥"功能');
-            }
+        // 加载应用密钥
+        function loadAppSecret() {
+            document.getElementById('secretKey').value = APP_SECRET;
+            showSuccessMessage('✅ 已加载应用密钥，所有小程序接口使用此密钥进行签名');
         }
 
-        // 获取用户签名密钥
-        async function getUserSecretKey() {
-            const wxUserId = document.getElementById('wxUserId').value;
-            if (!wxUserId) {
-                alert('请先输入小程序用户ID');
-                return;
-            }
+        // 显示成功消息
+        function showSuccessMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 9999;
+                background: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+                padding: 10px 15px; border-radius: 5px; font-size: 14px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            `;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
 
-            try {
-                const response = await fetch(`${baseURL}/api/auth/user-signature-key/${wxUserId}`);
-                const data = await response.json();
-
-                if (data.code === 200) {
-                    document.getElementById('secretKey').value = data.data.secretKey;
-                    alert('获取用户密钥成功！');
-                } else {
-                    alert(`获取用户密钥失败: ${data.message}`);
-                }
-            } catch (error) {
-                alert(`获取用户密钥失败: ${error.message}`);
-            }
+            setTimeout(() => {
+                document.body.removeChild(messageDiv);
+            }, 3000);
         }
+
+        // 显示错误消息
+        function showErrorMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 9999;
+                background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+                padding: 10px 15px; border-radius: 5px; font-size: 14px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            `;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+
+            setTimeout(() => {
+                document.body.removeChild(messageDiv);
+            }, 5000);
+        }
+
+
 
         // 生成客户搜索签名
         function generateCustomerSearchSignature() {
@@ -777,11 +784,14 @@ console.log('签名参数:', params);
         // 页面加载完成后自动生成时间戳和随机数
         window.onload = function() {
             generateTimestampAndNonce();
-            // 默认选择第一个用户
+            // 默认选择第一个用户并使用应用密钥
             document.getElementById('userSelect').value = '1';
-            selectUser();
+            selectUser(); // 这会自动使用应用密钥
+
             console.log('小程序接口测试工具已加载');
             console.log('基础URL:', baseURL);
+            console.log('签名方式: 应用级密钥签名（简化版）');
+            console.log('应用密钥:', APP_SECRET);
         };
     </script>
 </body>

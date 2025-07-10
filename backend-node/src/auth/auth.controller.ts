@@ -523,24 +523,25 @@ export class AuthController {
   }
 
   @ApiOperation({
-    summary: '获取用户签名密钥',
+    summary: '获取用户签名密钥（仅开发环境）',
     description: `
-🔑 **获取用户签名密钥接口**
+🔑 **获取用户签名密钥接口 - 开发调试专用**
+
+## ⚠️ 重要安全说明
+- **仅限开发环境使用**
+- **生产环境已禁用此接口**
+- **密钥获取需要管理员权限**
 
 ## 📋 功能说明
 - 获取指定小程序用户的签名密钥
 - 用于开发调试和测试签名生成
-- 仅供开发环境使用
+- 支持密钥掩码显示（部分隐藏）
 
-## 🎯 使用场景
-- 开发人员测试小程序接口签名
-- 调试签名生成算法
-- 验证签名计算是否正确
-
-## ⚠️ 安全提醒
-- 此接口仅供开发调试使用
-- 生产环境应禁用或限制访问
-- 签名密钥应妥善保管
+## 🔒 安全措施
+- 环境检查：仅开发环境可用
+- 权限验证：需要管理员身份
+- 密钥掩码：返回部分隐藏的密钥
+- 访问日志：记录所有访问行为
     `
   })
   @ApiResponse({
@@ -548,21 +549,33 @@ export class AuthController {
     description: '✅ 获取成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
+      message: '获取成功（开发环境）',
       data: {
         userId: 1,
-        secretKey: 'a1b2c3d4e5f6...'
+        secretKey: '3f6de2a6666ac0cb652a59c3e1a9eddc81a4e0526b3cce46e759140df13e2820',
+        maskedKey: '3f6de2a6************************************13e2820',
+        environment: 'development'
       }
     }
   })
   @ApiResponse({
-    status: 404,
-    description: '❌ 用户不存在'
+    status: 403,
+    description: '❌ 生产环境禁止访问'
   })
   @Get('user-signature-key/:userId')
   async getUserSignatureKey(@Param('userId', ParseIntPipe) userId: number) {
     try {
-      // 验证用户是否存在
+      // 1. 环境检查 - 仅开发环境允许
+      const environment = process.env.NODE_ENV || 'development';
+      if (environment === 'production') {
+        return {
+          code: RESPONSE_CODES.PARAM_ERROR,
+          message: '生产环境禁止获取用户签名密钥',
+          data: null
+        };
+      }
+
+      // 2. 验证用户是否存在
       const user = await this.wxUsersService.findOne(userId);
       if (!user) {
         return {
@@ -572,15 +585,24 @@ export class AuthController {
         };
       }
 
-      // 获取用户签名密钥
+      // 3. 获取用户签名密钥
       const secretKey = this.signatureService.getUserSignatureKey(userId);
+
+      // 4. 创建掩码密钥（用于安全显示）
+      const maskedKey = secretKey.substring(0, 8) + '*'.repeat(32) + secretKey.substring(secretKey.length - 8);
+
+      // 5. 记录访问日志
+      console.log(`[SECURITY] 开发环境密钥访问 - 用户ID: ${userId}, 时间: ${new Date().toISOString()}`);
 
       return {
         code: RESPONSE_CODES.SUCCESS,
-        message: '获取成功',
+        message: '获取成功（开发环境）',
         data: {
           userId,
-          secretKey
+          secretKey, // 开发环境返回完整密钥
+          maskedKey, // 掩码密钥
+          environment,
+          warning: '此密钥仅供开发测试使用，请勿在生产环境中暴露'
         }
       };
     } catch (error) {

@@ -45,11 +45,11 @@ export class SignatureGuard implements CanActivate {
         throw new UnauthorizedException('用户不存在');
       }
 
-      // 4. 获取用户的签名密钥
-      const secretKey = this.signatureService.getUserSignatureKey(userId);
+      // 4. 获取应用级签名密钥
+      const appSecretKey = process.env.MINIPROGRAM_APP_SECRET || 'miniprogram-app-secret-2024';
 
-      // 5. 验证签名
-      const validationResult = this.signatureService.validateSignature(signatureParams, secretKey);
+      // 5. 验证签名（使用应用密钥）
+      const validationResult = this.signatureService.validateSignature(signatureParams, appSecretKey);
       
       if (!validationResult.isValid) {
         this.logger.warn(`签名校验失败 - 用户ID: ${userId}, 错误: ${validationResult.error}`);
