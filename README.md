@@ -134,65 +134,10 @@ dswl1/
 ```
 
 ### 快速初始化数据库
-```bash
-# 创建数据库
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS delivery_system"
-
-# 导入初始化脚本
-mysql -u root -p delivery_system < init.sql
+mysql -u root -p123456 < init.sql
 ```
 
-## 🚨 快速部署
 
-### 1. 克隆代码
-```bash
-git clone <项目仓库地址>
-cd wlxt
-```
-
-### 2. 安装依赖
-```bash
-# 安装所有依赖
-cd backend-node && npm install && cd ..
-cd admin-frontend && npm install && cd ..
-```
-
-### 3. 启动服务
-```bash
-# 一键启动所有服务
-./ser.sh start all
-
-# 查看服务状态
-./ser.sh status
-```
-
-## 🔧 常见问题
-
-### Node.js 版本要求
-```bash
-# 检查版本
-node --version  # 需要 >= 18.18.0
-
-# 使用 nvm 升级
-nvm install 20 && nvm use 20 && nvm alias default 20
-```
-
-### 端口冲突
-```bash
-# 停止所有服务
-./ser.sh stop all
-
-# 查看服务状态
-./ser.sh status
-```
-
-### 依赖问题
-```bash
-# 清理重新安装
-cd 目标目录
-rm -rf node_modules package-lock.json
-npm install
-```
 
 ## 📞 支持与文档
 
