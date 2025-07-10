@@ -30,13 +30,11 @@ import { CustomLogger } from '../config/logger.config';
 // 导入服务
 import { CustomersService } from '../customers/customers.service';
 import { ReceiptsService } from '../receipts/receipts.service';
-import { CheckinsService } from '../checkins/checkins.service';
 import { WxUsersService } from '../wx-users/wx-users.service';
 import { SignatureService } from '../auth/signature.service';
 
 // 导入DTO
 import { UploadReceiptDto } from '../receipts/dto/upload-receipt.dto';
-import { UploadCheckinDto } from '../checkins/dto/upload-checkin.dto';
 import { WxUpdateCustomerDto } from '../customers/dto/wx-update-customer.dto';
 
 @ApiTags('📱 小程序接口')
@@ -48,7 +46,6 @@ export class MiniprogramController {
   constructor(
     private readonly customersService: CustomersService,
     private readonly receiptsService: ReceiptsService,
-    private readonly checkinsService: CheckinsService,
     private readonly wxUsersService: WxUsersService,
     private readonly signatureService: SignatureService,
   ) {}
@@ -289,98 +286,7 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
     }
   }
 
-  @Post('checkins/upload')
-  @RequireSignature()
-  @UseInterceptors(FileInterceptor('file', {
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB
-      files: 1,
-    },
-    fileFilter: (req, file, callback) => {
-      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-        return callback(new BadRequestException('只支持图片格式：jpg, jpeg, png, gif'), false);
-      }
-      callback(null, true);
-    },
-  }))
-  @ApiOperation({
-    summary: '上传打卡',
-    description: '小程序用户上传打卡图片和相关信息。需要签名校验。'
-  })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: '上传打卡数据',
-    type: UploadCheckinDto
-  })
-  @ApiResponse({
-    status: 200,
-    description: '打卡成功'
-  })
-  @ApiResponse({ status: 400, description: '参数错误' })
-  async uploadCheckin(
-    @Body() uploadDto: UploadCheckinDto,
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: Request
-  ) {
-    const startTime = Date.now();
-    try {
-      this.logger.log(`开始上传打卡 - 用户: ${uploadDto.wxUserName}, 文件大小: ${file?.size || 0} bytes`);
 
-      if (!file) {
-        throw new BadRequestException('请上传打卡图片');
-      }
-
-      // 检查文件大小
-      if (file.size > 10 * 1024 * 1024) {
-        throw new BadRequestException('文件大小不能超过10MB');
-      }
-
-      // 构建基础URL
-      const protocol = req.protocol;
-      const host = req.get('host');
-      const baseUrl = `${protocol}://${host}`;
-
-      this.logger.log(`开始处理文件 - 文件名: ${file.originalname}, 大小: ${file.size}`);
-      
-      const checkin = await this.checkinsService.uploadCheckin(uploadDto, file, baseUrl);
-
-      const duration = Date.now() - startTime;
-      this.logger.log(`打卡上传成功 - 耗时: ${duration}ms, ID: ${checkin.id}`);
-
-      return {
-        code: RESPONSE_CODES.SUCCESS,
-        message: '打卡成功',
-        data: {
-          id: checkin.id,
-          imageUrl: checkin.imageUrl,
-          checkinTime: checkin.checkinTime,
-          wxUserName: checkin.wxUserName,
-          customerName: checkin.customerName,
-          checkinLocation: checkin.checkinLocation
-        }
-      };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.logger.error(`上传打卡失败 - 耗时: ${duration}ms, 错误: ${error.message}`, error.stack);
-      
-      // 检查是否是网络连接问题
-      if (error.message.includes('aborted') || error.code === 'ECONNRESET') {
-        this.logger.error('检测到网络连接中断，可能是客户端提前关闭连接');
-        return {
-          code: RESPONSE_CODES.SERVER_ERROR,
-          message: '网络连接中断，请重试',
-          data: null
-        };
-      }
-      
-      return {
-        code: error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
-              RESPONSE_CODES.SERVER_ERROR,
-        message: error.message,
-        data: null
-      };
-    }
-  }
 
   // ==================== 销售页面 ====================
 
