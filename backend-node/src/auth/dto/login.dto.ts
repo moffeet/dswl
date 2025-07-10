@@ -56,23 +56,13 @@ fetch('/api/auth/login', {
   @IsString()
   password: string;
 
-  @ApiPropertyOptional({ 
-    description: `时间戳 - 防重放攻击机制
-    
-⏰ **生成规则**：
-- 使用 Date.now() 获取当前毫秒时间戳
-- 服务器验证时间窗口：5分钟内有效
-- 超时请求将被拒绝
+  @ApiPropertyOptional({
+    description: `时间戳 - 可选参数（已不再验证）
 
-📝 **生成示例**：
-\`\`\`javascript
-const timestamp = Date.now(); // 例如：1704387123456
-\`\`\`
-
-⚠️ **注意事项**：
-- 仅在加密模式下需要（_encrypted: true）
-- 客户端时间与服务器时间差不能超过5分钟
-- 用于防止网络请求被重复使用`,
+⏰ **说明**：
+- 此参数已不再进行验证
+- 保留是为了向后兼容
+- 可以不传递此参数`,
     example: 1704387123456,
     type: 'number'
   })
@@ -80,35 +70,13 @@ const timestamp = Date.now(); // 例如：1704387123456
   @IsNumber()
   timestamp?: number;
 
-  @ApiPropertyOptional({ 
-    description: `数字签名 - 数据完整性验证
-    
-🔏 **生成算法**：
-1. 拼接字符串：用户名 + 加密密码 + 时间戳
-2. 计算哈希值：简单哈希算法（((hash << 5) - hash) + char）
-3. 转换为36进制字符串
+  @ApiPropertyOptional({
+    description: `数字签名 - 可选参数（已不再验证）
 
-📝 **生成示例**：
-\`\`\`javascript
-function generateSignature(username, encryptedPassword, timestamp) {
-  const data = username + encryptedPassword + timestamp;
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash).toString(36);
-}
-
-const signature = generateSignature('admin', encryptedPassword, 1704387123456);
-// 结果示例：'a7b8c9d'
-\`\`\`
-
-⚠️ **验证规则**：
-- 仅在加密模式下需要（_encrypted: true）
-- 服务器会重新计算签名并对比验证
-- 签名不匹配将拒绝登录请求`,
+🔏 **说明**：
+- 此参数已不再进行验证
+- 保留是为了向后兼容
+- 可以不传递此参数`,
     example: 'a7b8c9d',
     type: 'string'
   })
@@ -120,7 +88,7 @@ const signature = generateSignature('admin', encryptedPassword, 1704387123456);
     description: `加密标识 - 标识当前请求是否使用加密模式
 
 🔐 **使用说明**：
-- true：使用加密传输（需要 timestamp 和 signature）
+- true：使用加密传输（不再需要 timestamp 和 signature）
 - false/undefined：明文传输（兼容模式）
 
 📦 **完整加密请求示例**：
@@ -128,8 +96,6 @@ const signature = generateSignature('admin', encryptedPassword, 1704387123456);
 {
   "username": "admin",
   "password": "U2FsdGVkX1/8K7gWn5W2mQ8tP3X9vK2lN4F6hB8cD1E=",
-  "timestamp": 1704387123456,
-  "signature": "a7b8c9d",
   "_encrypted": true,
   "captchaId": "abc123def456",
   "captchaCode": "A1B2"

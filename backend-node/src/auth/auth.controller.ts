@@ -21,7 +21,7 @@ export class AuthController {
     private readonly wxUsersService: WxUsersService
   ) {}
 
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '用户登录',
     description: `
 🔐 **用户登录接口 - 支持加密传输和明文兼容**
@@ -29,24 +29,22 @@ export class AuthController {
 ## 📋 功能说明
 - 支持密码加密传输（推荐）和明文传输（兼容）
 - 自动检测IP冲突，防止账号多地登录
-- 防重放攻击机制，数据完整性验证
 - 返回JWT访问令牌和用户基本信息
 
 ## 🔒 安全特性
 - ✅ 密码加密传输（Base64 + XOR）
-- ✅ 时间戳验证（5分钟有效期）
-- ✅ 数字签名验证（防篡改）
 - ✅ IP地址检查（防多地登录）
 - ✅ JWT令牌管理（1小时有效期）
+- ✅ 验证码验证
 
 ## 💡 使用建议
 1. **开发环境**：可使用明文传输快速测试
-2. **生产环境**：强烈建议使用加密传输
+2. **生产环境**：建议使用加密传输
 3. **IP冲突**：使用强制登录接口踢出其他会话
 
 ## 🚨 常见错误
 - \`400\`：参数验证失败（密码长度不足等）
-- \`401\`：用户名或密码错误，时间戳过期，签名验证失败
+- \`401\`：用户名或密码错误，验证码错误
 - \`409\`：账号已在其他位置登录（IP冲突）
 - \`500\`：服务器内部错误
     `
@@ -69,8 +67,6 @@ export class AuthController {
         value: {
           username: 'admin',
           password: 'U2FsdGVkX1/8K7gWn5W2mQ8tP3X9vK2lN4F6hB8cD1E=',
-          timestamp: 1704387123456,
-          signature: 'a7b8c9d',
           _encrypted: true
         }
       }
@@ -123,22 +119,7 @@ export class AuthController {
           data: null
         }
       },
-      timestampExpired: {
-        summary: '时间戳过期',
-        value: {
-          code: 401,
-          message: '请求已过期，请重新登录',
-          data: null
-        }
-      },
-      signatureInvalid: {
-        summary: '签名验证失败',
-        value: {
-          code: 401,
-          message: '数据签名验证失败',
-          data: null
-        }
-      },
+
       decryptionFailed: {
         summary: '密码解密失败',
         value: {

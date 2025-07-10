@@ -31,25 +31,15 @@ export class AuthService {
 
     let actualPassword: string;
 
-    // 🔒 安全改进：检查是否为加密数据
-    if (loginDto._encrypted && loginDto.timestamp && loginDto.signature) {
-      this.logger.log('检测到加密登录数据，开始解密处理');
+    // 🔒 安全改进：检查是否为加密数据（去掉签名验证）
+    if (loginDto._encrypted && loginDto.password) {
+      this.logger.log('检测到加密登录数据，开始解密处理（无签名验证）');
 
       // 导入解密工具
-      const { decryptPassword, validateTimestamp, validateSignature } = await import('./utils/crypto.util');
-
-      // 验证签名
-      if (!validateSignature(loginDto.username, loginDto.password, loginDto.timestamp, loginDto.signature)) {
-        throw new UnauthorizedException('数据签名验证失败');
-      }
-
-      // 验证时间戳（防重放攻击）
-      if (!validateTimestamp(loginDto.timestamp)) {
-        throw new UnauthorizedException('请求已过期，请重新登录');
-      }
+      const { decryptPassword } = await import('./utils/crypto.util');
 
       try {
-        // 解密密码
+        // 解密密码（不再验证签名和时间戳）
         const decryptedData = decryptPassword(loginDto.password);
         actualPassword = decryptedData.password;
         this.logger.log('密码解密成功');
@@ -59,7 +49,7 @@ export class AuthService {
       }
     } else {
       // 兼容明文密码（向后兼容）
-      console.log('使用明文密码登录（建议升级到加密传输）');
+      console.log('使用明文密码登录');
       actualPassword = loginDto.password;
     }
     
