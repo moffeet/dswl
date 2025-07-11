@@ -27,6 +27,7 @@ import { WxLoginDto, WxLoginResponseDto } from './dto/wx-login.dto';
 import { RESPONSE_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
+import { ResponseUtil } from '../common/utils/response.util';
 
 @ApiTags('📱 小程序用户管理')
 @Controller('wx-users')
@@ -215,16 +216,13 @@ export class WxUsersController {
   })
   async findAll(@Query() queryDto: WxUserQueryDto) {
     const { wxUsers, total } = await this.wxUsersService.findAll(queryDto);
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
-      data: {
-        list: wxUsers,
-        total,
-        page: queryDto.page || 1,
-        limit: queryDto.limit || 10
-      }
-    };
+    return ResponseUtil.page(
+      wxUsers,
+      total,
+      queryDto.page || 1,
+      queryDto.limit || 10,
+      '获取成功'
+    );
   }
 
   @Get(':id')

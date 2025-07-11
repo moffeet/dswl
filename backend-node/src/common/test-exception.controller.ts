@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { IsString, IsNotEmpty } from 'class-validator';
+import { ResponseUtil } from './utils/response.util';
 
 class TestDto {
   @IsString({ message: '名称必须是字符串' })
@@ -24,7 +25,7 @@ export class TestExceptionController {
   @ApiResponse({ status: 400, description: '参数验证失败' })
   @Post('validation-error')
   testValidationError(@Body() testDto: TestDto) {
-    return { message: '如果看到这个消息，说明验证通过了', data: testDto };
+    return ResponseUtil.success(testDto, '如果看到这个消息，说明验证通过了');
   }
 
   @ApiOperation({ 
@@ -102,13 +103,8 @@ export class TestExceptionController {
   @ApiResponse({ status: 200, description: '成功' })
   @Get('success')
   testSuccess() {
-    return {
-      code: 200,
-      message: '测试成功',
-      data: {
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-      },
-    };
+    return ResponseUtil.success({
+      environment: process.env.NODE_ENV || 'development',
+    }, '测试成功');
   }
 }

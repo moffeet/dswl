@@ -35,6 +35,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { RESPONSE_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
+import { ResponseUtil } from '../common/utils/response.util';
 
 @ApiTags('📋 签收单管理')
 @Controller('receipts')
@@ -236,16 +237,13 @@ export class ReceiptsController {
 
       const { receipts, total, page, limit } = await this.receiptsService.findAll(queryDto);
 
-      return {
-        code: RESPONSE_CODES.SUCCESS,
-        message: '获取成功',
-        data: {
-          list: receipts,
-          total,
-          page,
-          limit
-        }
-      };
+      return ResponseUtil.page(
+        receipts,
+        total,
+        page,
+        limit,
+        '获取成功'
+      );
     } catch (error) {
       this.logger.error(`获取签收单列表失败: ${error.message}`, error.stack);
       return {

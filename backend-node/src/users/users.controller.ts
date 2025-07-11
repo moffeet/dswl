@@ -23,6 +23,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ResponseUtil } from '../common/utils/response.util';
 
 @ApiTags('👤 用户管理')
 @Controller('users')
@@ -130,17 +131,14 @@ export class UsersController {
       const { password, ...safeUser } = user;
       return safeUser;
     });
-    
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
-      data: {
-        list: safeUsers,
-        total,
-        page: searchDto.page || 1,
-        limit: searchDto.limit || 10
-      }
-    };
+
+    return ResponseUtil.page(
+      safeUsers,
+      total,
+      searchDto.page || 1,
+      searchDto.limit || 10,
+      '获取成功'
+    );
   }
 
   @Get(':id')

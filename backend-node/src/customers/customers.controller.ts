@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth, A
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
 import { CustomerSyncService } from './sync.service';
+import { ResponseUtil } from '../common/utils/response.util';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { SearchCustomerDto, CustomerListQueryDto } from './dto/search-customer.dto';
@@ -87,17 +88,13 @@ export class CustomersController {
 
         const result = await this.customersService.search(searchDto, currentUser);
 
-        return {
-          code: RESPONSE_CODES.SUCCESS,
-          message: RESPONSE_MESSAGES.SEARCH_SUCCESS,
-          data: {
-            list: result.data,
-            total: result.total,
-            page: result.page,
-            limit: result.limit,
-            totalPages: result.totalPages,
-          }
-        };
+        return ResponseUtil.page(
+          result.data,
+          result.total,
+          result.page,
+          result.limit,
+          RESPONSE_MESSAGES.SEARCH_SUCCESS
+        );
       } else {
         // 没有搜索条件，使用普通分页（默认按更新时间排序）
         const page = query.page || 1;
@@ -107,17 +104,13 @@ export class CustomersController {
 
         const result = await this.customersService.findAll(page, limit, currentUser);
 
-        return {
-          code: RESPONSE_CODES.SUCCESS,
-          message: RESPONSE_MESSAGES.GET_SUCCESS,
-          data: {
-            list: result.data,
-            total: result.total,
-            page: result.page,
-            limit: result.limit,
-            totalPages: result.totalPages,
-          }
-        };
+        return ResponseUtil.page(
+          result.data,
+          result.total,
+          result.page,
+          result.limit,
+          RESPONSE_MESSAGES.GET_SUCCESS
+        );
       }
     } catch (error) {
       this.logger.error(`获取客户列表失败: ${error.message}`, error.stack);
@@ -163,18 +156,14 @@ export class CustomersController {
   async search(@Query() query: SearchCustomerDto) {
     try {
       const result = await this.customersService.search(query);
-      
-      return {
-        code: RESPONSE_CODES.SUCCESS,
-        message: RESPONSE_MESSAGES.SEARCH_SUCCESS,
-        data: {
-          list: result.data,
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          totalPages: result.totalPages,
-        }
-      };
+
+      return ResponseUtil.page(
+        result.data,
+        result.total,
+        result.page,
+        result.limit,
+        RESPONSE_MESSAGES.SEARCH_SUCCESS
+      );
     } catch (error) {
       return {
         code: RESPONSE_CODES.SERVER_ERROR,

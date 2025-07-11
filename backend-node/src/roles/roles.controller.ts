@@ -23,6 +23,7 @@ import { RolesService, CreateRoleDto, UpdateRoleDto } from './roles.service';
 import { RoleQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ResponseUtil } from '../common/utils/response.util';
 
 @ApiTags('👥 角色管理')
 @Controller('roles')
@@ -106,16 +107,13 @@ export class RolesController {
   @ApiResponse({ status: 200, description: '获取成功' })
   async findAll(@Query() searchDto: RoleQueryDto) {
     const { roles, total } = await this.rolesService.findAll(searchDto);
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
-      data: {
-        list: roles,
-        total,
-        page: searchDto.page || 1,
-        limit: searchDto.limit || 10
-      }
-    };
+    return ResponseUtil.page(
+      roles,
+      total,
+      searchDto.page || 1,
+      searchDto.limit || 10,
+      '获取成功'
+    );
   }
 
   @Get(':id')

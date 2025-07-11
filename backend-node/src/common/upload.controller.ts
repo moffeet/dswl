@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UploadConfig } from '../config/upload.config';
+import { ResponseUtil } from './utils/response.util';
 
 // 配置文件存储
 const storage = diskStorage({
@@ -63,13 +64,12 @@ export class UploadController {
     }
 
     const relativePath = UploadConfig.getRelativePath(file.path);
-    return {
-      message: '文件上传成功',
+    return ResponseUtil.success({
       filename: file.filename,
       originalname: file.originalname,
       size: file.size,
       url: UploadConfig.getUrlPath(relativePath),
-    };
+    }, '文件上传成功');
   }
 
   @ApiOperation({ summary: '上传多个图片' })
@@ -98,10 +98,9 @@ export class UploadController {
       };
     });
 
-    return {
-      message: '文件上传成功',
+    return ResponseUtil.success({
       count: files.length,
       files: uploadedFiles,
-    };
+    }, '文件上传成功');
   }
 } 

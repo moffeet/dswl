@@ -122,7 +122,7 @@ export class TasksService implements OnModuleInit, OnModuleDestroy {
       totalTasks: 1,
       runningTasks: this.intervals.length,
       timezone: 'Asia/Shanghai',
-      currentTime: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+      currentTime: new Date().toISOString()
     };
   }
 }
