@@ -19,7 +19,6 @@ import {
   ApiBody
 } from '@nestjs/swagger';
 import { PermissionsService, CreatePermissionDto, UpdatePermissionDto } from './permissions.service';
-import { StaticPermissionsService } from './static-permissions.service';
 import { PermissionQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES } from '../common/constants/response-codes';
 import { ResponseUtil } from '../common/utils/response.util';
@@ -31,8 +30,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiBearerAuth()
 export class PermissionsController {
   constructor(
-    private readonly permissionsService: PermissionsService,
-    private readonly staticPermissionsService: StaticPermissionsService
+    private readonly permissionsService: PermissionsService
   ) {}
 
   @Post()
@@ -87,22 +85,7 @@ export class PermissionsController {
     );
   }
 
-  @Get(':id')
-  @ApiOperation({
-    summary: '获取权限详情',
-    description: '根据权限ID获取权限详细信息。'
-  })
-  @ApiParam({ name: 'id', description: '权限ID', example: 1 })
-  @ApiResponse({ status: 200, description: '获取成功' })
-  @ApiResponse({ status: 404, description: '权限不存在' })
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    const permission = await this.permissionsService.findOne(id);
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
-      data: permission
-    };
-  }
+  // 将具体路由移到参数化路由之前，避免路由匹配冲突
 
   @Patch(':id')
   @ApiOperation({
@@ -218,99 +201,9 @@ export class PermissionsController {
     };
   }
 
-  @Get('buttons')
-  @ApiOperation({ 
-    summary: '获取按钮权限列表',
-    description: '获取所有按钮权限列表，用于角色权限配置时的按钮权限选择。按钮权限控制页面内具体操作按钮的显示与隐藏。'
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: '获取成功',
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'number', example: 200 },
-        message: { type: 'string', example: '获取成功' },
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'number', example: 101 },
-              permissionName: { type: 'string', example: '用户新增' },
-              permissionCode: { type: 'string', example: 'btn.user.add' },
-              permissionType: { type: 'string', example: 'button' },
-              parentId: { type: 'number', example: 0 },
-              sortOrder: { type: 'number', example: 101 },
-              status: { type: 'string', example: 'normal' }
-            }
-          }
-        }
-      }
-    }
-  })
-  async findButtonPermissions() {
-    const buttons = await this.permissionsService.findButtonPermissions();
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
-      data: buttons
-    };
-  }
 
-  @Get('button-tree')
-  @ApiOperation({ 
-    summary: '获取按钮权限树',
-    description: '获取树形结构的按钮权限列表，用于角色权限配置时的按钮权限选择。返回的数据包含父子关系，可直接用于前端树形组件。按钮权限按照功能模块进行分组。'
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: '获取成功',
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'number', example: 200 },
-        message: { type: 'string', example: '获取成功' },
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'number', example: 100 },
-              permissionName: { type: 'string', example: '用户管理按钮' },
-              permissionCode: { type: 'string', example: 'btn.user' },
-              permissionType: { type: 'string', example: 'button' },
-              parentId: { type: 'number', example: 0 },
-              sortOrder: { type: 'number', example: 100 },
-              status: { type: 'string', example: 'normal' },
-              children: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'number', example: 101 },
-                    permissionName: { type: 'string', example: '用户新增' },
-                    permissionCode: { type: 'string', example: 'btn.user.add' },
-                    permissionType: { type: 'string', example: 'button' },
-                    parentId: { type: 'number', example: 100 },
-                    sortOrder: { type: 'number', example: 101 }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  })
-  async findButtonTree() {
-    const buttonTree = await this.permissionsService.findButtonTree();
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
-      data: buttonTree
-    };
-  }
+
+
 
   @Get('complete-tree')
   @ApiOperation({ 
@@ -382,69 +275,25 @@ export class PermissionsController {
 
 
 
-  @Get('static/tree')
-  @ApiOperation({
-    summary: '获取静态权限树',
-    description: '获取基于常量定义的权限树结构，用于角色权限配置。包含菜单权限和对应的按钮权限。'
-  })
-  @ApiResponse({
-    status: 200,
-    description: '获取成功',
-    schema: {
-      type: 'object',
-      properties: {
-        code: { type: 'number', example: 200 },
-        message: { type: 'string', example: '获取成功' },
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string', example: '用户管理' },
-              code: { type: 'string', example: 'menu.users' },
-              type: { type: 'string', example: 'menu' },
-              path: { type: 'string', example: '/users' },
-              icon: { type: 'string', example: 'IconUser' },
-              sortOrder: { type: 'number', example: 1 },
-              children: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string', example: '用户管理-新增' },
-                    code: { type: 'string', example: 'btn.users.add' },
-                    type: { type: 'string', example: 'button' },
-                    sortOrder: { type: 'number', example: 101 }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  })
-  async getStaticPermissionTree() {
-    const tree = this.staticPermissionsService.getPermissionTree();
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '获取成功',
-      data: tree
-    };
-  }
 
-  @Get('static/all')
+
+
+
+  // 参数化路由放在最后，避免与具体路由冲突
+  @Get(':id')
   @ApiOperation({
-    summary: '获取所有静态权限',
-    description: '获取所有基于常量定义的权限列表，包含菜单权限和按钮权限。'
+    summary: '获取权限详情',
+    description: '根据权限ID获取权限详细信息。'
   })
+  @ApiParam({ name: 'id', description: '权限ID', example: 1 })
   @ApiResponse({ status: 200, description: '获取成功' })
-  async getAllStaticPermissions() {
-    const permissions = this.staticPermissionsService.getAllPermissions();
+  @ApiResponse({ status: 404, description: '权限不存在' })
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const permission = await this.permissionsService.findOne(id);
     return {
       code: RESPONSE_CODES.SUCCESS,
       message: '获取成功',
-      data: permissions
+      data: permission
     };
   }
 }

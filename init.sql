@@ -165,7 +165,7 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 ('签收单', 'menu.receipts', 'menu', 0, '/receipts', 'ReceiptManage', 'IconFileText', 4),
 ('小程序用户', 'menu.wxuser', 'menu', 0, '/wx-user', 'WxUserManage', 'IconMobile', 5),
 ('地图', 'menu.map', 'menu', 0, '/map', 'MapView', 'IconMap', 6),
-('菜单管理', 'menu.menus', 'menu', 0, '/menus', 'MenuManage', 'IconMenuFold', 7);
+('权限管理', 'menu.permissions', 'menu', 0, '/permissions', 'PermissionManage', 'IconLock', 7);
 
 -- 按钮权限数据（与静态权限常量一致）
 -- 获取菜单权限的ID

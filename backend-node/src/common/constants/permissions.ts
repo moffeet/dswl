@@ -78,10 +78,10 @@ export const PERMISSION_MENUS: MenuPermission[] = [
     actions: [] // 地图模块没有按钮权限
   },
   {
-    name: '菜单管理',
-    path: '/menus',
-    code: 'menu.menus',
-    icon: 'IconMenuFold',
+    name: '权限管理',
+    path: '/permissions',
+    code: 'menu.permissions',
+    icon: 'IconLock',
     sortOrder: 7,
     actions: [ButtonAction.ADD, ButtonAction.EDIT, ButtonAction.DELETE]
   }

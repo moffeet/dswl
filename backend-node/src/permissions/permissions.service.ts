@@ -202,23 +202,7 @@ export class PermissionsService {
     return this.buildTree(menuPermissions);
   }
 
-  async findButtonPermissions(): Promise<Permission[]> {
-    return await this.permissionRepository.find({
-      where: { permissionType: 'button', status: 'normal' },
-      order: { sortOrder: 'ASC' }
-    });
-  }
 
-  async findButtonTree(): Promise<Permission[]> {
-    // 获取所有按钮权限
-    const buttonPermissions = await this.permissionRepository.find({
-      where: { permissionType: 'button', status: 'normal' },
-      order: { sortOrder: 'ASC' }
-    });
-
-    // 构建树形结构
-    return this.buildTree(buttonPermissions);
-  }
 
   async findCompletePermissionTree(): Promise<Permission[]> {
     // 获取所有权限（菜单权限和按钮权限）

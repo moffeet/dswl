@@ -28,19 +28,25 @@ export class PermissionCheckService {
    * 获取用户权限信息
    */
   async getUserPermissionInfo(userId: number): Promise<UserPermissionInfo> {
-    // 获取用户及其角色信息
+    // 获取用户信息
     const user = await this.userRepository.findOne({
-      where: { id: userId, isDeleted: 0 },
-      relations: ['roles']
+      where: { id: userId, isDeleted: 0 }
     });
 
     if (!user) {
       throw new Error('用户不存在');
     }
 
+    // 手动查询用户的角色信息
+    const roles = await this.roleRepository
+      .createQueryBuilder('role')
+      .innerJoin('t_user_roles', 'ur', 'ur.role_id = role.id')
+      .where('ur.user_id = :userId', { userId })
+      .andWhere('role.is_deleted = 0')
+      .getMany();
+
     // 检查用户是否有角色
-    const hasRole = user.roles && user.roles.length > 0;
-    const roles = user.roles || [];
+    const hasRole = roles && roles.length > 0;
 
     // 检查是否为超级管理员
     const isAdmin = roles.some(role => role.roleCode === 'admin');
@@ -59,8 +65,8 @@ export class PermissionCheckService {
         if (roleIds.length > 0) {
           const rolePermissions = await this.permissionRepository
             .createQueryBuilder('permission')
-            .innerJoin('permission.roles', 'role')
-            .where('role.id IN (:...roleIds)', { roleIds })
+            .innerJoin('t_role_permissions', 'rp', 'rp.permission_id = permission.id')
+            .where('rp.role_id IN (:...roleIds)', { roleIds })
             .andWhere('permission.status = :status', { status: 'normal' })
             .getMany();
 
@@ -121,16 +127,19 @@ export class PermissionCheckService {
    * 检查用户是否为超级管理员
    */
   async isAdmin(userId: number): Promise<boolean> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId, isDeleted: 0 },
-      relations: ['roles']
-    });
+    // 手动查询用户的角色信息
+    const roles = await this.roleRepository
+      .createQueryBuilder('role')
+      .innerJoin('t_user_roles', 'ur', 'ur.role_id = role.id')
+      .where('ur.user_id = :userId', { userId })
+      .andWhere('role.is_deleted = 0')
+      .getMany();
 
-    if (!user || !user.roles) {
+    if (!roles || roles.length === 0) {
       return false;
     }
 
-    return user.roles.some(role => role.roleCode === 'admin');
+    return roles.some(role => role.roleCode === 'admin');
   }
 
   /**
@@ -211,10 +220,10 @@ export class PermissionCheckService {
         sortOrder: 6
       },
       {
-        name: '菜单管理',
-        path: '/menus',
-        code: 'menu.menus',
-        icon: 'IconMenuFold',
+        name: '权限管理',
+        path: '/permissions',
+        code: 'menu.permissions',
+        icon: 'IconLock',
         sortOrder: 7
       }
     ];

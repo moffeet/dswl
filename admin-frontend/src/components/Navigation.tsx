@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '../app/context/auth';
 import { usePermission } from '../app/context/permission';
 import { Button, Dropdown, Menu, Avatar, Space, Alert } from '@arco-design/web-react';
-import { IconUser, IconPoweroff, IconSettings, IconHome, IconUserGroup, IconLocation, IconFile, IconMobile, IconNav } from '@arco-design/web-react/icon';
+import { IconUser, IconPoweroff, IconSettings, IconHome, IconUserGroup, IconLocation, IconFile, IconMobile, IconNav, IconLock } from '@arco-design/web-react/icon';
 
 interface NavigationProps {}
 
@@ -25,7 +25,7 @@ export default function Navigation({}: NavigationProps) {
     'IconFileText': <IconFile />,
     'IconMobile': <IconMobile />,
     'IconMap': <IconNav />,
-    'IconMenuFold': <IconSettings />,
+    'IconLock': <IconLock />,
   };
 
   // 根据权限获取菜单项

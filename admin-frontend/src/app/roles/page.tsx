@@ -106,35 +106,7 @@ const fetchRoles = async (page: number = 1, limit: number = 10, searchParams?: a
   }
 };
 
-const fetchMenuPermissions = async (): Promise<Permission[]> => {
-  try {
-    const response = await fetch(`${API_ENDPOINTS.permissions}/menu-tree`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-      },
-    });
-    const result = await response.json();
-    return result.code === 200 ? result.data : [];
-  } catch (error) {
-    console.error('获取菜单权限失败:', error);
-    return [];
-  }
-};
-
-const fetchButtonPermissions = async (): Promise<Permission[]> => {
-  try {
-    const response = await fetch(`${API_ENDPOINTS.permissions}/button-tree`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-      },
-    });
-    const result = await response.json();
-    return result.code === 200 ? result.data : [];
-  } catch (error) {
-    console.error('获取按钮权限失败:', error);
-    return [];
-  }
-};
+// 删除了单独的菜单权限和按钮权限接口，统一使用完整权限树
 
 const fetchCompletePermissions = async (): Promise<Permission[]> => {
   try {
@@ -151,21 +123,7 @@ const fetchCompletePermissions = async (): Promise<Permission[]> => {
   }
 };
 
-// 新增：获取静态权限树
-const fetchStaticPermissionTree = async (): Promise<any[]> => {
-  try {
-    const response = await fetch(`${API_ENDPOINTS.permissions}/static/tree`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-      },
-    });
-    const result = await response.json();
-    return result.code === 200 ? result.data : [];
-  } catch (error) {
-    console.error('获取静态权限树失败:', error);
-    return [];
-  }
-};
+// 删除了静态权限树接口，统一使用完整权限树
 
 const createRole = async (data: any): Promise<boolean> => {
   try {
@@ -275,15 +233,15 @@ export default function RolesPage() {
       }
 
 
-      const [rolesData, permissionsData, staticTreeData] = await Promise.all([
+      const [rolesData, permissionsData] = await Promise.all([
         fetchRoles(currentPage, pageSize, searchParams),
-        fetchCompletePermissions(),
-        fetchStaticPermissionTree()
+        fetchCompletePermissions()
       ]);
       setData(rolesData.list);
       setTotal(rolesData.total);
       setAllPermissions(permissionsData);
-      setStaticPermissionTree(staticTreeData);
+      // 使用完整权限树数据作为静态权限树
+      setStaticPermissionTree(permissionsData);
     } catch (error) {
       Message.error('加载数据失败');
     } finally {
@@ -339,27 +297,38 @@ export default function RolesPage() {
     });
   };
 
-  // 构建静态权限树数据
-  const buildStaticTreeData = (staticTree: any[]): any[] => {
-    return staticTree.map(menu => ({
-      key: menu.code,
-      title: (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <IconMenuUnfold style={{ color: '#3b82f6', fontSize: '14px' }} />
-          <span style={{ color: '#374151', fontWeight: '500' }}>{menu.name}</span>
-          <span style={{ color: '#94a3b8', fontSize: '12px' }}>({menu.path})</span>
-        </div>
-      ),
-      children: menu.children ? menu.children.map((btn: any) => ({
-        key: btn.code,
+  // 构建权限树数据（适配完整权限树数据结构）
+  const buildStaticTreeData = (permissions: Permission[]): any[] => {
+    return permissions.map(permission => {
+      const isMenuPermission = permission.permissionType === 'menu';
+      const isButtonPermission = permission.permissionType === 'button';
+
+      return {
+        key: permission.permissionCode,
         title: (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <IconCode style={{ color: '#10b981', fontSize: '14px' }} />
-            <span style={{ color: '#10b981', fontWeight: '400' }}>{btn.name}</span>
+            {isMenuPermission && (
+              <IconMenuUnfold style={{ color: '#3b82f6', fontSize: '14px' }} />
+            )}
+            {isButtonPermission && (
+              <IconCode style={{ color: '#10b981', fontSize: '14px' }} />
+            )}
+            <span style={{
+              color: isButtonPermission ? '#10b981' : '#374151',
+              fontWeight: isMenuPermission ? '500' : '400'
+            }}>
+              {permission.permissionName}
+            </span>
+            {isMenuPermission && permission.path && (
+              <span style={{ color: '#94a3b8', fontSize: '12px' }}>({permission.path})</span>
+            )}
           </div>
-        )
-      })) : []
-    }));
+        ),
+        children: permission.children && permission.children.length > 0
+          ? buildStaticTreeData(permission.children)
+          : undefined
+      };
+    });
   };
 
   // 递归获取所有权限ID（包括子权限）
