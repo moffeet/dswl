@@ -23,18 +23,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    // 生成请求追踪ID（用于日志关联）
-    const traceId = this.generateTraceId();
-    
+    // 使用请求中的追踪ID，如果没有则生成新的
+    const traceId = (request as any).traceId || this.generateTraceId();
+
     // 解析异常信息
     const exceptionInfo = this.parseException(exception);
-    
+
     // 记录异常日志
     this.logException(exception, request, traceId, exceptionInfo);
-    
+
     // 构建响应数据
     const responseData = this.buildErrorResponse(exceptionInfo, request, traceId);
-    
+
     // 返回统一格式的错误响应
     response.status(exceptionInfo.httpStatus).json(responseData);
   }

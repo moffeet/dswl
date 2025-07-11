@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import { ReceiptsModule } from '../receipts/receipts.module';
+import { LogCleanupTask } from './log-cleanup.task';
 
 
 @Module({
@@ -9,7 +10,7 @@ import { ReceiptsModule } from '../receipts/receipts.module';
     ReceiptsModule,
   ],
   controllers: [TasksController],
-  providers: [TasksService],
+  providers: [TasksService, LogCleanupTask],
   exports: [TasksService],
 })
 export class TasksModule {}
