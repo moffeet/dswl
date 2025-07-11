@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Table, 
-  Card, 
-  Button, 
-  Input, 
-  Select, 
-  Modal, 
-  Form, 
-  Message, 
-  Tag, 
+import {
+  Table,
+  Card,
+  Button,
+  Input,
+  Select,
+  Modal,
+  Form,
+  Message,
+  Tag,
   Pagination,
-  Grid
+  Grid,
+  Popconfirm
 } from '@arco-design/web-react';
 import { 
   IconPlus, 
@@ -154,8 +155,9 @@ const updatePermission = async (id: number, data: any): Promise<boolean> => {
   }
 };
 
-const deletePermission = async (id: number): Promise<boolean> => {
+const deletePermission = async (id: number): Promise<{ success: boolean; message?: string }> => {
   try {
+    console.log('🗑️ 开始删除权限:', id);
     const response = await fetch(`${API_ENDPOINTS.permissions}/${id}`, {
       method: 'DELETE',
       headers: {
@@ -163,11 +165,25 @@ const deletePermission = async (id: number): Promise<boolean> => {
         'Content-Type': 'application/json',
       },
     });
+
+    console.log('📡 删除权限响应状态:', response.status);
+
+    if (!response.ok) {
+      console.error('❌ HTTP错误:', response.status, response.statusText);
+      return { success: false, message: `HTTP错误: ${response.status}` };
+    }
+
     const result = await response.json();
-    return result.code === 200;
+    console.log('📊 删除权限响应数据:', result);
+
+    if (result.code === 200) {
+      return { success: true };
+    } else {
+      return { success: false, message: result.message || '删除失败' };
+    }
   } catch (error) {
-    console.error('删除权限失败:', error);
-    return false;
+    console.error('❌ 删除权限异常:', error);
+    return { success: false, message: '网络错误或服务器异常' };
   }
 };
 
@@ -292,20 +308,16 @@ export default function PermissionsPage() {
   };
 
   // 删除权限
-  const handleDelete = (permission: Permission) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除权限 "${permission.permissionName}" 吗？`,
-      onOk: async () => {
-        const success = await deletePermission(permission.id);
-        if (success) {
-          Message.success('删除成功');
-          loadPermissions();
-        } else {
-          Message.error('删除失败');
-        }
-      },
-    });
+  const handleDelete = async (permissionId: number) => {
+    console.log('🗑️ 开始删除权限:', permissionId);
+    const result = await deletePermission(permissionId);
+    if (result.success) {
+      Message.success('删除成功');
+      loadPermissions();
+    } else {
+      Message.error(result.message || '删除失败');
+      console.error('❌ 删除权限失败:', result.message);
+    }
   };
 
   // 保存权限
@@ -530,17 +542,24 @@ export default function PermissionsPage() {
               padding: '4px 8px'
             }}
           />
-          <Button
-            type="text"
-            size="small"
-            icon={<IconDelete />}
-            onClick={() => handleDelete(record)}
-            style={{
-              color: '#ef4444',
-              borderRadius: '6px',
-              padding: '4px 8px'
-            }}
-          />
+          <Popconfirm
+            title="确认删除"
+            content={`确定要删除权限 "${record.permissionName}" 吗？`}
+            onOk={() => handleDelete(record.id)}
+            okText="确认"
+            cancelText="取消"
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<IconDelete />}
+              style={{
+                color: '#ef4444',
+                borderRadius: '6px',
+                padding: '4px 8px'
+              }}
+            />
+          </Popconfirm>
         </div>
       ),
     },
