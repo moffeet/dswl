@@ -12,9 +12,13 @@ export enum PermissionType {
 // 按钮操作类型
 export enum ButtonAction {
   ADD = 'add',
-  EDIT = 'edit', 
+  EDIT = 'edit',
   DELETE = 'delete',
-  EXPORT = 'export'
+  RESET = 'reset',      // 重置密码
+  EXPORT = 'export',    // 导出
+  IMPORT = 'import',    // 导入
+  VIEW = 'view',        // 查看详情
+  SYNC = 'sync'         // 同步数据
 }
 
 // 菜单权限定义
@@ -35,10 +39,10 @@ export const PERMISSION_MENUS: MenuPermission[] = [
     code: 'menu.users',
     icon: 'IconUser',
     sortOrder: 1,
-    actions: [ButtonAction.ADD, ButtonAction.EDIT, ButtonAction.DELETE]
+    actions: [ButtonAction.ADD, ButtonAction.EDIT, ButtonAction.DELETE, ButtonAction.RESET]
   },
   {
-    name: '角色管理', 
+    name: '角色管理',
     path: '/roles',
     code: 'menu.roles',
     icon: 'IconUserGroup',
@@ -51,15 +55,15 @@ export const PERMISSION_MENUS: MenuPermission[] = [
     code: 'menu.customer',
     icon: 'IconLocation',
     sortOrder: 3,
-    actions: [ButtonAction.EDIT, ButtonAction.EXPORT]
+    actions: [ButtonAction.EDIT, ButtonAction.EXPORT, ButtonAction.IMPORT, ButtonAction.SYNC]
   },
   {
     name: '签收单',
-    path: '/receipts', 
+    path: '/receipts',
     code: 'menu.receipts',
     icon: 'IconFileText',
     sortOrder: 4,
-    actions: [ButtonAction.ADD, ButtonAction.EDIT, ButtonAction.DELETE]
+    actions: [ButtonAction.ADD, ButtonAction.EDIT, ButtonAction.DELETE, ButtonAction.VIEW, ButtonAction.EXPORT]
   },
   {
     name: '小程序用户',
@@ -67,7 +71,7 @@ export const PERMISSION_MENUS: MenuPermission[] = [
     code: 'menu.wxuser',
     icon: 'IconMobile',
     sortOrder: 5,
-    actions: [ButtonAction.ADD, ButtonAction.EDIT, ButtonAction.DELETE]
+    actions: [ButtonAction.ADD, ButtonAction.EDIT, ButtonAction.DELETE, ButtonAction.RESET]
   },
   {
     name: '地图',
@@ -122,9 +126,13 @@ export function generateAllPermissions() {
       menu.actions.forEach((action, actionIndex) => {
         const actionNames = {
           [ButtonAction.ADD]: '新增',
-          [ButtonAction.EDIT]: '编辑', 
+          [ButtonAction.EDIT]: '编辑',
           [ButtonAction.DELETE]: '删除',
-          [ButtonAction.EXPORT]: '导出'
+          [ButtonAction.RESET]: '重置密码',
+          [ButtonAction.EXPORT]: '导出',
+          [ButtonAction.IMPORT]: '导入',
+          [ButtonAction.VIEW]: '查看详情',
+          [ButtonAction.SYNC]: '同步数据'
         };
 
         permissions.push({
@@ -169,8 +177,12 @@ export function getButtonPermissions() {
         const actionNames = {
           [ButtonAction.ADD]: '新增',
           [ButtonAction.EDIT]: '编辑',
-          [ButtonAction.DELETE]: '删除', 
-          [ButtonAction.EXPORT]: '导出'
+          [ButtonAction.DELETE]: '删除',
+          [ButtonAction.RESET]: '重置密码',
+          [ButtonAction.EXPORT]: '导出',
+          [ButtonAction.IMPORT]: '导入',
+          [ButtonAction.VIEW]: '查看详情',
+          [ButtonAction.SYNC]: '同步数据'
         };
 
         buttons.push({
@@ -223,7 +235,11 @@ export function generatePermissionTree(): PermissionTreeNode[] {
           [ButtonAction.ADD]: '新增',
           [ButtonAction.EDIT]: '编辑',
           [ButtonAction.DELETE]: '删除',
-          [ButtonAction.EXPORT]: '导出'
+          [ButtonAction.RESET]: '重置密码',
+          [ButtonAction.EXPORT]: '导出',
+          [ButtonAction.IMPORT]: '导入',
+          [ButtonAction.VIEW]: '查看详情',
+          [ButtonAction.SYNC]: '同步数据'
         };
 
         menuNode.children!.push({

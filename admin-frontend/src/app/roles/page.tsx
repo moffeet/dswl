@@ -909,9 +909,63 @@ export default function RolesPage() {
               }}>
                 <Tree
                   checkable
+                  checkStrictly={true}
                   checkedKeys={selectedPermissionCodes}
-                  onCheck={(checkedKeys) => {
-                    setSelectedPermissionCodes(checkedKeys as string[]);
+                  onCheck={(checkedKeys, info) => {
+                    // 自定义权限选择逻辑
+                    const newCheckedKeys = Array.isArray(checkedKeys) ? checkedKeys : checkedKeys.checked;
+                    const currentKeys = new Set(selectedPermissionCodes);
+                    const newKeys = new Set(newCheckedKeys);
+
+                    // 找出新增和删除的权限
+                    const addedKeys = newCheckedKeys.filter(key => !currentKeys.has(key));
+                    const removedKeys = selectedPermissionCodes.filter(key => !newKeys.has(key));
+
+                    let finalKeys = [...newCheckedKeys];
+
+                    // 处理新增的权限：如果是按钮权限，确保对应的菜单权限也被选中
+                    addedKeys.forEach(key => {
+                      if (key.startsWith('btn.')) {
+                        // 提取菜单权限代码 (btn.users.add -> menu.users)
+                        const parts = key.split('.');
+                        if (parts.length >= 3) {
+                          const menuKey = `menu.${parts[1]}`;
+                          if (!finalKeys.includes(menuKey)) {
+                            finalKeys.push(menuKey);
+                          }
+                        }
+                      }
+                    });
+
+                    // 处理删除的权限：如果删除的是菜单权限，同时删除所有相关的按钮权限
+                    removedKeys.forEach(key => {
+                      if (key.startsWith('menu.')) {
+                        const menuName = key.replace('menu.', '');
+                        finalKeys = finalKeys.filter(k => !k.startsWith(`btn.${menuName}.`));
+                      }
+                    });
+
+                    // 处理删除按钮权限的情况：检查是否还有其他按钮权限，如果没有则可以删除菜单权限
+                    removedKeys.forEach(key => {
+                      if (key.startsWith('btn.')) {
+                        const parts = key.split('.');
+                        if (parts.length >= 3) {
+                          const menuName = parts[1];
+                          const menuKey = `menu.${menuName}`;
+
+                          // 检查是否还有其他该菜单下的按钮权限
+                          const hasOtherButtons = finalKeys.some(k =>
+                            k.startsWith(`btn.${menuName}.`) && k !== key
+                          );
+
+                          // 如果没有其他按钮权限，且用户没有主动选择菜单权限，则可以取消菜单权限
+                          // 但这里我们保持菜单权限，让用户手动决定是否取消
+                          // 这样用户可以保留菜单访问权限，即使没有任何按钮权限
+                        }
+                      }
+                    });
+
+                    setSelectedPermissionCodes(finalKeys);
                   }}
                   treeData={buildStaticTreeData(staticPermissionTree)}
                   fieldNames={{

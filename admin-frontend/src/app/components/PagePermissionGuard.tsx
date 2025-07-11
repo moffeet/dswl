@@ -16,25 +16,35 @@ export default function PagePermissionGuard({ children }: PagePermissionGuardPro
   const pathname = usePathname();
 
   useEffect(() => {
+    console.log('🛡️ PagePermissionGuard 检查:', {
+      pathname,
+      isLoading,
+      hasRole,
+      permissionInfo
+    });
+
     // 如果正在加载权限信息，不做任何处理
     if (isLoading) {
+      console.log('⏳ 权限信息加载中...');
       return;
     }
 
     // 如果没有角色且不是首页，跳转到首页
     if (!hasRole && pathname !== '/' && pathname !== '/home') {
-      console.log('用户没有角色，跳转到首页');
+      console.log('❌ 用户没有角色，跳转到首页');
       router.push('/');
       return;
     }
 
     // 如果有角色但没有权限访问当前页面，跳转到首页
     if (hasRole && !canAccessPage(pathname)) {
-      console.log('用户没有权限访问当前页面，跳转到首页');
+      console.log('❌ 用户没有权限访问当前页面，跳转到首页');
       router.push('/');
       return;
     }
-  }, [isLoading, hasRole, pathname, canAccessPage, router]);
+
+    console.log('✅ 权限检查通过，允许访问页面');
+  }, [isLoading, hasRole, pathname, canAccessPage, router, permissionInfo]);
 
   // 如果正在加载权限信息，显示加载状态
   if (isLoading) {

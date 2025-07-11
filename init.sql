@@ -179,7 +179,8 @@ SET @menu_wxuser_id = (SELECT id FROM t_permissions WHERE permission_code = 'men
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
 ('用户管理-新增', 'btn.users.add', 'button', @menu_users_id, 101),
 ('用户管理-编辑', 'btn.users.edit', 'button', @menu_users_id, 102),
-('用户管理-删除', 'btn.users.delete', 'button', @menu_users_id, 103);
+('用户管理-删除', 'btn.users.delete', 'button', @menu_users_id, 103),
+('用户管理-重置密码', 'btn.users.reset', 'button', @menu_users_id, 104);
 
 -- 角色管理相关按钮权限
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
@@ -190,19 +191,24 @@ INSERT INTO t_permissions (permission_name, permission_code, permission_type, pa
 -- 客户地址相关按钮权限
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
 ('客户地址-编辑', 'btn.customer.edit', 'button', @menu_customer_id, 301),
-('客户地址-导出', 'btn.customer.export', 'button', @menu_customer_id, 302);
+('客户地址-导出', 'btn.customer.export', 'button', @menu_customer_id, 302),
+('客户地址-导入', 'btn.customer.import', 'button', @menu_customer_id, 303),
+('客户地址-同步数据', 'btn.customer.sync', 'button', @menu_customer_id, 304);
 
 -- 签收单相关按钮权限
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
 ('签收单-新增', 'btn.receipts.add', 'button', @menu_receipts_id, 401),
 ('签收单-编辑', 'btn.receipts.edit', 'button', @menu_receipts_id, 402),
-('签收单-删除', 'btn.receipts.delete', 'button', @menu_receipts_id, 403);
+('签收单-删除', 'btn.receipts.delete', 'button', @menu_receipts_id, 403),
+('签收单-查看详情', 'btn.receipts.view', 'button', @menu_receipts_id, 404),
+('签收单-导出', 'btn.receipts.export', 'button', @menu_receipts_id, 405);
 
 -- 小程序用户相关按钮权限
 INSERT INTO t_permissions (permission_name, permission_code, permission_type, parent_id, sort_order) VALUES
 ('小程序用户-新增', 'btn.wxuser.add', 'button', @menu_wxuser_id, 501),
 ('小程序用户-编辑', 'btn.wxuser.edit', 'button', @menu_wxuser_id, 502),
-('小程序用户-删除', 'btn.wxuser.delete', 'button', @menu_wxuser_id, 503);
+('小程序用户-删除', 'btn.wxuser.delete', 'button', @menu_wxuser_id, 503),
+('小程序用户-重置密码', 'btn.wxuser.reset', 'button', @menu_wxuser_id, 504);
 
 -- 插入角色数据 - 只保留超级管理员角色
 INSERT INTO t_roles (role_name, role_code, description, create_by) VALUES

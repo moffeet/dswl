@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePermissions } from '../../hooks/usePermissions';
 import { 
   Table, 
   Card, 
@@ -203,7 +204,10 @@ export default function UsersPage() {
   const [visible, setVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form] = Form.useForm();
-  
+
+  // 获取权限信息
+  const { hasButtonPermission, isAdmin } = usePermissions();
+
   // 搜索状态
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
@@ -334,20 +338,31 @@ export default function UsersPage() {
           );
         }
 
-        return (
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-              <Button
+        const buttons = [];
+
+        // 编辑按钮 - 需要编辑权限
+        if (isAdmin() || hasButtonPermission('btn.users.edit')) {
+          buttons.push(
+            <Button
+              key="edit"
               type="text"
-                size="small"
+              size="small"
               icon={<IconEdit />}
               onClick={() => handleEdit(record)}
-                style={{
+              style={{
                 color: '#3b82f6',
                 padding: '4px 8px',
                 borderRadius: '4px'
               }}
             />
+          );
+        }
+
+        // 重置密码按钮 - 需要重置密码权限
+        if (isAdmin() || hasButtonPermission('btn.users.reset')) {
+          buttons.push(
             <Popconfirm
+              key="reset"
               title="确认重置此用户密码？重置后密码将变为用户名"
               onOk={() => handleResetPassword(record.id)}
               okText="确认"
@@ -364,7 +379,14 @@ export default function UsersPage() {
                 }}
               />
             </Popconfirm>
+          );
+        }
+
+        // 删除按钮 - 需要删除权限
+        if (isAdmin() || hasButtonPermission('btn.users.delete')) {
+          buttons.push(
             <Popconfirm
+              key="delete"
               title="确认删除此用户？"
               onOk={() => handleDelete(record.id)}
               okText="确认"
@@ -381,6 +403,12 @@ export default function UsersPage() {
                 }}
               />
             </Popconfirm>
+          );
+        }
+
+        return (
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            {buttons.length > 0 ? buttons : <span style={{ color: '#86909C', fontSize: '12px' }}>无权限</span>}
           </div>
         );
       },
@@ -648,45 +676,51 @@ export default function UsersPage() {
             用户管理
           </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <Button
-                  type="primary"
-                  icon={<IconPlus />}
-                  onClick={handleAdd}
-                  style={{
-                    height: '40px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                    border: 'none',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                  }}
-                >
-                  新增用户
-                </Button>
-
-                <Popconfirm
-                  title={`确认删除选中的 ${selectedRowKeys.length} 个用户？`}
-                  onOk={handleBatchDelete}
-                  okText="确认"
-                  cancelText="取消"
-                  disabled={selectedRowKeys.length === 0}
-                >
+                {/* 新增用户按钮 - 需要新增权限 */}
+                {(isAdmin() || hasButtonPermission('btn.users.add')) && (
                   <Button
                     type="primary"
-                    status="danger"
-                    icon={<IconDelete />}
-                    disabled={selectedRowKeys.length === 0}
+                    icon={<IconPlus />}
+                    onClick={handleAdd}
                     style={{
                       height: '40px',
                       borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      border: 'none',
                       fontSize: '14px',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
                     }}
                   >
-                    批量删除 ({selectedRowKeys.length})
+                    新增用户
                   </Button>
-                </Popconfirm>
+                )}
+
+                {/* 批量删除按钮 - 需要删除权限 */}
+                {(isAdmin() || hasButtonPermission('btn.users.delete')) && (
+                  <Popconfirm
+                    title={`确认删除选中的 ${selectedRowKeys.length} 个用户？`}
+                    onOk={handleBatchDelete}
+                    okText="确认"
+                    cancelText="取消"
+                    disabled={selectedRowKeys.length === 0}
+                  >
+                    <Button
+                      type="primary"
+                      status="danger"
+                      icon={<IconDelete />}
+                      disabled={selectedRowKeys.length === 0}
+                      style={{
+                        height: '40px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      批量删除 ({selectedRowKeys.length})
+                    </Button>
+                  </Popconfirm>
+                )}
               </div>
         </div>
 

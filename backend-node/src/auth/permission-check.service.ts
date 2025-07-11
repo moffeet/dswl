@@ -98,20 +98,20 @@ export class PermissionCheckService {
       return path === '/' || path === '/home' || path === '';
     }
 
-    // 页面路径与权限代码的映射
-    const pagePermissionMap: { [key: string]: string } = {
-      '/users': 'menu.users',
-      '/roles': 'menu.roles',
-      '/customers': 'menu.customer',
-      '/receipts': 'menu.receipts',
-      '/wx-user': 'menu.wxuser',
-      '/map': 'menu.map'
-    };
-
     // home页面所有用户都可以访问
     if (path === '/' || path === '/home' || path === '') {
       return true;
     }
+
+    // 页面路径与权限代码的映射（修复路径不匹配问题）
+    const pagePermissionMap: { [key: string]: string } = {
+      '/users': 'menu.users',
+      '/roles': 'menu.roles',
+      '/customer': 'menu.customer',  // 修复：数据库中是 /customer 不是 /customers
+      '/receipts': 'menu.receipts',
+      '/wx-user': 'menu.wxuser',
+      '/map': 'menu.map'
+    };
 
     // 检查是否有对应页面的权限
     const requiredPermission = pagePermissionMap[path];
@@ -143,15 +143,9 @@ export class PermissionCheckService {
   }
 
   /**
-   * 获取用户可访问的菜单列表
+   * 获取用户可访问的菜单列表（支持层级结构）
    */
-  async getUserMenus(userId: number): Promise<Array<{
-    name: string;
-    path: string;
-    code: string;
-    icon?: string;
-    sortOrder: number;
-  }>> {
+  async getUserMenus(userId: number): Promise<Array<any>> {
     const permissionInfo = await this.getUserPermissionInfo(userId);
 
     // 检查是否为超级管理员
@@ -168,77 +162,82 @@ export class PermissionCheckService {
       }];
     }
 
-    // 定义所有可能的菜单
-    const allMenus = [
-      {
-        name: '首页',
-        path: '/',
-        code: 'menu.home',
-        icon: 'IconHome',
-        sortOrder: 0
-      },
-      {
-        name: '用户管理',
-        path: '/users',
-        code: 'menu.users',
-        icon: 'IconUser',
-        sortOrder: 1
-      },
-      {
-        name: '角色管理',
-        path: '/roles',
-        code: 'menu.roles',
-        icon: 'IconUserGroup',
-        sortOrder: 2
-      },
-      {
-        name: '客户地址',
-        path: '/customers',
-        code: 'menu.customer',
-        icon: 'IconLocation',
-        sortOrder: 3
-      },
-      {
-        name: '签收单',
-        path: '/receipts',
-        code: 'menu.receipts',
-        icon: 'IconFileText',
-        sortOrder: 4
-      },
-      {
-        name: '小程序用户',
-        path: '/wx-user',
-        code: 'menu.wxuser',
-        icon: 'IconMobile',
-        sortOrder: 5
-      },
-      {
-        name: '地图',
-        path: '/map',
-        code: 'menu.map',
-        icon: 'IconMap',
-        sortOrder: 6
-      },
-      {
-        name: '权限管理',
-        path: '/permissions',
-        code: 'menu.permissions',
-        icon: 'IconLock',
-        sortOrder: 7
-      }
-    ];
+    // 从数据库获取所有菜单权限（包括层级结构）
+    const allMenuPermissions = await this.permissionRepository.find({
+      where: { permissionType: 'menu', status: 'normal' },
+      order: { sortOrder: 'ASC' }
+    });
 
-    // 超级管理员可以访问所有菜单
-    if (isAdmin) {
-      return allMenus.sort((a, b) => a.sortOrder - b.sortOrder);
+    // 构建菜单树
+    const buildMenuTree = (permissions: any[], parentId: number | null = null, visited: Set<number> = new Set()) => {
+      const result: any[] = [];
+
+      for (const permission of permissions) {
+        // 防止无限递归
+        if (visited.has(permission.id)) {
+          continue;
+        }
+
+        let permParentId = permission.parentId;
+        if (typeof permParentId === 'string') {
+          permParentId = parseInt(permParentId);
+        }
+
+        // 处理顶级菜单：parentId 为 null、0 或 undefined 都视为顶级菜单
+        const isTopLevel = permParentId === null || permParentId === 0 || permParentId === undefined;
+        const isTargetParent = parentId === null ? isTopLevel : permParentId === parentId;
+
+        if (isTargetParent) {
+          // 检查权限
+          const hasPermission = isAdmin ||
+            permission.permissionCode === 'menu.home' ||
+            permissionInfo.permissions.includes(permission.permissionCode);
+
+          if (hasPermission) {
+            // 标记为已访问
+            visited.add(permission.id);
+
+            const menuItem: any = {
+              name: permission.permissionName,
+              path: permission.path || `/${permission.permissionCode.replace('menu.', '')}`,
+              code: permission.permissionCode,
+              icon: permission.icon,
+              sortOrder: permission.sortOrder
+            };
+
+            // 递归获取子菜单
+            const children = buildMenuTree(permissions, permission.id, new Set(visited));
+            if (children.length > 0) {
+              menuItem.children = children;
+            }
+
+            result.push(menuItem);
+          }
+        }
+      }
+
+      return result.sort((a, b) => a.sortOrder - b.sortOrder);
+    };
+
+    // 添加首页菜单（如果不存在）
+    const homeMenu = allMenuPermissions.find(p => p.permissionCode === 'menu.home');
+    if (!homeMenu) {
+      const homePermission = new Permission();
+      homePermission.id = -1; // 使用负数ID避免与真实菜单冲突
+      homePermission.permissionName = '首页';
+      homePermission.permissionCode = 'menu.home';
+      homePermission.permissionType = 'menu';
+      homePermission.parentId = null; // 首页没有父菜单
+      homePermission.path = '/';
+      homePermission.icon = 'IconHome';
+      homePermission.sortOrder = 0;
+      homePermission.status = 'normal';
+      homePermission.createTime = new Date();
+      homePermission.updateTime = new Date();
+
+      allMenuPermissions.unshift(homePermission);
     }
 
-    // 过滤用户有权限的菜单
-    return allMenus.filter(menu => {
-      if (menu.code === 'menu.home') {
-        return true; // 首页所有人都可以访问
-      }
-      return permissionInfo.permissions.includes(menu.code);
-    }).sort((a, b) => a.sortOrder - b.sortOrder);
+    return buildMenuTree(allMenuPermissions);
   }
 }

@@ -2,17 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../app/context/auth';
 import { usePermission } from '../app/context/permission';
 import { Button, Dropdown, Menu, Avatar, Space, Alert } from '@arco-design/web-react';
-import { IconUser, IconPoweroff, IconSettings, IconHome, IconUserGroup, IconLocation, IconFile, IconMobile, IconNav, IconLock } from '@arco-design/web-react/icon';
+import { IconUser, IconPoweroff, IconSettings, IconHome, IconUserGroup, IconLocation, IconFile, IconMobile, IconNav, IconLock, IconDown, IconRight } from '@arco-design/web-react/icon';
 
 interface NavigationProps {}
 
 export default function Navigation({}: NavigationProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const { permissionInfo, hasRole, isLoading } = usePermission();
 
@@ -28,13 +30,74 @@ export default function Navigation({}: NavigationProps) {
     'IconLock': <IconLock />,
   };
 
-  // 根据权限获取菜单项
-  const menuItems = permissionInfo?.menus?.map(menu => ({
-    href: menu.path,
-    icon: iconMap[menu.icon || 'IconHome'] || '📄',
-    label: menu.name,
-    code: menu.code
-  })) || [];
+  // 切换子菜单展开状态
+  const toggleSubmenu = (menuCode: string) => {
+    const newExpanded = new Set(expandedMenus);
+    if (newExpanded.has(menuCode)) {
+      newExpanded.delete(menuCode);
+    } else {
+      newExpanded.add(menuCode);
+    }
+    setExpandedMenus(newExpanded);
+  };
+
+  // 渲染菜单项（支持子菜单）
+  const renderMenuItem = (menu: any, level: number = 0) => {
+    const isActive = pathname === menu.path;
+    const isHovered = hoveredItem === menu.code;
+    const hasChildren = menu.children && menu.children.length > 0;
+    const isExpanded = expandedMenus.has(menu.code);
+    const paddingLeft = 20 + (level * 16); // 根据层级调整缩进
+
+    return (
+      <div key={menu.code}>
+        {/* 主菜单项 */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: `14px ${paddingLeft}px`,
+            color: isActive ? '#1890ff' : '#374151',
+            fontSize: '14px',
+            fontWeight: isActive ? '600' : '500',
+            transition: 'all 0.2s ease',
+            borderLeft: `3px solid ${isActive ? '#1890ff' : (isHovered ? '#1890ff' : 'transparent')}`,
+            backgroundColor: isActive ? '#e6f7ff' : (isHovered ? '#f3f4f6' : 'transparent'),
+            cursor: 'pointer'
+          }}
+          onMouseEnter={() => setHoveredItem(menu.code)}
+          onMouseLeave={() => setHoveredItem(null)}
+          onClick={() => {
+            if (hasChildren) {
+              toggleSubmenu(menu.code);
+            } else {
+              // 如果没有子菜单，使用客户端路由跳转
+              console.log('🔗 导航到:', menu.path);
+              router.push(menu.path);
+            }
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>
+            {iconMap[menu.icon || 'IconHome'] || '📄'}
+          </span>
+          <span style={{ flex: 1 }}>{menu.name}</span>
+          {hasChildren && (
+            <span style={{ fontSize: '12px', transition: 'transform 0.2s' }}>
+              {isExpanded ? <IconDown /> : <IconRight />}
+            </span>
+          )}
+        </div>
+
+        {/* 子菜单 */}
+        {hasChildren && isExpanded && (
+          <div>
+            {menu.children.map((child: any) => renderMenuItem(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const userMenuItems = [
     {
@@ -161,40 +224,12 @@ export default function Navigation({}: NavigationProps) {
               style={{ fontSize: '12px' }}
             />
           </div>
-        ) : menuItems.length === 0 ? (
+        ) : !permissionInfo?.menus || permissionInfo.menus.length === 0 ? (
           <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
             暂无可访问的菜单
           </div>
         ) : (
-          menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            const isHovered = hoveredItem === item.href;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '14px 20px',
-                  color: isActive ? '#1890ff' : '#374151',
-                  textDecoration: 'none',
-                  fontSize: '14px',
-                  fontWeight: isActive ? '600' : '500',
-                  transition: 'all 0.2s ease',
-                  borderLeft: `3px solid ${isActive ? '#1890ff' : (isHovered ? '#1890ff' : 'transparent')}`,
-                  backgroundColor: isActive ? '#e6f7ff' : (isHovered ? '#f3f4f6' : 'transparent')
-                }}
-                onMouseEnter={() => setHoveredItem(item.href)}
-                onMouseLeave={() => setHoveredItem(null)}
-              >
-                <span style={{ fontSize: '16px' }}>{item.icon}</span>
-                {item.label}
-              </Link>
-            );
-          })
+          permissionInfo.menus.map((menu) => renderMenuItem(menu))
         )}
       </div>
     </div>

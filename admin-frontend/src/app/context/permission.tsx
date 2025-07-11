@@ -18,6 +18,7 @@ interface Menu {
   code: string;
   icon?: string;
   sortOrder: number;
+  children?: Menu[];
 }
 
 interface PermissionInfo {
@@ -93,22 +94,44 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
 
   // 检查是否可以访问指定页面
   const canAccessPage = useCallback((path: string): boolean => {
+    console.log('🔍 检查页面权限:', path);
+    console.log('📋 权限信息:', permissionInfo);
+
     if (!permissionInfo) {
+      console.log('❌ 没有权限信息');
       return false;
     }
 
     // 如果没有角色，只能访问home页面
     if (!permissionInfo.hasRole) {
+      console.log('❌ 用户没有角色');
       return path === '/' || path === '/home' || path === '';
     }
 
     // home页面所有用户都可以访问
     if (path === '/' || path === '/home' || path === '') {
+      console.log('✅ 首页，允许访问');
       return true;
     }
 
-    // 检查菜单权限
-    return permissionInfo.menus.some(menu => menu.path === path);
+    // 递归检查菜单权限（包括子菜单）
+    const checkMenuAccess = (menus: Menu[]): boolean => {
+      for (const menu of menus) {
+        console.log(`🔍 检查菜单: ${menu.name} (${menu.path}) vs ${path}`);
+        if (menu.path === path) {
+          console.log('✅ 找到匹配的菜单路径');
+          return true;
+        }
+        if (menu.children && checkMenuAccess(menu.children)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const hasAccess = checkMenuAccess(permissionInfo.menus);
+    console.log(`🎯 最终权限检查结果: ${hasAccess}`);
+    return hasAccess;
   }, [permissionInfo]);
 
   // 检查是否可以执行指定操作
