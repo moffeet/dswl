@@ -17,6 +17,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
 import { MiniprogramModule } from './miniprogram/miniprogram.module';
 import { TasksModule } from './tasks/tasks.module';
 import { HealthController } from './common/health.controller';
+import { TestExceptionController } from './common/test-exception.controller';
 import { databaseConfig } from './config/database.config';
 
 @Module({
@@ -68,6 +69,10 @@ import { databaseConfig } from './config/database.config';
     // 定时任务模块
     TasksModule,
   ],
-  controllers: [HealthController],
+  controllers: [
+    HealthController,
+    // 仅在开发环境添加异常测试控制器
+    TestExceptionController,
+  ],
 })
 export class AppModule {} 

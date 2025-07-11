@@ -3,6 +3,7 @@ import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { CustomLogger } from './config/logger.config';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import * as dotenv from 'dotenv';
 
 // 显式加载环境变量
@@ -56,6 +57,9 @@ async function bootstrap() {
   // 设置全局API前缀
   app.setGlobalPrefix('api');
 
+  // 全局异常过滤器（必须在管道之前注册）
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
   // 全局管道
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -65,9 +69,10 @@ async function bootstrap() {
     transformOptions: {
       enableImplicitConversion: true,
     },
-    exceptionFactory: (errors) => {
-      return new BadRequestException(errors);
-    },
+    // 移除自定义异常工厂，让全局异常过滤器处理
+    // exceptionFactory: (errors) => {
+    //   return new BadRequestException(errors);
+    // },
   }));
 
   // Swagger配置
