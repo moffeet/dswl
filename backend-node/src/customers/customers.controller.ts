@@ -38,25 +38,30 @@ export class CustomersController {
         code: { type: 'number', example: 200 },
         message: { type: 'string', example: '获取成功' },
         data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'number', example: 1 },
-              customerNumber: { type: 'string', example: 'C001' },
-              customerName: { type: 'string', example: '深圳科技有限公司' },
-              storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座' },
-              warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座' },
-              updateBy: { type: 'string', example: '管理员' },
-              status: { type: 'string', example: 'active', description: '仅超级管理员可见' },
-              updatedAt: { type: 'string', example: '2025-06-27T08:16:28.000Z' }
-            }
+          type: 'object',
+          properties: {
+            list: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'number', example: 1 },
+                  customerNumber: { type: 'string', example: 'C001' },
+                  customerName: { type: 'string', example: '深圳科技有限公司' },
+                  storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座' },
+                  warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座' },
+                  updateBy: { type: 'string', example: '管理员' },
+                  status: { type: 'string', example: 'active', description: '仅超级管理员可见' },
+                  updatedAt: { type: 'string', example: '2025-06-27T08:16:28.000Z' }
+                }
+              }
+            },
+            total: { type: 'number', example: 100 },
+            page: { type: 'number', example: 1 },
+            limit: { type: 'number', example: 10 },
+            totalPages: { type: 'number', example: 10 }
           }
-        },
-        total: { type: 'number', example: 100 },
-        page: { type: 'number', example: 1 },
-        limit: { type: 'number', example: 10 },
-        totalPages: { type: 'number', example: 10 }
+        }
       }
     }
   })
@@ -85,11 +90,13 @@ export class CustomersController {
         return {
           code: RESPONSE_CODES.SUCCESS,
           message: RESPONSE_MESSAGES.SEARCH_SUCCESS,
-          data: result.data,
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          totalPages: result.totalPages,
+          data: {
+            list: result.data,
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: result.totalPages,
+          }
         };
       } else {
         // 没有搜索条件，使用普通分页（默认按更新时间排序）
@@ -103,11 +110,13 @@ export class CustomersController {
         return {
           code: RESPONSE_CODES.SUCCESS,
           message: RESPONSE_MESSAGES.GET_SUCCESS,
-          data: result.data,
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          totalPages: result.totalPages,
+          data: {
+            list: result.data,
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: result.totalPages,
+          }
         };
       }
     } catch (error) {
@@ -135,10 +144,18 @@ export class CustomersController {
         code: { type: 'number', example: 200 },
         message: { type: 'string', example: '搜索成功' },
         data: {
-          type: 'array',
-          items: { $ref: '#/components/schemas/Customer' }
-        },
-        total: { type: 'number', example: 3, description: '搜索结果总数' }
+          type: 'object',
+          properties: {
+            list: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/Customer' }
+            },
+            total: { type: 'number', example: 3, description: '搜索结果总数' },
+            page: { type: 'number', example: 1 },
+            limit: { type: 'number', example: 10 },
+            totalPages: { type: 'number', example: 1 }
+          }
+        }
       }
     }
   })
@@ -150,8 +167,13 @@ export class CustomersController {
       return {
         code: RESPONSE_CODES.SUCCESS,
         message: RESPONSE_MESSAGES.SEARCH_SUCCESS,
-        data: result.data,
-        total: result.total,
+        data: {
+          list: result.data,
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          totalPages: result.totalPages,
+        }
       };
     } catch (error) {
       return {

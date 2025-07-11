@@ -15,7 +15,8 @@ export class ResponseUtil {
   }
 
   /**
-   * 分页响应
+   * 分页响应 - 标准格式
+   * 所有分页接口都应该使用这个格式，确保前端处理的一致性
    */
   static page<T>(data: T[], total: number, page: number, limit: number, message: string = '获取成功') {
     return {
@@ -28,6 +29,24 @@ export class ResponseUtil {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * 分页响应 - 兼容旧格式（已废弃，请使用 page 方法）
+   * @deprecated 请使用 ResponseUtil.page() 方法
+   */
+  static pageOld<T>(data: T[], total: number, page: number, limit: number, message: string = '获取成功') {
+    console.warn('⚠️ 使用了已废弃的 pageOld 方法，请改用 page 方法以确保分页格式统一');
+    return {
+      code: 200,
+      message,
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
       timestamp: new Date().toISOString(),
     };
   }
