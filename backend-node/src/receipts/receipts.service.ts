@@ -203,8 +203,6 @@ export class ReceiptsService {
       
       const queryBuilder = this.receiptRepository
         .createQueryBuilder('receipt')
-        .leftJoinAndSelect('receipt.wxUser', 'wxUser')
-        .leftJoinAndSelect('receipt.customer', 'customer')
         .where('receipt.isDeleted = :isDeleted', { isDeleted: 0 });
 
       // 搜索条件：上传人姓名
@@ -266,8 +264,7 @@ export class ReceiptsService {
       }
 
       const receipt = await this.receiptRepository.findOne({
-        where: { id, isDeleted: 0 },
-        relations: ['wxUser', 'customer']
+        where: { id, isDeleted: 0 }
       });
 
       if (!receipt) {
