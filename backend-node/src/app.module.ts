@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+// import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 import { UploadConfig } from './config/upload.config';
 
@@ -12,8 +13,9 @@ import { AuthModule } from './auth/auth.module';
 import { CustomersModule } from './customers/customers.module';
 import { WxUsersModule } from './wx-users/wx-users.module';
 import { ReceiptsModule } from './receipts/receipts.module';
-import { CheckinsModule } from './checkins/checkins.module';
+
 import { MiniprogramModule } from './miniprogram/miniprogram.module';
+import { TasksModule } from './tasks/tasks.module';
 import { HealthController } from './common/health.controller';
 import { databaseConfig } from './config/database.config';
 
@@ -24,6 +26,9 @@ import { databaseConfig } from './config/database.config';
       isGlobal: true,
       envFilePath: '.env',
     }),
+
+    // 定时任务模块
+    // ScheduleModule.forRoot(),
 
     // 数据库配置
     TypeOrmModule.forRoot(databaseConfig),
@@ -56,10 +61,12 @@ import { databaseConfig } from './config/database.config';
     CustomersModule,
     WxUsersModule,
     ReceiptsModule,
-    CheckinsModule,
 
     // 小程序模块
     MiniprogramModule,
+
+    // 定时任务模块
+    TasksModule,
   ],
   controllers: [HealthController],
 })
