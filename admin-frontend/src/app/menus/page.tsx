@@ -55,13 +55,13 @@ const fetchMenuPermissions = async (page: number = 1, limit: number = 10, search
       page: page.toString(),
       limit: limit.toString(),
     });
-    
+
     // 添加搜索参数
     if (searchParams?.permissionName) params.append('permissionName', searchParams.permissionName);
     if (searchParams?.permissionCode) params.append('permissionCode', searchParams.permissionCode);
     if (searchParams?.permissionType) params.append('permissionType', searchParams.permissionType);
     if (searchParams?.status) params.append('status', searchParams.status);
-    
+
     const response = await fetch(`${API_ENDPOINTS.permissions}?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
@@ -172,12 +172,13 @@ export default function MenusPage() {
       // 构造搜索参数
       const searchParams: any = {};
       if (searchKeyword) {
+        // 同时搜索权限名称和权限编码
         searchParams.permissionName = searchKeyword;
         searchParams.permissionCode = searchKeyword;
       }
       if (selectedType) searchParams.permissionType = selectedType;
       if (selectedStatus) searchParams.status = selectedStatus;
-      
+
       const data = await fetchMenuPermissions(currentPage, pageSize, searchParams);
       setPermissions(data.list);
       setTotal(data.total);

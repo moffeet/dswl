@@ -209,6 +209,13 @@ export class PermissionCheckService {
         code: 'menu.map',
         icon: 'IconMap',
         sortOrder: 6
+      },
+      {
+        name: '菜单管理',
+        path: '/menus',
+        code: 'menu.menus',
+        icon: 'IconMenuFold',
+        sortOrder: 7
       }
     ];
 

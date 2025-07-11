@@ -25,6 +25,7 @@ export default function Navigation({}: NavigationProps) {
     'IconFileText': <IconFile />,
     'IconMobile': <IconMobile />,
     'IconMap': <IconNav />,
+    'IconMenuFold': <IconSettings />,
   };
 
   // 根据权限获取菜单项
