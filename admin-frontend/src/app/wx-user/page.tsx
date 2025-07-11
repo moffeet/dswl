@@ -68,7 +68,10 @@ const fetchWxUsers = async (page: number = 1, limit: number = 10, searchParams?:
 
     const result = await response.json();
     if (result.code === 200) {
-      return result.data;
+      return {
+        list: result.data.list || [],
+        total: result.data.total || 0
+      };
     } else {
       throw new Error(result.message || '获取数据失败');
     }

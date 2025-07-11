@@ -110,9 +110,9 @@ export default function CustomersPage() {
       
       if (response.ok) {
         const result = await response.json();
-        if (result.code === 200 && Array.isArray(result.data)) {
+        if (result.code === 200 && result.data && Array.isArray(result.data.list)) {
           // 映射后端字段到前端字段
-          const mappedData = result.data.map((item: any) => ({
+          const mappedData = result.data.list.map((item: any) => ({
             id: item.id,
             customerNumber: item.customerNumber,
             customerName: item.customerName,
@@ -128,10 +128,10 @@ export default function CustomersPage() {
             updateBy: item.updateBy || '系统',
           }));
           setData(mappedData);
-          setTotal(result.total || mappedData.length);
+          setTotal(result.data.total || mappedData.length);
           setPagination(prev => ({
             ...prev,
-            total: result.total || mappedData.length,
+            total: result.data.total || mappedData.length,
           }));
         } else {
           Message.error(`获取数据失败: ${result.message || '未知错误'}`);
