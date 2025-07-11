@@ -2,12 +2,12 @@ import { IsString, MinLength, IsEmail, IsOptional, IsBoolean, IsNumber } from 'c
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LoginDto {
-  @ApiProperty({ 
-    description: '用户名', 
+  @ApiProperty({
+    description: '用户名',
     example: 'admin',
     type: 'string'
   })
-  @IsString()
+  @IsString({ message: '用户名必须是字符串' })
   username: string;
 
   @ApiProperty({ 
@@ -53,7 +53,7 @@ fetch('/api/auth/login', {
       }
     }
   })
-  @IsString()
+  @IsString({ message: '密码必须是字符串' })
   password: string;
 
   @ApiPropertyOptional({
@@ -67,7 +67,7 @@ fetch('/api/auth/login', {
     type: 'number'
   })
   @IsOptional()
-  @IsNumber()
+  @IsNumber({}, { message: '时间戳必须是数字' })
   timestamp?: number;
 
   @ApiPropertyOptional({
@@ -81,7 +81,7 @@ fetch('/api/auth/login', {
     type: 'string'
   })
   @IsOptional()
-  @IsString()
+  @IsString({ message: '签名必须是字符串' })
   signature?: string;
 
   @ApiPropertyOptional({
@@ -115,7 +115,7 @@ fetch('/api/auth/login', {
     type: 'boolean'
   })
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: '加密标识必须是布尔值' })
   _encrypted?: boolean;
 
   @ApiProperty({
@@ -128,7 +128,7 @@ fetch('/api/auth/login', {
     example: 'abc123def456',
     type: 'string'
   })
-  @IsString()
+  @IsString({ message: '验证码ID必须是字符串' })
   captchaId: string;
 
   @ApiProperty({
@@ -141,13 +141,13 @@ fetch('/api/auth/login', {
     example: 'A1B2',
     type: 'string'
   })
-  @IsString()
+  @IsString({ message: '验证码必须是字符串' })
   captchaCode: string;
 }
 
 export class ResetPasswordDto {
   @ApiProperty({ description: '邮箱地址' })
-  @IsEmail()
+  @IsEmail({}, { message: '邮箱格式不正确' })
   email: string;
 }
 

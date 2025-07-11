@@ -14,8 +14,8 @@ export class CreateCustomerDto {
     maxLength: 100,
     required: true
   })
-  @IsString()
-  @MaxLength(100)
+  @IsString({ message: '客户名称必须是字符串' })
+  @MaxLength(100, { message: '客户名称长度不能超过100个字符' })
   customerName: string;
 
   @ApiProperty({
@@ -25,8 +25,8 @@ export class CreateCustomerDto {
     required: false
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
+  @IsString({ message: '门店地址必须是字符串' })
+  @MaxLength(255, { message: '门店地址长度不能超过255个字符' })
   storeAddress?: string;
 
   @ApiProperty({
@@ -36,8 +36,8 @@ export class CreateCustomerDto {
     required: false
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
+  @IsString({ message: '仓库地址必须是字符串' })
+  @MaxLength(255, { message: '仓库地址长度不能超过255个字符' })
   warehouseAddress?: string;
 
   @ApiProperty({

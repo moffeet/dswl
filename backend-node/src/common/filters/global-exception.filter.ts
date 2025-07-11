@@ -104,21 +104,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // 处理class-validator的错误格式
     if (Array.isArray(response.message)) {
       const validationErrors = response.message;
-      const errorMessages: string[] = [];
-      
-      validationErrors.forEach((error: any) => {
-        if (error.constraints) {
-          Object.values(error.constraints).forEach((constraint: any) => {
-            errorMessages.push(constraint);
-          });
-        }
-      });
-      
-      if (errorMessages.length > 0) {
-        message = errorMessages[0]; // 只显示第一个错误
+      const formattedErrors = this.formatValidationErrors(validationErrors);
+
+      if (formattedErrors.length > 0) {
+        // 使用第一个错误作为主要错误消息
+        message = formattedErrors[0].message;
         details = {
-          field: validationErrors[0]?.property,
-          errors: errorMessages,
+          field: formattedErrors[0].field,
+          value: formattedErrors[0].value,
+          errors: formattedErrors.map(err => err.message),
+          validationRules: formattedErrors[0].rules,
         };
       }
     } else if (typeof response.message === 'string') {
@@ -132,6 +127,167 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       details,
       isBusinessError: true,
     };
+  }
+
+  /**
+   * 格式化验证错误信息
+   */
+  private formatValidationErrors(validationErrors: any[]): Array<{
+    field: string;
+    value: any;
+    message: string;
+    rules: string[];
+  }> {
+    const formattedErrors: Array<{
+      field: string;
+      value: any;
+      message: string;
+      rules: string[];
+    }> = [];
+
+    validationErrors.forEach((error: any) => {
+      if (error.constraints) {
+        const rules = Object.keys(error.constraints);
+        const messages = Object.values(error.constraints) as string[];
+
+        // 优先使用自定义错误消息，否则使用友好的默认消息
+        const friendlyMessage = this.getFriendlyValidationMessage(error, rules, messages);
+
+        formattedErrors.push({
+          field: error.property,
+          value: error.value,
+          message: friendlyMessage,
+          rules: rules,
+        });
+      }
+    });
+
+    return formattedErrors;
+  }
+
+  /**
+   * 获取友好的验证错误消息
+   */
+  private getFriendlyValidationMessage(error: any, rules: string[], messages: string[]): string {
+    const field = error.property;
+    const value = error.value;
+
+    // 如果有自定义消息且是中文，优先使用
+    for (const message of messages) {
+      if (message && this.isChineseMessage(message)) {
+        return message;
+      }
+    }
+
+    // 否则根据验证规则生成友好的中文消息
+    for (const rule of rules) {
+      const friendlyMessage = this.generateFriendlyMessage(field, value, rule);
+      if (friendlyMessage) {
+        return friendlyMessage;
+      }
+    }
+
+    // 兜底消息
+    return `${field}字段验证失败`;
+  }
+
+  /**
+   * 判断是否为中文错误消息
+   */
+  private isChineseMessage(message: string): boolean {
+    return /[\u4e00-\u9fa5]/.test(message);
+  }
+
+  /**
+   * 根据验证规则生成友好的中文消息
+   */
+  private generateFriendlyMessage(field: string, value: any, rule: string): string {
+    const fieldName = this.getFieldDisplayName(field);
+
+    switch (rule) {
+      case 'isNotEmpty':
+        return `${fieldName}不能为空`;
+      case 'isString':
+        return `${fieldName}必须是字符串`;
+      case 'isNumber':
+        return `${fieldName}必须是数字`;
+      case 'isEmail':
+        return `${fieldName}格式不正确，请输入有效的邮箱地址`;
+      case 'isPhoneNumber':
+        return `${fieldName}格式不正确，请输入有效的手机号码`;
+      case 'minLength':
+        return `${fieldName}长度不能少于要求的最小长度`;
+      case 'maxLength':
+        return `${fieldName}长度不能超过要求的最大长度`;
+      case 'length':
+        return `${fieldName}长度不符合要求`;
+      case 'min':
+        return `${fieldName}不能小于最小值`;
+      case 'max':
+        return `${fieldName}不能大于最大值`;
+      case 'isEnum':
+        return `${fieldName}的值不在允许的选项范围内`;
+      case 'isBoolean':
+        return `${fieldName}必须是布尔值（true或false）`;
+      case 'isArray':
+        return `${fieldName}必须是数组`;
+      case 'isObject':
+        return `${fieldName}必须是对象`;
+      case 'isUrl':
+        return `${fieldName}必须是有效的URL地址`;
+      case 'isUUID':
+        return `${fieldName}必须是有效的UUID格式`;
+      case 'isDateString':
+        return `${fieldName}必须是有效的日期格式`;
+      case 'isNumberString':
+        return `${fieldName}必须是数字字符串`;
+      case 'matches':
+        return `${fieldName}格式不正确`;
+      default:
+        return `${fieldName}验证失败`;
+    }
+  }
+
+  /**
+   * 获取字段的显示名称
+   */
+  private getFieldDisplayName(field: string): string {
+    const fieldNameMap: { [key: string]: string } = {
+      'username': '用户名',
+      'password': '密码',
+      'email': '邮箱',
+      'phone': '手机号',
+      'name': '姓名',
+      'nickname': '昵称',
+      'title': '标题',
+      'content': '内容',
+      'description': '描述',
+      'address': '地址',
+      'customerName': '客户名称',
+      'customerNumber': '客户编号',
+      'storeAddress': '门店地址',
+      'warehouseAddress': '仓库地址',
+      'roleName': '角色名称',
+      'roleCode': '角色编码',
+      'wxUserId': '用户ID',
+      'wechatId': '微信ID',
+      'macAddress': 'MAC地址',
+      'timestamp': '时间戳',
+      'nonce': '随机数',
+      'signature': '签名',
+      'captchaId': '验证码ID',
+      'captchaCode': '验证码',
+      'customerId': '客户ID',
+      'imageUrl': '图片地址',
+      'uploadTime': '上传时间',
+      'role': '角色',
+      'status': '状态',
+      'id': 'ID',
+      'createTime': '创建时间',
+      'updateTime': '更新时间',
+    };
+
+    return fieldNameMap[field] || field;
   }
 
   /**
