@@ -21,7 +21,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from '../common/dto/pagination.dto';
-import { RESPONSE_CODES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResponseUtil } from '../common/utils/response.util';
 
@@ -37,8 +37,8 @@ export class UsersController {
     summary: '创建用户',
     description: '创建新的系统用户，用户创建后可以分配角色获得相应权限。密码会自动加密存储，返回数据不包含密码字段。'
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '用户创建成功',
     schema: {
       type: 'object',
@@ -62,8 +62,8 @@ export class UsersController {
       }
     }
   })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 409, description: '用户名已存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.CONFLICT, description: '用户名已存在' })
   async create(@Body() createUserDto: CreateUserDto) {
     const user = await this.usersService.create(createUserDto);
     // 移除密码字段
@@ -81,7 +81,7 @@ export class UsersController {
     description: '分页查询用户列表，支持按用户名、昵称进行筛选。返回数据不包含密码字段。'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -143,7 +143,7 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: '获取用户详情' })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.findOne(id);
     // 移除密码字段
@@ -157,7 +157,7 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: '更新用户' })
-  @ApiResponse({ status: 200, description: '更新成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '更新成功' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -174,7 +174,7 @@ export class UsersController {
 
   @Delete(':id')
   @ApiOperation({ summary: '删除用户' })
-  @ApiResponse({ status: 200, description: '删除成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '删除成功' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.usersService.remove(id);
     return {
@@ -203,9 +203,9 @@ export class UsersController {
       }
     }
   })
-  @ApiResponse({ status: 200, description: '批量删除成功' })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 404, description: '部分用户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '批量删除成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '部分用户不存在' })
   async removeMultiple(@Body() body: { ids: number[] }) {
     await this.usersService.removeMultiple(body.ids);
     return {
@@ -216,7 +216,7 @@ export class UsersController {
 
   @Post(':id/reset-password')
   @ApiOperation({ summary: '重置用户密码' })
-  @ApiResponse({ status: 200, description: '重置成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '重置成功' })
   async resetPassword(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.resetPassword(id);
     // 移除密码字段

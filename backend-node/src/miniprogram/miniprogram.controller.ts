@@ -24,7 +24,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { RequireSignature } from '../auth/decorators/require-signature.decorator';
 import { SignatureGuard } from '../auth/guards/signature.guard';
-import { RESPONSE_CODES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 
 // 导入服务
@@ -114,7 +114,7 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
     example: 'a1b2c3d4e5f6...'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '查询成功',
     schema: {
       type: 'object',
@@ -138,8 +138,8 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
       }
     }
   })
-  @ApiResponse({ status: 404, description: '客户不存在' })
-  @ApiResponse({ status: 400, description: '参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
   async searchCustomer(@Query('customerNumber') customerNumber: string) {
     try {
       this.logger.log(`小程序司机查询客户 - 客户编号: ${customerNumber}`);
@@ -218,10 +218,10 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
     type: UploadReceiptDto
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '上传成功'
   })
-  @ApiResponse({ status: 400, description: '参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
   async uploadReceipt(
     @Body() uploadDto: UploadReceiptDto,
     @UploadedFile() file: Express.Multer.File,
@@ -301,11 +301,11 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
     type: WxUpdateCustomerDto
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '更新成功'
   })
-  @ApiResponse({ status: 404, description: '客户不存在' })
-  @ApiResponse({ status: 400, description: '参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
   async updateCustomer(@Body() updateDto: WxUpdateCustomerDto) {
     try {
       this.logger.log(`小程序修改客户 - 操作人: ${updateDto.operatorName}, 客户编号: ${updateDto.customerNumber}`);

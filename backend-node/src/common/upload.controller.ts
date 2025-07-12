@@ -14,6 +14,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { UploadConfig } from '../config/upload.config';
 import { ResponseUtil } from './utils/response.util';
+import { HTTP_STATUS_CODES } from './constants/response-codes';
 
 // 配置文件存储
 const storage = diskStorage({
@@ -49,7 +50,7 @@ export class UploadController {
 
   @ApiOperation({ summary: '上传单个图片' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, description: '上传成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '上传成功' })
   @Post('image')
   @UseInterceptors(FileInterceptor('file', {
     storage,
@@ -74,7 +75,7 @@ export class UploadController {
 
   @ApiOperation({ summary: '上传多个图片' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: 201, description: '上传成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '上传成功' })
   @Post('images')
   @UseInterceptors(FilesInterceptor('files', 5, {
     storage,

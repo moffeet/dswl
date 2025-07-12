@@ -33,7 +33,7 @@ import { ReceiptQueryDto, ReceiptListResponseDto } from './dto/receipt-query.dto
 import { UploadReceiptDto, UploadReceiptResponseDto } from './dto/upload-receipt.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
-import { RESPONSE_CODES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 import { ResponseUtil } from '../common/utils/response.util';
 
@@ -68,11 +68,11 @@ export class ReceiptsController {
     type: UploadReceiptDto
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '上传成功',
     type: UploadReceiptResponseDto
   })
-  @ApiResponse({ status: 400, description: '参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
   async uploadReceipt(
     @Body() uploadDto: UploadReceiptDto,
     @UploadedFile() file: Express.Multer.File,
@@ -148,8 +148,8 @@ export class ReceiptsController {
     description: '创建签收单数据',
     type: CreateReceiptDto
   })
-  @ApiResponse({ status: 200, description: '创建成功' })
-  @ApiResponse({ status: 400, description: '参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '创建成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
   async create(@Body() createReceiptDto: CreateReceiptDto) {
     try {
       this.logger.log(`管理后台创建签收单`);
@@ -227,7 +227,7 @@ export class ReceiptsController {
     example: 'DESC'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     type: ReceiptListResponseDto
   })
@@ -266,8 +266,8 @@ export class ReceiptsController {
     description: '签收单ID',
     example: 1
   })
-  @ApiResponse({ status: 200, description: '获取成功' })
-  @ApiResponse({ status: 404, description: '签收单不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '签收单不存在' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     try {
       this.logger.log(`获取签收单详情 - ID: ${id}`);
@@ -307,8 +307,8 @@ export class ReceiptsController {
     description: '更新签收单数据',
     type: UpdateReceiptDto
   })
-  @ApiResponse({ status: 200, description: '更新成功' })
-  @ApiResponse({ status: 404, description: '签收单不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '更新成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '签收单不存在' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateReceiptDto: UpdateReceiptDto
@@ -347,8 +347,8 @@ export class ReceiptsController {
     description: '签收单ID',
     example: 1
   })
-  @ApiResponse({ status: 200, description: '删除成功' })
-  @ApiResponse({ status: 404, description: '签收单不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '删除成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '签收单不存在' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     try {
       this.logger.log(`删除签收单 - ID: ${id}`);
@@ -392,8 +392,8 @@ export class ReceiptsController {
       }
     }
   })
-  @ApiResponse({ status: 200, description: '批量删除成功' })
-  @ApiResponse({ status: 400, description: '参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '批量删除成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
   async batchRemove(@Body() body: { ids: number[] }) {
     try {
       this.logger.log(`批量删除签收单 - IDs: ${JSON.stringify(body.ids)}`);
@@ -422,7 +422,7 @@ export class ReceiptsController {
     summary: '清理3个月前的签收单',
     description: '定时清理3个月前的签收单记录和图片文件（硬删除）'
   })
-  @ApiResponse({ status: 200, description: '清理成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '清理成功' })
   async cleanupOldReceipts() {
     try {
       this.logger.log('开始清理3个月前的签收单');

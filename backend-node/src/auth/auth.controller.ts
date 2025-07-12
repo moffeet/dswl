@@ -4,7 +4,7 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, RESPONSE_MESSAGES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { PermissionCheckService } from './permission-check.service';
 import { CaptchaService } from './captcha.service';
 import { SignatureService } from './signature.service';
@@ -72,9 +72,9 @@ export class AuthController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: '✅ 登录成功', 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '✅ 登录成功',
     type: LoginResponseDto,
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -94,11 +94,11 @@ export class AuthController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 400, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.BAD_REQUEST,
     description: '❌ 请求参数错误',
     example: {
-      code: 400,
+      code: HTTP_STATUS_CODES.BAD_REQUEST,
       message: '参数验证失败',
       data: null,
       errors: [
@@ -107,14 +107,14 @@ export class AuthController {
       ]
     }
   })
-  @ApiResponse({ 
-    status: 401, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.UNAUTHORIZED,
     description: '❌ 认证失败',
     examples: {
       wrongPassword: {
         summary: '用户名或密码错误',
         value: {
-          code: 401,
+          code: HTTP_STATUS_CODES.UNAUTHORIZED,
           message: '用户名或密码错误',
           data: null
         }
@@ -123,24 +123,24 @@ export class AuthController {
       decryptionFailed: {
         summary: '密码解密失败',
         value: {
-          code: 401,
+          code: HTTP_STATUS_CODES.UNAUTHORIZED,
           message: '密码解密失败',
           data: null
         }
       }
     }
   })
-  @ApiResponse({ 
-    status: 409, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.CONFLICT,
     description: '⚠️ 账号冲突（已在其他位置登录）',
     example: {
-      code: 409,
+      code: HTTP_STATUS_CODES.CONFLICT,
       message: '账号已在其他位置登录，当前IP: 192.168.1.100，登录IP: 192.168.1.200。请使用强制登录或联系管理员。',
       data: null
     }
   })
-  @ApiResponse({ 
-    status: 500, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
     description: '❌ 服务器内部错误',
     example: {
       code: RESPONSE_CODES.SERVER_ERROR,
@@ -161,7 +161,7 @@ export class AuthController {
       // 如果是IP冲突错误，返回特殊错误码
       if (error.message.includes('账号已在其他位置登录')) {
         return {
-          code: 409, // 冲突状态码
+          code: HTTP_STATUS_CODES.CONFLICT, // 冲突状态码
           message: error.message,
           data: null
         };
@@ -195,9 +195,9 @@ export class AuthController {
     type: LoginDto,
     description: '强制登录请求参数（与普通登录相同）'
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: '✅ 强制登录成功', 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '✅ 强制登录成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
       message: '强制登录成功',
@@ -244,9 +244,9 @@ export class AuthController {
 - 建议在用户主动登出时调用
     `
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: '✅ 登出成功', 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '✅ 登出成功',
     type: LogoutResponseDto,
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -254,11 +254,11 @@ export class AuthController {
       data: null
     }
   })
-  @ApiResponse({ 
-    status: 401, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.UNAUTHORIZED,
     description: '❌ 未授权（Token无效或已过期）',
     example: {
-      code: 401,
+      code: HTTP_STATUS_CODES.UNAUTHORIZED,
       message: 'Unauthorized',
       data: null
     }
@@ -301,8 +301,8 @@ export class AuthController {
 - 权限变更立即生效
     `
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '✅ 获取成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -321,11 +321,11 @@ export class AuthController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 401, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.UNAUTHORIZED,
     description: '❌ 未授权（Token无效或已过期）',
     example: {
-      code: 401,
+      code: HTTP_STATUS_CODES.UNAUTHORIZED,
       message: 'Unauthorized',
       data: null
     }
@@ -360,7 +360,7 @@ export class AuthController {
     description: '获取当前用户的权限信息，包括角色、权限列表和可访问的菜单'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -437,7 +437,7 @@ export class AuthController {
     }
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '✅ 修改成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -478,7 +478,7 @@ export class AuthController {
     `
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '✅ 验证码生成成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -525,7 +525,7 @@ export class AuthController {
     `
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '✅ 获取成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -537,7 +537,7 @@ export class AuthController {
     }
   })
   @ApiResponse({
-    status: 404,
+    status: HTTP_STATUS_CODES.NOT_FOUND,
     description: '❌ 验证码不存在或已过期'
   })
   @Get('captcha/:id/text')
@@ -545,8 +545,8 @@ export class AuthController {
     const text = this.captchaService.getCaptchaText(id);
     
     if (!text) {
-      return res.status(404).json({
-        code: 404,
+      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+        code: HTTP_STATUS_CODES.NOT_FOUND,
         message: '验证码不存在、已过期或当前为生产环境'
       });
     }
@@ -578,7 +578,7 @@ export class AuthController {
     `
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '✅ 获取成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -626,7 +626,7 @@ export class AuthController {
     `
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '✅ 获取成功',
     example: {
       code: RESPONSE_CODES.SUCCESS,
@@ -640,7 +640,7 @@ export class AuthController {
     }
   })
   @ApiResponse({
-    status: 403,
+    status: HTTP_STATUS_CODES.FORBIDDEN,
     description: '❌ 生产环境禁止访问'
   })
   @Get('user-signature-key/:userId')

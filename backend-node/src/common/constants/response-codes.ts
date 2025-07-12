@@ -8,6 +8,30 @@ export const RESPONSE_CODES = {
 } as const;
 
 /**
+ * HTTP状态码常量
+ * 用于@ApiResponse装饰器和HTTP响应
+ */
+export const HTTP_STATUS_CODES = {
+  // 2xx 成功状态码
+  OK: 200,                    // 请求成功（统一使用200表示所有成功情况）
+
+  // 4xx 客户端错误状态码
+  BAD_REQUEST: 400,           // 请求参数错误
+  UNAUTHORIZED: 401,          // 未授权
+  FORBIDDEN: 403,             // 禁止访问
+  NOT_FOUND: 404,             // 资源不存在
+  METHOD_NOT_ALLOWED: 405,    // 方法不允许
+  CONFLICT: 409,              // 冲突（如数据已存在）
+  UNPROCESSABLE_ENTITY: 422,  // 无法处理的实体
+
+  // 5xx 服务器错误状态码
+  INTERNAL_SERVER_ERROR: 500, // 服务器内部错误
+  BAD_GATEWAY: 502,           // 网关错误
+  SERVICE_UNAVAILABLE: 503,   // 服务不可用
+  GATEWAY_TIMEOUT: 504,       // 网关超时
+} as const;
+
+/**
  * 响应消息常量
  */
 export const RESPONSE_MESSAGES = {

@@ -1,13 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ResponseUtil } from './utils/response.util';
+import { HTTP_STATUS_CODES } from './constants/response-codes';
 
 @ApiTags('系统')
 @Controller()
 export class HealthController {
   
   @ApiOperation({ summary: '健康检查' })
-  @ApiResponse({ status: 200, description: '系统正常' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '系统正常' })
   @Get('health')
   getHealth() {
     return ResponseUtil.success({
@@ -18,7 +19,7 @@ export class HealthController {
   }
 
   @ApiOperation({ summary: '系统信息' })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   @Get('info')
   getInfo() {
     return ResponseUtil.success({

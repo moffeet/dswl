@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { PermissionsService, CreatePermissionDto, UpdatePermissionDto } from './permissions.service';
 import { PermissionQueryDto } from '../common/dto/pagination.dto';
-import { RESPONSE_CODES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { ResponseUtil } from '../common/utils/response.util';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -56,9 +56,9 @@ export class PermissionsController {
       }
     }
   })
-  @ApiResponse({ status: 201, description: '创建成功' })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 409, description: '权限编码或名称已存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '创建成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.CONFLICT, description: '权限编码或名称已存在' })
   async create(@Body() createPermissionDto: CreatePermissionDto) {
     const permission = await this.permissionsService.create(createPermissionDto);
     return {
@@ -73,7 +73,7 @@ export class PermissionsController {
     summary: '获取权限列表',
     description: '分页获取权限列表，支持按权限名称、编码、类型、状态筛选。'
   })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   async findAll(@Query() queryDto: PermissionQueryDto) {
     const { permissions, total } = await this.permissionsService.findAll(queryDto);
     return ResponseUtil.page(
@@ -110,10 +110,10 @@ export class PermissionsController {
       }
     }
   })
-  @ApiResponse({ status: 200, description: '更新成功' })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 404, description: '权限不存在' })
-  @ApiResponse({ status: 409, description: '权限编码或名称已存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '更新成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '权限不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.CONFLICT, description: '权限编码或名称已存在' })
   async update(@Param('id', ParseIntPipe) id: number, @Body() updatePermissionDto: UpdatePermissionDto) {
     const permission = await this.permissionsService.update(id, updatePermissionDto);
     return {
@@ -129,9 +129,9 @@ export class PermissionsController {
     description: '删除指定权限。如果权限下有子权限或被角色使用，则无法删除。'
   })
   @ApiParam({ name: 'id', description: '权限ID', example: 1 })
-  @ApiResponse({ status: 200, description: '删除成功' })
-  @ApiResponse({ status: 400, description: '权限下有子权限或被角色使用，无法删除' })
-  @ApiResponse({ status: 404, description: '权限不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '删除成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '权限下有子权限或被角色使用，无法删除' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '权限不存在' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.permissionsService.remove(id);
     return {
@@ -149,8 +149,8 @@ export class PermissionsController {
     summary: '获取菜单权限树',
     description: '获取树形结构的菜单权限列表，用于角色权限配置时的菜单权限选择。返回的数据包含父子关系，可直接用于前端树形组件。'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -210,8 +210,8 @@ export class PermissionsController {
     summary: '获取完整权限树',
     description: '获取包含菜单权限和按钮权限的完整权限树。菜单权限作为上级节点，按钮权限作为叶子节点。适用于角色权限配置界面的统一权限选择。'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -286,8 +286,8 @@ export class PermissionsController {
     description: '根据权限ID获取权限详细信息。'
   })
   @ApiParam({ name: 'id', description: '权限ID', example: 1 })
-  @ApiResponse({ status: 200, description: '获取成功' })
-  @ApiResponse({ status: 404, description: '权限不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '权限不存在' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const permission = await this.permissionsService.findOne(id);
     return {

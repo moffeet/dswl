@@ -10,7 +10,7 @@ import { SearchCustomerDto, CustomerListQueryDto } from './dto/search-customer.d
 import { BatchDeleteCustomerDto, GeocodeRequestDto, ReverseGeocodeRequestDto } from './dto/sync-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, RESPONSE_MESSAGES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 
 @ApiTags('客户管理 - Customer Management')
@@ -31,7 +31,7 @@ export class CustomersController {
   })
 
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -66,7 +66,7 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 500, description: '获取失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '获取失败' })
   @Get()
   async findAll(@Query() query: CustomerListQueryDto, @Request() req) {
     try {
@@ -128,8 +128,8 @@ export class CustomersController {
     description: '根据客户编号、名称、地址等条件搜索客户'
   })
 
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '搜索成功',
     schema: {
       type: 'object',
@@ -180,7 +180,7 @@ export class CustomersController {
   })
 
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '导出成功',
     headers: {
       'Content-Type': {
@@ -191,7 +191,7 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 500, description: '导出失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '导出失败' })
   @Get('export')
   async exportToExcel(@Query('customerIds') customerIds: string, @Res() res: Response) {
     try {
@@ -241,7 +241,7 @@ export class CustomersController {
     description: '获取客户数据的最后同步时间'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       example: {
@@ -282,7 +282,7 @@ export class CustomersController {
   })
   @ApiParam({ name: 'id', description: '客户ID', example: 1 })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -310,7 +310,7 @@ export class CustomersController {
     summary: '获取同步元数据',
     description: '获取外部系统同步的元数据信息，包括最后同步时间等'
   })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   async getSyncMetadata() {
     try {
       const metadata = await this.customerSyncService.getSyncMetadata();
@@ -330,8 +330,8 @@ export class CustomersController {
     }
   }
 
-  @ApiResponse({ status: 404, description: '客户不存在' })
-  @ApiResponse({ status: 500, description: '获取失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '获取失败' })
   @Get(':id')
   async findOne(@Param('id') id: string, @Res() res: Response) {
     try {
@@ -342,7 +342,7 @@ export class CustomersController {
       if (!customer) {
         this.logger.warn(`客户不存在 - ID: ${id}`);
         return res.status(HttpStatus.NOT_FOUND).json({
-          code: 403,
+          code: HTTP_STATUS_CODES.NOT_FOUND,
           message: '客户不存在',
           data: null,
         });
@@ -391,8 +391,8 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '创建成功',
     schema: {
       type: 'object',
@@ -415,8 +415,8 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 400, description: '请求参数错误：客户名称不能为空' })
-  @ApiResponse({ status: 500, description: '服务器内部错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误：客户名称不能为空' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '服务器内部错误' })
   @Post()
   async create(@Body() createCustomerDto: CreateCustomerDto) {
     try {
@@ -464,8 +464,8 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '更新成功',
     schema: {
       type: 'object',
@@ -488,9 +488,9 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 404, description: '客户不存在' })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 500, description: '更新失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '更新失败' })
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateCustomerDto: UpdateCustomerDto) {
     try {
@@ -524,8 +524,8 @@ export class CustomersController {
     description: '根据客户ID删除客户信息，删除后无法恢复'
   })
   @ApiParam({ name: 'id', description: '客户ID', example: 1 })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '删除成功',
     schema: {
       example: {
@@ -539,8 +539,8 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 404, description: '客户不存在' })
-  @ApiResponse({ status: 500, description: '删除失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '删除失败' })
   @Delete(':id')
   async remove(@Param('id') id: string) {
     try {
@@ -576,7 +576,7 @@ export class CustomersController {
     description: '批量删除多个客户，支持多选删除'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '删除成功',
     schema: {
       example: {
@@ -589,8 +589,8 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 404, description: '未找到要删除的客户' })
-  @ApiResponse({ status: 500, description: '删除失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '未找到要删除的客户' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '删除失败' })
   @Delete('batch')
   async batchDelete(@Body() batchDeleteDto: BatchDeleteCustomerDto) {
     try {
@@ -616,7 +616,7 @@ export class CustomersController {
     description: '将地址转换为经纬度坐标'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '编码成功',
     schema: {
       example: {
@@ -633,8 +633,8 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 400, description: '地址格式不正确' })
-  @ApiResponse({ status: 500, description: '编码失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '地址格式不正确' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '编码失败' })
   @Post('geocode')
   async geocodeAddress(@Body() geocodeDto: GeocodeRequestDto) {
     try {
@@ -660,7 +660,7 @@ export class CustomersController {
     description: '将经纬度坐标转换为地址'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '编码成功',
     schema: {
       example: {
@@ -677,8 +677,8 @@ export class CustomersController {
       }
     }
   })
-  @ApiResponse({ status: 400, description: '坐标格式不正确' })
-  @ApiResponse({ status: 500, description: '编码失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '坐标格式不正确' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '编码失败' })
   @Post('reverse-geocode')
   async reverseGeocodeLocation(@Body() reverseGeocodeDto: ReverseGeocodeRequestDto) {
     try {
@@ -706,7 +706,7 @@ export class CustomersController {
     description: '从外部系统同步客户数据，以客户ID为基准。新客户：同步门店地址并计算经纬度；现有客户：只更新客户名称，门店地址以当前系统为准'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '同步成功',
     schema: {
       type: 'object',

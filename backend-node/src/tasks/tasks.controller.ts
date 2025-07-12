@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CustomLogger } from '../config/logger.config';
-import { RESPONSE_CODES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 
 @ApiTags('🕐 定时任务管理')
 @Controller('tasks')
@@ -19,7 +19,7 @@ export class TasksController {
     summary: '获取定时任务状态',
     description: '查看所有定时任务的配置和状态信息'
   })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   async getTasksStatus() {
     try {
       this.logger.log('获取定时任务状态');

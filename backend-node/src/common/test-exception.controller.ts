@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, BadRequestException, InternalServerErrorEx
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { IsString, IsNotEmpty } from 'class-validator';
 import { ResponseUtil } from './utils/response.util';
+import { HTTP_STATUS_CODES } from './constants/response-codes';
 
 class TestDto {
   @IsString({ message: '名称必须是字符串' })
@@ -22,7 +23,7 @@ export class TestExceptionController {
     summary: '测试参数验证异常',
     description: '测试class-validator验证失败时的异常处理'
   })
-  @ApiResponse({ status: 400, description: '参数验证失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数验证失败' })
   @Post('validation-error')
   testValidationError(@Body() testDto: TestDto) {
     return ResponseUtil.success(testDto, '如果看到这个消息，说明验证通过了');
@@ -32,7 +33,7 @@ export class TestExceptionController {
     summary: '测试业务异常',
     description: '测试手动抛出的业务异常处理'
   })
-  @ApiResponse({ status: 400, description: '业务异常' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '业务异常' })
   @Get('business-error')
   testBusinessError() {
     throw new BadRequestException('这是一个测试的业务异常');
@@ -42,7 +43,7 @@ export class TestExceptionController {
     summary: '测试404异常',
     description: '测试资源不存在异常处理'
   })
-  @ApiResponse({ status: 404, description: '资源不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '资源不存在' })
   @Get('not-found-error')
   testNotFoundError() {
     throw new NotFoundException('测试资源不存在');
@@ -52,7 +53,7 @@ export class TestExceptionController {
     summary: '测试服务器异常',
     description: '测试服务器内部错误异常处理'
   })
-  @ApiResponse({ status: 500, description: '服务器内部错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '服务器内部错误' })
   @Get('server-error')
   testServerError() {
     throw new InternalServerErrorException('这是一个测试的服务器异常');
@@ -73,7 +74,7 @@ export class TestExceptionController {
     summary: '测试数据库异常',
     description: '模拟数据库错误异常处理'
   })
-  @ApiResponse({ status: 400, description: '数据库错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '数据库错误' })
   @Get('database-error')
   testDatabaseError() {
     // 模拟数据库错误
@@ -87,7 +88,7 @@ export class TestExceptionController {
     summary: '测试文件系统异常',
     description: '模拟文件系统错误异常处理'
   })
-  @ApiResponse({ status: 500, description: '文件系统错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '文件系统错误' })
   @Get('filesystem-error')
   testFileSystemError() {
     // 模拟文件系统错误
@@ -100,7 +101,7 @@ export class TestExceptionController {
     summary: '测试正常响应',
     description: '测试正常情况下的响应格式'
   })
-  @ApiResponse({ status: 200, description: '成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '成功' })
   @Get('success')
   testSuccess() {
     return ResponseUtil.success({

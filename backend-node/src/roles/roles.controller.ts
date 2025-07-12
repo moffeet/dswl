@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { RolesService, CreateRoleDto, UpdateRoleDto } from './roles.service';
 import { RoleQueryDto } from '../common/dto/pagination.dto';
-import { RESPONSE_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, RESPONSE_MESSAGES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResponseUtil } from '../common/utils/response.util';
 
@@ -67,8 +67,8 @@ export class RolesController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
     description: '角色创建成功',
     schema: {
       type: 'object',
@@ -91,8 +91,8 @@ export class RolesController {
       }
     }
   })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 409, description: '角色编码已存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.CONFLICT, description: '角色编码已存在' })
   async create(@Body() createRoleDto: CreateRoleDto) {
     const role = await this.rolesService.create(createRoleDto);
     return {
@@ -104,7 +104,7 @@ export class RolesController {
 
   @Get()
   @ApiOperation({ summary: '获取角色列表' })
-  @ApiResponse({ status: 200, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   async findAll(@Query() searchDto: RoleQueryDto) {
     const { roles, total } = await this.rolesService.findAll(searchDto);
     return ResponseUtil.page(
@@ -145,7 +145,7 @@ export class RolesController {
 
   @Delete(':id')
   @ApiOperation({ summary: '删除角色' })
-  @ApiResponse({ status: 200, description: '删除成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '删除成功' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.rolesService.remove(id);
     return {
@@ -180,7 +180,7 @@ export class RolesController {
     }
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '权限分配成功',
     schema: {
       type: 'object',
@@ -190,8 +190,8 @@ export class RolesController {
       }
     }
   })
-  @ApiResponse({ status: 404, description: '角色不存在' })
-  @ApiResponse({ status: 400, description: '权限代码无效' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '角色不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '权限代码无效' })
   async assignPermissions(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { permissionCodes: string[] },

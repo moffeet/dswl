@@ -24,7 +24,7 @@ import { CreateWxUserDto } from './dto/create-wx-user.dto';
 import { UpdateWxUserDto } from './dto/update-wx-user.dto';
 import { WxUserQueryDto } from './dto/wx-user-query.dto';
 import { WxLoginDto, WxLoginResponseDto } from './dto/wx-login.dto';
-import { RESPONSE_CODES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { ResponseUtil } from '../common/utils/response.util';
@@ -46,13 +46,13 @@ export class WxUsersController {
     description: '小程序传入微信openid和手机号进行登录，自动绑定用户并验证MAC地址'
   })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '登录成功',
     type: WxLoginResponseDto
   })
-  @ApiResponse({ status: 400, description: '登录失败' })
-  @ApiResponse({ status: 401, description: 'MAC地址验证失败' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '登录失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.UNAUTHORIZED, description: 'MAC地址验证失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
   async login(@Body() loginDto: WxLoginDto) {
     try {
       // 1. 根据手机号查找用户
@@ -60,7 +60,7 @@ export class WxUsersController {
 
       if (!user) {
         return {
-          code: 404,
+          code: HTTP_STATUS_CODES.NOT_FOUND,
           message: '用户不存在，请联系管理员创建账户',
           data: null
         };
@@ -74,7 +74,7 @@ export class WxUsersController {
         // 如果已经绑定了微信ID，验证是否匹配
         if (user.wechatId !== loginDto.wechatId) {
           return {
-            code: 400,
+            code: HTTP_STATUS_CODES.BAD_REQUEST,
             message: '微信账号不匹配，请使用正确的微信账号登录',
             data: null
           };
@@ -86,7 +86,7 @@ export class WxUsersController {
         const macValid = await this.wxUsersService.validateMacAddress(user.id, loginDto.macAddress);
         if (!macValid) {
           return {
-            code: 401,
+            code: HTTP_STATUS_CODES.UNAUTHORIZED,
             message: 'MAC地址验证失败，请使用注册设备登录',
             data: null
           };
@@ -121,7 +121,7 @@ export class WxUsersController {
 
     } catch (error) {
       return {
-        code: 400,
+        code: HTTP_STATUS_CODES.BAD_REQUEST,
         message: error.message || '登录失败',
         data: null
       };
@@ -134,7 +134,7 @@ export class WxUsersController {
     description: '创建新的小程序用户，手机号必须唯一。角色只能是司机或销售。'
   })
   @ApiResponse({
-    status: 201,
+    status: HTTP_STATUS_CODES.OK,
     description: '创建成功',
     schema: {
       type: 'object',
@@ -157,8 +157,8 @@ export class WxUsersController {
       }
     }
   })
-  @ApiResponse({ status: 400, description: '请求参数错误' })
-  @ApiResponse({ status: 409, description: '手机号已存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '请求参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.CONFLICT, description: '手机号已存在' })
   async create(@Body() createWxUserDto: CreateWxUserDto) {
     const wxUser = await this.wxUsersService.create(createWxUserDto);
     return {
@@ -180,7 +180,7 @@ export class WxUsersController {
   @ApiQuery({ name: 'role', required: false, description: '角色筛选', example: '司机' })
   @ApiQuery({ name: 'wechatId', required: false, description: '微信ID搜索', example: 'wx_' })
   @ApiResponse({
-    status: 200,
+    status: HTTP_STATUS_CODES.OK,
     description: '获取成功',
     schema: {
       type: 'object',
@@ -228,8 +228,8 @@ export class WxUsersController {
   @Get(':id')
   @ApiOperation({ summary: '获取小程序用户详情' })
   @ApiParam({ name: 'id', description: '用户ID', example: 1 })
-  @ApiResponse({ status: 200, description: '获取成功' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const wxUser = await this.wxUsersService.findOne(id);
     return {
@@ -242,9 +242,9 @@ export class WxUsersController {
   @Patch(':id')
   @ApiOperation({ summary: '更新小程序用户' })
   @ApiParam({ name: 'id', description: '用户ID', example: 1 })
-  @ApiResponse({ status: 200, description: '更新成功' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
-  @ApiResponse({ status: 409, description: '手机号已存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '更新成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.CONFLICT, description: '手机号已存在' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateWxUserDto: UpdateWxUserDto,
@@ -260,8 +260,8 @@ export class WxUsersController {
   @Delete(':id')
   @ApiOperation({ summary: '删除小程序用户' })
   @ApiParam({ name: 'id', description: '用户ID', example: 1 })
-  @ApiResponse({ status: 200, description: '删除成功' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '删除成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.wxUsersService.remove(id);
     return {
