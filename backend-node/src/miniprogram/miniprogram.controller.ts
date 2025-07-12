@@ -26,6 +26,7 @@ import { RequireSignature } from '../auth/decorators/require-signature.decorator
 import { SignatureGuard } from '../auth/guards/signature.guard';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 
 // 导入服务
 import { CustomersService } from '../customers/customers.service';
@@ -55,6 +56,7 @@ export class MiniprogramController {
   // ==================== 司机页面 ====================
 
   @Get('customers/search')
+  @ChineseTime() // 小程序客户查询时间格式化
   @RequireSignature()
   @ApiOperation({
     summary: '司机查询客户信息',
@@ -195,6 +197,7 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
   // ==================== 打卡/签收单上传 ====================
 
   @Post('receipts/upload')
+  @ChineseTime() // 小程序上传签收单时间格式化
   @RequireSignature()
   @UseInterceptors(FileInterceptor('file', {
     limits: {
@@ -291,6 +294,7 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
   // ==================== 销售页面 ====================
 
   @Patch('customers/update')
+  @ChineseTime() // 小程序更新客户信息时间格式化
   @RequireSignature()
   @ApiOperation({
     summary: '修改客户地址',

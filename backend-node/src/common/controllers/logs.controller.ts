@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CustomLogger } from '../../config/logger.config';
 import { ResponseUtil } from '../utils/response.util';
+import { RelativeTime } from '../decorators/format-time.decorator';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -22,6 +23,7 @@ export class LogsController {
    * 获取日志目录状态
    */
   @Get('status')
+  @RelativeTime() // 日志状态时间显示为相对时间
   @ApiOperation({ summary: '获取日志目录状态' })
   async getLogStatus() {
     try {

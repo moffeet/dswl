@@ -26,6 +26,7 @@ import { WxUserQueryDto } from './dto/wx-user-query.dto';
 import { WxLoginDto, WxLoginResponseDto } from './dto/wx-login.dto';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { ResponseUtil } from '../common/utils/response.util';
 
@@ -129,6 +130,7 @@ export class WxUsersController {
   }
 
   @Post()
+  @ChineseTime() // 创建小程序用户时间格式化
   @ApiOperation({
     summary: '创建小程序用户',
     description: '创建新的小程序用户，手机号必须唯一。角色只能是司机或销售。'
@@ -169,6 +171,7 @@ export class WxUsersController {
   }
 
   @Get()
+  @ChineseTime() // 小程序用户列表时间格式化
   @ApiOperation({
     summary: '获取小程序用户列表',
     description: '分页查询小程序用户列表，支持按姓名、手机号、角色、微信ID进行筛选。'
@@ -226,6 +229,7 @@ export class WxUsersController {
   }
 
   @Get(':id')
+  @ChineseTime() // 小程序用户详情时间格式化
   @ApiOperation({ summary: '获取小程序用户详情' })
   @ApiParam({ name: 'id', description: '用户ID', example: 1 })
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
@@ -240,6 +244,7 @@ export class WxUsersController {
   }
 
   @Patch(':id')
+  @ChineseTime() // 更新小程序用户时间格式化
   @ApiOperation({ summary: '更新小程序用户' })
   @ApiParam({ name: 'id', description: '用户ID', example: 1 })
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '更新成功' })

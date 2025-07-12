@@ -15,6 +15,7 @@ import { extname } from 'path';
 import { UploadConfig } from '../config/upload.config';
 import { ResponseUtil } from './utils/response.util';
 import { HTTP_STATUS_CODES } from './constants/response-codes';
+import { ChineseTime } from './decorators/format-time.decorator';
 
 // 配置文件存储
 const storage = diskStorage({
@@ -52,6 +53,7 @@ export class UploadController {
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '上传成功' })
   @Post('image')
+  @ChineseTime() // 单图片上传时间格式化
   @UseInterceptors(FileInterceptor('file', {
     storage,
     fileFilter: imageFilter,
@@ -77,6 +79,7 @@ export class UploadController {
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '上传成功' })
   @Post('images')
+  @ChineseTime() // 多图片上传时间格式化
   @UseInterceptors(FilesInterceptor('files', 5, {
     storage,
     fileFilter: imageFilter,

@@ -12,6 +12,7 @@ import { Customer } from './entities/customer.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RESPONSE_CODES, RESPONSE_MESSAGES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 
 @ApiTags('客户管理 - Customer Management')
 @Controller('customers')
@@ -68,6 +69,7 @@ export class CustomersController {
   })
   @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '获取失败' })
   @Get()
+  @ChineseTime() // 自动格式化时间为中文格式：2025-07-11 12:11:01
   async findAll(@Query() query: CustomerListQueryDto, @Request() req) {
     try {
       const currentUser = req.user; // 从JWT中获取当前用户信息
@@ -153,6 +155,7 @@ export class CustomersController {
     }
   })
   @Get('search')
+  @ChineseTime() // 搜索结果时间格式化
   async search(@Query() query: SearchCustomerDto) {
     try {
       const result = await this.customersService.search(query);
@@ -254,6 +257,7 @@ export class CustomersController {
     }
   })
   @Get('last-sync-time')
+  @RelativeTime() // 同步时间显示为相对时间
   async getLastSyncTime() {
     try {
       const lastSyncTime = await this.customersService.getLastSyncTime();
@@ -306,6 +310,7 @@ export class CustomersController {
     }
   })
   @Get('sync-metadata')
+  @RelativeTime() // 元数据中的时间显示为相对时间
   @ApiOperation({
     summary: '获取同步元数据',
     description: '获取外部系统同步的元数据信息，包括最后同步时间等'
@@ -333,6 +338,7 @@ export class CustomersController {
   @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
   @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '获取失败' })
   @Get(':id')
+  @ChineseTime() // 客户详情时间格式化
   async findOne(@Param('id') id: string, @Res() res: Response) {
     try {
       this.logger.log(`获取客户详情 - ID: ${id}`);

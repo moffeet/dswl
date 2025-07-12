@@ -9,6 +9,7 @@ import { PermissionCheckService } from './permission-check.service';
 import { CaptchaService } from './captcha.service';
 import { SignatureService } from './signature.service';
 import { WxUsersService } from '../wx-users/wx-users.service';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 
 @ApiTags('认证管理')
 @Controller('auth')
@@ -333,6 +334,7 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   @Get('profile')
+  @RelativeTime() // 用户资料最后登录时间显示为相对时间
   async getProfile(@Request() req) {
     return {
       code: RESPONSE_CODES.SUCCESS,

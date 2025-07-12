@@ -8,6 +8,7 @@ import { join } from 'path';
 import { UploadConfig } from './config/upload.config';
 import { TraceIdMiddleware } from './common/middleware/trace-id.middleware';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { TimeFormatInterceptor } from './common/interceptors/time-format.interceptor';
 
 import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
@@ -85,6 +86,11 @@ import { databaseConfig } from './config/database.config';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    // 全局时间格式化拦截器
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TimeFormatInterceptor,
     },
   ],
 })

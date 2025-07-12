@@ -24,6 +24,7 @@ import { RoleQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES, RESPONSE_MESSAGES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResponseUtil } from '../common/utils/response.util';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 
 @ApiTags('👥 角色管理')
 @Controller('roles')
@@ -33,7 +34,8 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
-  @ApiOperation({ 
+  @ChineseTime() // 创建角色时间格式化
+  @ApiOperation({
     summary: '创建角色',
     description: '创建新的系统角色，角色创建后可以为其分配菜单权限和按钮权限，用户绑定角色后即可获得对应的权限。'
   })
@@ -103,6 +105,7 @@ export class RolesController {
   }
 
   @Get()
+  @ChineseTime() // 角色列表时间格式化
   @ApiOperation({ summary: '获取角色列表' })
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   async findAll(@Query() searchDto: RoleQueryDto) {
@@ -117,6 +120,7 @@ export class RolesController {
   }
 
   @Get(':id')
+  @ChineseTime() // 角色详情时间格式化
   @ApiOperation({ summary: '获取角色详情' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
@@ -129,6 +133,7 @@ export class RolesController {
   }
 
   @Patch(':id')
+  @ChineseTime() // 更新角色时间格式化
   @ApiOperation({ summary: '更新角色' })
   @ApiResponse({ status: 200, description: '更新成功' })
   async update(

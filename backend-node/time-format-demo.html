@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间格式化功能演示</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .demo-title {
+            color: #34495e;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        .format-example {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .format-label {
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 120px;
+        }
+        .format-value {
+            font-family: 'Courier New', monospace;
+            color: #27ae60;
+            background: #ecf0f1;
+            padding: 5px 10px;
+            border-radius: 3px;
+            flex: 1;
+            margin-left: 20px;
+        }
+        .api-example {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .highlight {
+            background: #f39c12;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .success {
+            color: #27ae60;
+        }
+        .info {
+            color: #3498db;
+        }
+        .warning {
+            color: #f39c12;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .response-box {
+            background: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕐 时间格式化功能演示</h1>
+        
+        <div class="demo-section">
+            <div class="demo-title">📅 时间格式对比</div>
+            <div class="format-example">
+                <span class="format-label">原始ISO格式:</span>
+                <span class="format-value" id="iso-time">2025-07-11T04:11:01.000Z</span>
+            </div>
+            <div class="format-example">
+                <span class="format-label">中文格式:</span>
+                <span class="format-value" id="chinese-time">2025-07-11 12:11:01</span>
+            </div>
+            <div class="format-example">
+                <span class="format-label">相对时间:</span>
+                <span class="format-value" id="relative-time">5分钟前</span>
+            </div>
+            <div class="format-example">
+                <span class="format-label">自定义格式:</span>
+                <span class="format-value" id="custom-time">2025年07月11日 12:11</span>
+            </div>
+            <button class="btn" onclick="updateTimes()">🔄 更新时间</button>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">🎯 使用方式演示</div>
+            
+            <h4>1. 装饰器方式（推荐）</h4>
+            <div class="api-example">
+@Controller('customers')
+export class CustomersController {
+  
+  @Get()
+  <span class="highlight">@ChineseTime()</span> // 自动格式化为中文时间
+  async findAll() {
+    return ResponseUtil.success(customers, '获取成功');
+  }
+
+  @Get('recent')
+  <span class="highlight">@RelativeTime()</span> // 格式化为相对时间
+  async getRecent() {
+    return ResponseUtil.success(recentData, '获取成功');
+  }
+}
+            </div>
+
+            <h4>2. 请求参数方式</h4>
+            <div class="api-example">
+# 中文格式
+GET /api/customers?<span class="highlight">formatTime=true&timeFormat=chinese</span>
+
+# 相对时间格式  
+GET /api/customers?<span class="highlight">formatTime=true&timeFormat=relative</span>
+
+# ISO格式（默认）
+GET /api/customers?<span class="highlight">formatTime=true&timeFormat=iso</span>
+            </div>
+
+            <h4>3. 请求头方式</h4>
+            <div class="api-example">
+curl -H "<span class="highlight">X-Format-Time: true</span>" \
+     -H "<span class="highlight">X-Time-Format: chinese</span>" \
+     http://localhost:3000/api/customers
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">📊 API响应对比</div>
+            
+            <h4>原始响应（ISO格式）</h4>
+            <div class="response-box">
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "id": 1,
+    "customerName": "深圳科技有限公司",
+    "updatedAt": "<span class="warning">2025-07-11T04:11:01.000Z</span>"
+  },
+  "timestamp": "<span class="warning">2025-07-11T04:11:01.000Z</span>"
+}
+            </div>
+
+            <h4>格式化后响应（中文格式）</h4>
+            <div class="response-box">
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "id": 1,
+    "customerName": "深圳科技有限公司",
+    "updatedAt": "<span class="success">2025-07-11 12:11:01</span>"
+  },
+  "timestamp": "<span class="success">2025-07-11 12:11:01</span>"
+}
+            </div>
+
+            <h4>相对时间响应</h4>
+            <div class="response-box">
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "id": 1,
+    "customerName": "深圳科技有限公司",
+    "updatedAt": "<span class="info">5分钟前</span>"
+  },
+  "timestamp": "<span class="info">刚刚</span>"
+}
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">🛠️ 工具类使用</div>
+            <div class="api-example">
+import { DateFormatUtil } from './common/utils/date-format.util';
+
+// 格式化为中文日期时间
+const formatted = DateFormatUtil.<span class="highlight">formatDateTime</span>(new Date());
+// 结果：2025-07-11 12:11:01
+
+// 格式化为相对时间
+const relative = DateFormatUtil.<span class="highlight">formatRelativeTime</span>(pastDate);
+// 结果：5分钟前
+
+// 自定义格式
+const custom = DateFormatUtil.<span class="highlight">formatCustom</span>(new Date(), 'YYYY年MM月DD日 HH:mm');
+// 结果：2025年07月11日 12:11
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">✅ 支持的时间字段</div>
+            <p>系统会自动识别并格式化以下时间字段：</p>
+            <ul>
+                <li><code>createdAt</code> - 创建时间</li>
+                <li><code>updatedAt</code> - 更新时间</li>
+                <li><code>createTime</code> - 创建时间</li>
+                <li><code>updateTime</code> - 更新时间</li>
+                <li><code>uploadTime</code> - 上传时间</li>
+                <li><code>lastSyncTime</code> - 最后同步时间</li>
+                <li><code>timestamp</code> - 时间戳</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function updateTimes() {
+            const now = new Date();
+            const pastTime = new Date(Date.now() - 5 * 60 * 1000); // 5分钟前
+            
+            // ISO格式
+            document.getElementById('iso-time').textContent = now.toISOString();
+            
+            // 中文格式
+            document.getElementById('chinese-time').textContent = now.toLocaleString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).replace(/\//g, '-');
+            
+            // 相对时间
+            const diffMs = now.getTime() - pastTime.getTime();
+            const diffMinutes = Math.floor(diffMs / (1000 * 60));
+            document.getElementById('relative-time').textContent = `${diffMinutes}分钟前`;
+            
+            // 自定义格式
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('custom-time').textContent = `${year}年${month}月${day}日 ${hours}:${minutes}`;
+        }
+        
+        // 页面加载时更新时间
+        updateTimes();
+        
+        // 每秒更新时间
+        setInterval(updateTimes, 1000);
+    </script>
+</body>
+</html>

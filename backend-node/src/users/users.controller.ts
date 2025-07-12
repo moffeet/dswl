@@ -24,6 +24,7 @@ import { UserQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResponseUtil } from '../common/utils/response.util';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 
 @ApiTags('👤 用户管理')
 @Controller('users')
@@ -33,6 +34,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @ChineseTime() // 创建用户时间格式化
   @ApiOperation({
     summary: '创建用户',
     description: '创建新的系统用户，用户创建后可以分配角色获得相应权限。密码会自动加密存储，返回数据不包含密码字段。'
@@ -76,6 +78,7 @@ export class UsersController {
   }
 
   @Get()
+  @ChineseTime() // 用户列表时间格式化
   @ApiOperation({
     summary: '获取用户列表',
     description: '分页查询用户列表，支持按用户名、昵称进行筛选。返回数据不包含密码字段。'
@@ -142,6 +145,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @ChineseTime() // 用户详情时间格式化
   @ApiOperation({ summary: '获取用户详情' })
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '获取成功' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
@@ -156,6 +160,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @ChineseTime() // 更新用户时间格式化
   @ApiOperation({ summary: '更新用户' })
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '更新成功' })
   async update(

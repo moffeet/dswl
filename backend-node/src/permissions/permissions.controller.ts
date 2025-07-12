@@ -23,6 +23,7 @@ import { PermissionQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { ResponseUtil } from '../common/utils/response.util';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 
 @ApiTags('🔐 权限管理')
 @Controller('permissions')
@@ -34,6 +35,7 @@ export class PermissionsController {
   ) {}
 
   @Post()
+  @ChineseTime() // 创建权限时间格式化
   @ApiOperation({
     summary: '创建权限',
     description: '创建新的菜单权限或按钮权限。权限编码和权限名称必须唯一。'
@@ -69,6 +71,7 @@ export class PermissionsController {
   }
 
   @Get()
+  @ChineseTime() // 权限列表时间格式化
   @ApiOperation({
     summary: '获取权限列表',
     description: '分页获取权限列表，支持按权限名称、编码、类型、状态筛选。'
@@ -88,6 +91,7 @@ export class PermissionsController {
   // 将具体路由移到参数化路由之前，避免路由匹配冲突
 
   @Patch(':id')
+  @ChineseTime() // 更新权限时间格式化
   @ApiOperation({
     summary: '更新权限',
     description: '更新指定权限的信息。权限编码和权限名称必须唯一。'
@@ -281,6 +285,7 @@ export class PermissionsController {
 
   // 参数化路由放在最后，避免与具体路由冲突
   @Get(':id')
+  @ChineseTime() // 权限详情时间格式化
   @ApiOperation({
     summary: '获取权限详情',
     description: '根据权限ID获取权限详细信息。'

@@ -4,6 +4,7 @@ import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CustomLogger } from '../config/logger.config';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
+import { RelativeTime } from '../common/decorators/format-time.decorator';
 
 @ApiTags('🕐 定时任务管理')
 @Controller('tasks')
@@ -15,6 +16,7 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get('status')
+  @RelativeTime() // 定时任务状态时间显示为相对时间
   @ApiOperation({
     summary: '获取定时任务状态',
     description: '查看所有定时任务的配置和状态信息'

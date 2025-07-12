@@ -28,6 +28,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { ReceiptQueryDto, ReceiptListResponseDto } from './dto/receipt-query.dto';
 import { UploadReceiptDto, UploadReceiptResponseDto } from './dto/upload-receipt.dto';
@@ -46,6 +47,7 @@ export class ReceiptsController {
 
   @Public()
   @Post('upload')
+  @ChineseTime() // 上传签收单时间格式化
   @UseInterceptors(FileInterceptor('file', {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
@@ -138,6 +140,7 @@ export class ReceiptsController {
   }
 
   @Post()
+  @ChineseTime() // 创建签收单时间格式化
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -172,6 +175,7 @@ export class ReceiptsController {
   }
 
   @Get()
+  @ChineseTime() // 签收单列表时间格式化
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -255,6 +259,7 @@ export class ReceiptsController {
   }
 
   @Get(':id')
+  @ChineseTime() // 签收单详情时间格式化
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -292,6 +297,7 @@ export class ReceiptsController {
   }
 
   @Patch(':id')
+  @ChineseTime() // 更新签收单时间格式化
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
