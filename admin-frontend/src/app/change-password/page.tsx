@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Form, 
-  Input, 
-  Button, 
-  Message, 
+import {
+  Form,
+  Input,
+  Button,
+  Message,
   Card
 } from '@arco-design/web-react';
-import { 
+import {
   IconLock
 } from '@arco-design/web-react/icon';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { API_ENDPOINTS } from '@/config/api';
+import { createSecureLoginData } from '@/utils/crypto';
 
 interface ChangePasswordForm {
   newPassword: string;
@@ -51,11 +52,27 @@ export default function ChangePasswordPage() {
 
     setLoading(true);
     try {
+      // 🔒 安全改进：加密密码后再发送
+      const secureData = createSecureLoginData('', values.newPassword);
+
       const requestData = {
         userId: parseInt(userId!),
-        newPassword: values.newPassword
+        newPassword: secureData.password, // 使用加密后的密码
+        timestamp: secureData.timestamp,
+        signature: secureData.signature,
+        _encrypted: true
       };
-      console.log('🔧 发送修改密码请求数据:', requestData);
+
+      console.log('=== 密码修改加密传输 ===');
+      console.log('原始密码长度:', values.newPassword.length);
+      console.log('加密后数据:', {
+        userId: requestData.userId,
+        passwordLength: requestData.newPassword.length,
+        hasTimestamp: !!requestData.timestamp,
+        hasSignature: !!requestData.signature,
+        isEncrypted: requestData._encrypted
+      });
+      console.log('🔧 发送加密修改密码数据，密码已加密处理');
 
       const response = await fetch(`${API_ENDPOINTS.auth.login.replace('/login', '/change-password')}`, {
         method: 'POST',

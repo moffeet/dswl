@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Request, Res, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request, Res, Param, ParseIntPipe, Logger, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -14,6 +14,8 @@ import { ChineseTime, RelativeTime } from '../common/decorators/format-time.deco
 @ApiTags('认证管理')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly permissionCheckService: PermissionCheckService,
@@ -448,9 +450,46 @@ export class AuthController {
     }
   })
   @Post('change-password')
-  async changePassword(@Body() body: { userId: number; newPassword: string }) {
-    console.log('收到修改密码请求:', body);
-    await this.authService.changePassword(body.userId, body.newPassword);
+  async changePassword(@Body() body: {
+    userId: number;
+    newPassword: string;
+    timestamp?: number;
+    signature?: string;
+    _encrypted?: boolean;
+  }) {
+    console.log('收到修改密码请求:', {
+      userId: body.userId,
+      hasPassword: !!body.newPassword,
+      isEncrypted: body._encrypted,
+      hasTimestamp: !!body.timestamp,
+      hasSignature: !!body.signature
+    });
+
+    let actualPassword: string;
+
+    // 🔒 安全改进：检查是否为加密数据
+    if (body._encrypted && body.newPassword) {
+      this.logger.log('检测到加密密码修改数据，开始解密处理');
+
+      // 导入解密工具
+      const { decryptPassword } = await import('./utils/crypto.util');
+
+      try {
+        // 解密密码
+        const decryptedData = decryptPassword(body.newPassword);
+        actualPassword = decryptedData.password;
+        this.logger.log('密码解密成功');
+      } catch (error) {
+        this.logger.error('密码解密失败', error.stack);
+        throw new UnauthorizedException('密码解密失败');
+      }
+    } else {
+      // 兼容明文密码（向后兼容）
+      console.log('使用明文密码修改');
+      actualPassword = body.newPassword;
+    }
+
+    await this.authService.changePassword(body.userId, actualPassword);
     console.log('密码修改成功');
     return {
       code: RESPONSE_CODES.SUCCESS,

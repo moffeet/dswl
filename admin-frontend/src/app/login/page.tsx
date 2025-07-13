@@ -196,11 +196,27 @@ export default function LoginPage() {
     setChangePasswordLoading(true);
     setChangePasswordError(''); // 清除之前的错误
     try {
+      // 🔒 安全改进：加密密码后再发送
+      const secureData = createSecureLoginData('', values.newPassword);
+
       const requestData = {
         userId: currentUserId,
-        newPassword: values.newPassword
+        newPassword: secureData.password, // 使用加密后的密码
+        timestamp: secureData.timestamp,
+        signature: secureData.signature,
+        _encrypted: true
       };
-      console.log('🔧 发送修改密码请求数据:', requestData);
+
+      console.log('=== 密码修改加密传输 ===');
+      console.log('原始密码长度:', values.newPassword.length);
+      console.log('加密后数据:', {
+        userId: requestData.userId,
+        passwordLength: requestData.newPassword.length,
+        hasTimestamp: !!requestData.timestamp,
+        hasSignature: !!requestData.signature,
+        isEncrypted: requestData._encrypted
+      });
+      console.log('🔧 发送加密修改密码数据，密码已加密处理');
 
       const result = await api.post('/auth/change-password', requestData);
 
