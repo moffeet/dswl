@@ -110,7 +110,8 @@ export class PermissionCheckService {
       '/customer': 'menu.customer',  // 修复：数据库中是 /customer 不是 /customers
       '/receipts': 'menu.receipts',
       '/wx-user': 'menu.wxuser',
-      '/map': 'menu.map'
+      '/map': 'menu.map',
+      '/permissions': 'menu.permissions'  // 添加权限管理页面
     };
 
     // 检查是否有对应页面的权限

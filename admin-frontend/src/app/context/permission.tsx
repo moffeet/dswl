@@ -102,6 +102,13 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
       return false;
     }
 
+    // 🔥 超级管理员绕过所有权限检查 - 解决权限命名变更和新增权限的问题
+    const isAdmin = permissionInfo.roles?.some(role => role.roleCode === 'admin');
+    if (isAdmin) {
+      console.log('✅ 超级管理员，绕过权限检查，允许访问所有页面');
+      return true;
+    }
+
     // 如果没有角色，只能访问home页面
     if (!permissionInfo.hasRole) {
       console.log('❌ 用户没有角色');
@@ -139,6 +146,13 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     if (!permissionInfo) {
       return false;
     }
+
+    // 🔥 超级管理员绕过所有权限检查 - 解决权限命名变更和新增权限的问题
+    const isAdmin = permissionInfo.roles?.some(role => role.roleCode === 'admin');
+    if (isAdmin) {
+      return true;
+    }
+
     return permissionInfo.permissions.includes(actionCode);
   }, [permissionInfo]);
 
