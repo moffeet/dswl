@@ -7,7 +7,7 @@ import { useAuth } from '../app/context/auth';
 import { usePermission } from '../app/context/permission';
 import { Button, Dropdown, Menu, Avatar, Space, Alert, Modal, Form, Input, Message } from '@arco-design/web-react';
 import { IconUser, IconPoweroff, IconSettings, IconHome, IconUserGroup, IconLocation, IconFile, IconMobile, IconNav, IconLock, IconDown, IconRight } from '@arco-design/web-react/icon';
-import { API_ENDPOINTS } from '../config/api';
+import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
 import { createSecureLoginData } from '../utils/crypto';
 
 interface NavigationProps {}
@@ -23,7 +23,16 @@ export default function Navigation({}: NavigationProps) {
   const { user, logout } = useAuth();
   const { permissionInfo, hasRole, isLoading } = usePermission();
 
-  // 密码验证函数
+  // 原密码验证函数（只验证是否为空）
+  const validateOldPassword = (value: string, callback: (error?: string) => void) => {
+    if (!value) {
+      callback('请输入原密码');
+      return;
+    }
+    callback();
+  };
+
+  // 新密码验证函数
   const validatePassword = (value: string, callback: (error?: string) => void) => {
     if (!value) {
       callback('请输入密码');
@@ -78,6 +87,16 @@ export default function Navigation({}: NavigationProps) {
   // 处理修改密码
   const handleChangePassword = async (values: any) => {
     console.log('🔧 handleChangePassword 被调用，参数:', values);
+    console.log('🔧 表单字段值详情:');
+    console.log('  - oldPassword:', values.oldPassword);
+    console.log('  - newPassword:', values.newPassword);
+    console.log('  - confirmPassword:', values.confirmPassword);
+
+    // 检查必填字段
+    if (!values.oldPassword || !values.newPassword || !values.confirmPassword) {
+      console.error('🔧 表单验证失败：缺少必填字段');
+      return;
+    }
 
     setChangePasswordLoading(true);
     try {
@@ -90,6 +109,12 @@ export default function Navigation({}: NavigationProps) {
         newPassword: secureNewData.password, // 使用加密后的新密码
         _encrypted: true
       };
+
+      console.log('🔧 准备发送请求:');
+      console.log('  - URL:', `${API_BASE_URL}/api/auth/update-password`);
+      console.log('  - 原密码长度:', values.oldPassword?.length);
+      console.log('  - 新密码长度:', values.newPassword?.length);
+      console.log('  - 请求体:', requestData);
 
       console.log('=== 用户主动修改密码加密传输 ===');
       console.log('原密码长度:', values.oldPassword.length);
@@ -105,7 +130,7 @@ export default function Navigation({}: NavigationProps) {
         return;
       }
 
-      const response = await fetch(`${API_ENDPOINTS.auth.login.replace('/login', '/update-password')}`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -376,7 +401,6 @@ export default function Navigation({}: NavigationProps) {
         <Form
           form={changePasswordForm}
           layout="vertical"
-          onSubmit={handleChangePassword}
           autoComplete="off"
         >
           <Form.Item
@@ -384,7 +408,7 @@ export default function Navigation({}: NavigationProps) {
             label="原密码"
             rules={[
               { required: true, message: '请输入原密码' },
-              { validator: validatePassword }
+              { validator: validateOldPassword }
             ]}
           >
             <Input.Password
@@ -457,9 +481,17 @@ export default function Navigation({}: NavigationProps) {
             </Button>
             <Button
               type="primary"
-              htmlType="submit"
               size="large"
               loading={changePasswordLoading}
+              onClick={async () => {
+                try {
+                  const values = await changePasswordForm.validate();
+                  console.log('🔧 表单验证通过，准备调用 handleChangePassword');
+                  await handleChangePassword(values);
+                } catch (error) {
+                  console.error('🔧 表单验证失败:', error);
+                }
+              }}
               style={{
                 borderRadius: '8px',
                 height: '40px',

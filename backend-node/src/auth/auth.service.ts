@@ -62,12 +62,31 @@ export class AuthService {
     // 检查是否首次登录（通过账号和密码是否相同判断）
     const isFirstLogin = user.username === actualPassword;
     if (isFirstLogin) {
-      // 首次登录，返回特殊状态要求修改密码
-      return {
-        requirePasswordChange: true,
-        userId: user.id,
+      // 首次登录，正常生成JWT Token，但标记需要修改密码
+      const payload = {
+        sub: user.id,
         username: user.username,
-        message: '首次登录，请修改密码'
+        nickname: user.nickname,
+        roles: user.roles || [],
+        userType: 'admin',
+        isFirstLogin: true, // 标记首次登录
+      };
+
+      const accessToken = this.jwtService.sign(payload);
+
+      // 更新登录信息
+      await this.updateLastLogin(user.id, req);
+
+      return {
+        accessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+          roles: user.roles || []
+        },
+        requirePasswordChange: true, // 标记需要修改密码
+        message: '首次登录，建议修改密码'
       };
     }
 

@@ -4,6 +4,7 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, LoginResponseDto, LogoutResponseDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+
 import { RESPONSE_CODES, RESPONSE_MESSAGES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { PermissionCheckService } from './permission-check.service';
 import { CaptchaService } from './captcha.service';
@@ -399,132 +400,36 @@ export class AuthController {
     };
   }
 
+
+
   @ApiOperation({
-    summary: '首次登录修改密码',
+    summary: '修改密码（统一接口）',
     description: `
-🔑 **首次登录修改密码接口（强制修改）**
+🔑 **统一密码修改接口**
 
 ## 📋 功能说明
-- 专门用于首次登录用户强制修改密码
-- 不需要验证原密码（因为是强制修改）
+- 统一的密码修改接口，适用于所有场景
+- 必须验证原密码（确保用户身份）
 - 密码必须包含英文和数字，长度6-12位
-- 修改成功后可正常登录
+- 修改成功后需要重新登录
 
 ## 🎯 使用场景
-- 新用户首次登录
-- 管理员重置密码后的首次登录
-- 系统强制要求修改密码的场景
+- **首次登录修改密码**：用户首次登录后修改默认密码
+- **用户主动修改密码**：用户在个人设置中修改密码
+- **定期更换密码**：安全需求的定期更换
+- **密码泄露处理**：怀疑密码泄露时的主动更换
 
-## 🔒 密码规则
-- 必须包含英文字母
-- 必须包含数字
-- 长度6-12位
-- 不能与用户名相同
+## 🔒 安全特性
+- ✅ **必须**验证原密码（统一安全标准）
+- ✅ 需要JWT token认证（确保用户已登录）
+- ✅ 支持加密传输（防止网络窃听）
+- ✅ 密码格式验证（英文+数字，6-12位）
+- ✅ 防止新旧密码相同
 
-## ⚠️ 安全说明
-- 此接口不验证原密码
-- 仅用于首次登录强制修改场景
-- 如需主动修改密码，请使用 /auth/update-password 接口
-    `
-  })
-  @ApiBody({
-    description: '修改密码请求参数',
-    schema: {
-      type: 'object',
-      required: ['userId', 'newPassword'],
-      properties: {
-        userId: {
-          type: 'number',
-          description: '用户ID',
-          example: 1
-        },
-        newPassword: {
-          type: 'string',
-          description: '新密码（英文+数字，6-12位）',
-          example: 'abc123'
-        }
-      }
-    }
-  })
-  @ApiResponse({
-    status: HTTP_STATUS_CODES.OK,
-    description: '✅ 修改成功',
-    example: {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '密码修改成功',
-      data: null
-    }
-  })
-  @Post('change-password')
-  async changePassword(@Body() body: {
-    userId: number;
-    newPassword: string;
-    timestamp?: number;
-    signature?: string;
-    _encrypted?: boolean;
-  }) {
-    console.log('收到首次登录修改密码请求:', {
-      userId: body.userId,
-      hasPassword: !!body.newPassword,
-      isEncrypted: body._encrypted,
-      hasTimestamp: !!body.timestamp,
-      hasSignature: !!body.signature
-    });
-
-    let actualPassword: string;
-
-    // 🔒 安全改进：检查是否为加密数据
-    if (body._encrypted && body.newPassword) {
-      this.logger.log('检测到加密密码修改数据，开始解密处理');
-
-      // 导入解密工具
-      const { decryptPassword } = await import('./utils/crypto.util');
-
-      try {
-        // 解密密码
-        const decryptedData = decryptPassword(body.newPassword);
-        actualPassword = decryptedData.password;
-        this.logger.log('密码解密成功');
-      } catch (error) {
-        this.logger.error('密码解密失败', error.stack);
-        throw new UnauthorizedException('密码解密失败');
-      }
-    } else {
-      // 兼容明文密码（向后兼容）
-      console.log('使用明文密码修改');
-      actualPassword = body.newPassword;
-    }
-
-    await this.authService.changePassword(body.userId, actualPassword);
-    console.log('首次登录密码修改成功');
-    return {
-      code: RESPONSE_CODES.SUCCESS,
-      message: '密码修改成功',
-      data: null
-    };
-  }
-
-  @ApiOperation({
-    summary: '用户主动修改密码',
-    description: `
-🔑 **用户主动修改密码接口**
-
-## 📋 功能说明
-- 用于已登录用户主动修改密码
-- 需要验证原密码确保安全性
-- 密码必须包含英文和数字，长度6-12位
-- 新密码不能与原密码相同
-
-## 🔒 安全验证
-- 必须提供正确的原密码
-- 验证JWT token有效性
-- 新密码格式验证
-- 防止密码重复使用
-
-## 🔄 使用场景
-- 用户在个人设置中修改密码
-- 定期更换密码的安全需求
-- 怀疑密码泄露时的主动更换
+## 💡 设计优势
+- 统一接口，简化维护
+- 统一安全标准，无安全漏洞
+- 首次登录也需要知道原密码，确保安全
     `
   })
   @ApiBody({

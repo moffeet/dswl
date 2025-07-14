@@ -31,17 +31,16 @@ interface CaptchaData {
 
 export default function LoginPage() {
   const [form] = Form.useForm();
-  const [changePasswordForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showForceLogin, setShowForceLogin] = useState(false);
   const [loginData, setLoginData] = useState<LoginForm | null>(null);
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [currentUsername, setCurrentUsername] = useState<string>('');
-  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
-  const [changePasswordError, setChangePasswordError] = useState<string>('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [changePasswordForm] = Form.useForm();
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState('');
   const [captchaData, setCaptchaData] = useState<CaptchaData | null>(null);
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const router = useRouter();
@@ -120,30 +119,26 @@ export default function LoginPage() {
       const result = await api.post(endpoint, loginData);
 
       if (result.code === 200) {
-        // 检查是否需要修改密码
-        if (result.data.requirePasswordChange) {
-          Message.info('首次登录，请修改密码');
-          setCurrentUserId(result.data.userId);
-          setCurrentUsername(result.data.username || values.username);
-          setChangePasswordError(''); // 清除之前的错误
-          setShowChangePasswordModal(true);
-          return;
-        }
-
         if (result.data.accessToken) {
           console.log('✅ 登录成功 - 密码加密传输有效');
 
-          // 使用认证上下文的login方法，只传递token
-          await login(result.data.accessToken);
-
-          Message.success(force ? '强制登录成功！' : '登录成功！');
-
-          // 重置状态
-          setShowForceLogin(false);
-          setLoginData(null);
-
-          // 跳转到主页
-          router.push('/');
+          // 检查是否需要修改密码
+          if (result.data.requirePasswordChange) {
+            // 首次登录，直接显示修改密码弹窗，不进入系统
+            setShowChangePasswordModal(true);
+            setChangePasswordError('');
+            // 暂时保存token，修改密码成功后再正式登录
+            localStorage.setItem('tempToken', result.data.accessToken);
+          } else {
+            // 使用认证上下文的login方法，只传递token
+            await login(result.data.accessToken);
+            Message.success(force ? '强制登录成功！' : '登录成功！');
+            // 重置状态
+            setShowForceLogin(false);
+            setLoginData(null);
+            // 跳转到主页
+            router.push('/');
+          }
         }
       } else if (result.code === 409) {
         // IP冲突，显示强制登录选项
@@ -176,67 +171,79 @@ export default function LoginPage() {
     }
   };
 
+  // 处理修改密码
   const handleChangePassword = async (values: any) => {
-    console.log('🔧 handleChangePassword 被调用，参数:', values);
-    console.log('🔧 currentUserId:', currentUserId);
-    console.log('🔧 currentUsername:', currentUsername);
-    console.log('🔧 newPassword length:', values.newPassword?.length);
-    console.log('🔧 newPassword content:', values.newPassword);
-
-    // 验证密码格式
-    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{6,12}$/;
-    console.log('🔧 密码正则测试结果:', passwordRegex.test(values.newPassword));
-
-    if (!currentUserId) {
-      console.error('🔧 currentUserId 为空');
-      setChangePasswordError('用户ID不存在，请重新登录');
-      return;
-    }
-
     setChangePasswordLoading(true);
-    setChangePasswordError(''); // 清除之前的错误
+    setChangePasswordError('');
+
     try {
+      const tempToken = localStorage.getItem('tempToken');
+      if (!tempToken) {
+        setChangePasswordError('登录状态已过期，请重新登录');
+        return;
+      }
+
+      // 检查密码值是否存在
+      if (!values.oldPassword || !values.newPassword) {
+        setChangePasswordError('请输入原密码和新密码');
+        return;
+      }
+
       // 🔒 安全改进：加密密码后再发送
-      const secureData = createSecureLoginData('', values.newPassword);
+      const secureOldData = createSecureLoginData('', values.oldPassword);
+      const secureNewData = createSecureLoginData('', values.newPassword);
 
       const requestData = {
-        userId: currentUserId,
-        newPassword: secureData.password, // 使用加密后的密码
-        timestamp: secureData.timestamp,
-        signature: secureData.signature,
+        oldPassword: secureOldData.password, // 使用加密后的原密码
+        newPassword: secureNewData.password, // 使用加密后的新密码
+        timestamp: secureNewData.timestamp,
+        signature: secureNewData.signature,
         _encrypted: true
       };
 
-      console.log('=== 密码修改加密传输 ===');
-      console.log('原始密码长度:', values.newPassword.length);
+      console.log('=== 首次登录修改密码加密传输 ===');
+      console.log('原密码长度:', values.oldPassword?.length || 0);
+      console.log('新密码长度:', values.newPassword?.length || 0);
       console.log('加密后数据:', {
-        userId: requestData.userId,
-        passwordLength: requestData.newPassword.length,
+        hasOldPassword: !!requestData.oldPassword,
+        hasNewPassword: !!requestData.newPassword,
         hasTimestamp: !!requestData.timestamp,
         hasSignature: !!requestData.signature,
         isEncrypted: requestData._encrypted
       });
-      console.log('🔧 发送加密修改密码数据，密码已加密处理');
 
-      const result = await api.post('/auth/change-password', requestData);
+      const response = await fetch('/api/auth/update-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tempToken}`
+        },
+        body: JSON.stringify(requestData)
+      });
 
-      console.log('🔧 修改密码响应:', result);
+      const result = await response.json();
 
       if (result.code === 200) {
-        // 显示成功弹窗
+        // 修改密码成功，正式登录
+        localStorage.removeItem('tempToken');
+        await login(tempToken);
+        Message.success('密码修改成功！');
         setShowChangePasswordModal(false);
         changePasswordForm.resetFields();
-        setShowSuccessModal(true);
+        // 跳转到主页
+        router.push('/');
       } else {
-        setChangePasswordError(result.message || '密码修改失败');
+        setChangePasswordError(result.message || '修改密码失败');
       }
-    } catch (error: any) {
-      console.error('🔧 修改密码错误:', error);
-      setChangePasswordError(error.message || '修改密码失败');
+    } catch (error) {
+      console.error('修改密码失败:', error);
+      setChangePasswordError('修改密码失败，请重试');
     } finally {
       setChangePasswordLoading(false);
     }
   };
+
+
 
   return (
     <div style={{
@@ -441,70 +448,66 @@ export default function LoginPage() {
         </div>
       </Card>
 
-      {/* 修改密码弹窗 */}
+      {/* 首次登录强制修改密码弹窗 */}
       <Modal
-        title="首次登录 - 修改密码"
+        title="修改密码"
         visible={showChangePasswordModal}
-        onCancel={() => {
-          setShowChangePasswordModal(false);
-          changePasswordForm.resetFields();
-        }}
         footer={null}
         maskClosable={false}
         closable={false}
         style={{ width: 480 }}
       >
-        <div style={{ marginBottom: '16px', color: '#86909C' }}>
-          <p>用户：<strong>{currentUsername}</strong></p>
-          <p>为了账户安全，首次登录需要修改密码</p>
-          <p style={{ fontSize: '12px', color: '#F53F3F' }}>
-            注意：新密码不能与用户名相同
-          </p>
-        </div>
-
-        {/* 错误提示区域 */}
-        {changePasswordError && (
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '24px',
+          padding: '16px',
+          backgroundColor: '#FFF7E6',
+          border: '1px solid #FFD591',
+          borderRadius: '6px'
+        }}>
           <div style={{
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: '#FFF2F0',
-            border: '1px solid #FFCCC7',
-            borderRadius: '6px',
-            color: '#F53F3F',
-            fontSize: '14px'
+            fontSize: '16px',
+            color: '#D46B08',
+            marginBottom: '8px'
           }}>
-            {changePasswordError}
+            首次登录，建议修改密码
           </div>
-        )}
+          <div style={{
+            fontSize: '14px',
+            color: '#86909C'
+          }}>
+            为了账户安全，建议您立即修改密码
+          </div>
+        </div>
 
         <Form
           form={changePasswordForm}
           layout="vertical"
           onSubmit={handleChangePassword}
           autoComplete="off"
-          onSubmitFailed={(errorInfo: any) => {
-            console.log('🔧 表单验证失败:', errorInfo);
-            Message.error('请检查表单输入');
-          }}
         >
           <Form.Item
+            label="原密码"
+            name="oldPassword"
+            rules={[
+              { required: true, message: '请输入原密码' }
+            ]}
+          >
+            <Input.Password
+              placeholder="请输入原密码"
+              size="large"
+              prefix={<IconLock />}
+            />
+          </Form.Item>
+
+          <Form.Item
             label="新密码"
-            field="newPassword"
+            name="newPassword"
             rules={[
               { required: true, message: '请输入新密码' },
               {
-                validator: (value: string | undefined, callback: (error?: React.ReactNode) => void) => {
-                  if (!value) {
-                    callback();
-                    return;
-                  }
-                  const pattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,12}$/;
-                  if (!pattern.test(value)) {
-                    callback('密码必须包含英文和数字，长度6-12位');
-                  } else {
-                    callback();
-                  }
-                }
+                pattern: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,12}$/,
+                message: '密码必须包含英文和数字，长度6-12位'
               }
             ]}
           >
@@ -516,25 +519,19 @@ export default function LoginPage() {
           </Form.Item>
 
           <Form.Item
-            label="确认新密码"
-            field="confirmPassword"
+            label="确认密码"
+            name="confirmPassword"
             dependencies={['newPassword']}
             rules={[
-              { required: true, message: '请确认新密码' },
-              {
-                validator: (value: string | undefined, callback: (error?: React.ReactNode) => void) => {
-                  if (!value) {
-                    callback();
-                    return;
+              { required: true, message: '请再次输入新密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
                   }
-                  const newPassword = changePasswordForm.getFieldValue('newPassword');
-                  if (newPassword === value) {
-                    callback();
-                  } else {
-                    callback('两次输入的密码不一致');
-                  }
-                }
-              }
+                  return Promise.reject(new Error('两次输入的密码不一致'));
+                },
+              }),
             ]}
           >
             <Input.Password
@@ -544,25 +541,31 @@ export default function LoginPage() {
             />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0, marginTop: '24px' }}>
+          {changePasswordError && (
+            <div style={{
+              color: '#F53F3F',
+              fontSize: '14px',
+              marginBottom: '16px',
+              textAlign: 'center',
+              padding: '8px',
+              backgroundColor: '#FFF2F0',
+              border: '1px solid #FFCCC7',
+              borderRadius: '6px'
+            }}>
+              {changePasswordError}
+            </div>
+          )}
+
+          <Form.Item style={{ marginBottom: 0 }}>
             <Button
               type="primary"
               htmlType="submit"
-              loading={changePasswordLoading}
               size="large"
+              loading={changePasswordLoading}
               style={{
                 width: '100%',
-                height: '48px',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 'bold'
-              }}
-              onClick={() => {
-                const values = changePasswordForm.getFieldsValue();
-                console.log('🔧 表单当前值:', values);
-
-                // 手动调用处理函数
-                handleChangePassword(values);
+                backgroundColor: '#165DFF',
+                borderColor: '#165DFF'
               }}
             >
               {changePasswordLoading ? '修改中...' : '确认修改'}
@@ -571,39 +574,7 @@ export default function LoginPage() {
         </Form>
       </Modal>
 
-      {/* 密码修改成功弹窗 */}
-      <Modal
-        title="密码修改成功"
-        visible={showSuccessModal}
-        onCancel={() => setShowSuccessModal(false)}
-        footer={[
-          <Button
-            key="confirm"
-            type="primary"
-            onClick={async () => {
-              setShowSuccessModal(false);
-              // 修改密码成功后，使用新密码重新登录
-              if (loginData) {
-                const newLoginData = { ...loginData, password: changePasswordForm.getFieldValue('newPassword') };
-                await handleLogin(newLoginData, false);
-              }
-            }}
-          >
-            确认
-          </Button>
-        ]}
-        maskClosable={false}
-        closable={false}
-      >
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <div style={{ fontSize: '16px', color: '#52C41A', marginBottom: '12px' }}>
-            ✅ 密码修改成功！
-          </div>
-          <div style={{ fontSize: '14px', color: '#86909C' }}>
-            点击确认按钮将自动使用新密码登录
-          </div>
-        </div>
-      </Modal>
+
     </div>
   );
 }

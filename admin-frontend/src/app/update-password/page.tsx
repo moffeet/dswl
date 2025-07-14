@@ -13,7 +13,7 @@ import {
   IconUser
 } from '@arco-design/web-react/icon';
 import { useRouter } from 'next/navigation';
-import { API_ENDPOINTS } from '@/config/api';
+import { API_BASE_URL } from '@/config/api';
 import { createSecureLoginData } from '@/utils/crypto';
 import { useAuth } from '@/app/context/auth';
 
@@ -101,7 +101,7 @@ export default function UpdatePasswordPage() {
         return;
       }
 
-      const response = await fetch(`${API_ENDPOINTS.auth.login.replace('/login', '/update-password')}`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
