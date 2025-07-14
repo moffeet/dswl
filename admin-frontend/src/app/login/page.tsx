@@ -16,7 +16,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/auth';
 import api from '../../utils/api';
-import { createSecureLoginData } from '../../utils/crypto';
+import { encryptPassword } from '../../utils/crypto';
+import { API_BASE_URL } from '../../config/api';
 
 interface LoginForm {
   username: string;
@@ -94,27 +95,27 @@ export default function LoginPage() {
     try {
       const endpoint = force ? '/auth/login/force' : '/auth/login';
 
-      // 🔒 安全改进：加密密码后再发送
-      const secureData = createSecureLoginData(values.username, values.password);
+      // 🔒 安全改进：加密密码后再发送（简化版，只加密不签名）
+      const encryptedPassword = encryptPassword(values.password);
 
       // 添加验证码信息
       const loginData = {
-        ...secureData,
+        username: values.username,
+        password: encryptedPassword,
         captchaId: captchaData.id,
-        captchaCode: values.captchaCode
+        captchaCode: values.captchaCode,
+        _encrypted: true
       };
       
-      console.log('=== 密码加密传输 ===');
+      console.log('=== 密码加密传输（简化版） ===');
       console.log('原始密码长度:', values.password.length);
       console.log('加密后数据:', {
         username: loginData.username,
         passwordLength: loginData.password.length,
-        hasTimestamp: !!loginData.timestamp,
-        hasSignature: !!loginData.signature,
         isEncrypted: loginData._encrypted,
         hasCaptcha: !!loginData.captchaId
       });
-      console.log('发送加密登录数据，密码已加密处理');
+      console.log('发送加密登录数据，密码已加密处理（无签名验证）');
 
       const result = await api.post(endpoint, loginData);
 
@@ -189,15 +190,13 @@ export default function LoginPage() {
         return;
       }
 
-      // 🔒 安全改进：加密密码后再发送
-      const secureOldData = createSecureLoginData('', values.oldPassword);
-      const secureNewData = createSecureLoginData('', values.newPassword);
+      // 🔒 安全改进：加密密码后再发送（修改密码只需要简单加密，不需要签名）
+      const encryptedOldPassword = encryptPassword(values.oldPassword);
+      const encryptedNewPassword = encryptPassword(values.newPassword);
 
       const requestData = {
-        oldPassword: secureOldData.password, // 使用加密后的原密码
-        newPassword: secureNewData.password, // 使用加密后的新密码
-        timestamp: secureNewData.timestamp,
-        signature: secureNewData.signature,
+        oldPassword: encryptedOldPassword, // 使用加密后的原密码
+        newPassword: encryptedNewPassword, // 使用加密后的新密码
         _encrypted: true
       };
 
@@ -207,12 +206,12 @@ export default function LoginPage() {
       console.log('加密后数据:', {
         hasOldPassword: !!requestData.oldPassword,
         hasNewPassword: !!requestData.newPassword,
-        hasTimestamp: !!requestData.timestamp,
-        hasSignature: !!requestData.signature,
         isEncrypted: requestData._encrypted
       });
 
-      const response = await fetch('/api/auth/update-password', {
+      // 使用正确的API地址，手动设置Authorization header
+      // 因为tempToken还没有存储到localStorage中
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -488,7 +487,7 @@ export default function LoginPage() {
         >
           <Form.Item
             label="原密码"
-            name="oldPassword"
+            field="oldPassword"
             rules={[
               { required: true, message: '请输入原密码' }
             ]}
@@ -502,12 +501,21 @@ export default function LoginPage() {
 
           <Form.Item
             label="新密码"
-            name="newPassword"
+            field="newPassword"
             rules={[
               { required: true, message: '请输入新密码' },
               {
-                pattern: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,12}$/,
-                message: '密码必须包含英文和数字，长度6-12位'
+                validator: (value, callback) => {
+                  if (!value) {
+                    callback('请输入新密码');
+                    return;
+                  }
+                  if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,12}$/.test(value)) {
+                    callback('密码必须包含英文和数字，长度6-12位');
+                    return;
+                  }
+                  callback();
+                }
               }
             ]}
           >
@@ -520,18 +528,25 @@ export default function LoginPage() {
 
           <Form.Item
             label="确认密码"
-            name="confirmPassword"
+            field="confirmPassword"
             dependencies={['newPassword']}
             rules={[
               { required: true, message: '请再次输入新密码' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve();
+              {
+                validator: (value, callback) => {
+                  const form = changePasswordForm;
+                  const newPassword = form.getFieldValue('newPassword');
+                  if (!value) {
+                    callback('请再次输入新密码');
+                    return;
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'));
-                },
-              }),
+                  if (value !== newPassword) {
+                    callback('两次输入的密码不一致');
+                    return;
+                  }
+                  callback();
+                }
+              }
             ]}
           >
             <Input.Password
