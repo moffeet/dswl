@@ -81,15 +81,13 @@ export default function Navigation({}: NavigationProps) {
 
     setChangePasswordLoading(true);
     try {
-      // 🔒 安全改进：加密密码后再发送
+      // 🔒 安全改进：加密密码后再发送（和首次修改密码相同的加密方式）
       const secureOldData = createSecureLoginData('', values.oldPassword);
       const secureNewData = createSecureLoginData('', values.newPassword);
 
       const requestData = {
         oldPassword: secureOldData.password, // 使用加密后的原密码
         newPassword: secureNewData.password, // 使用加密后的新密码
-        timestamp: secureNewData.timestamp,
-        signature: secureNewData.signature,
         _encrypted: true
       };
 

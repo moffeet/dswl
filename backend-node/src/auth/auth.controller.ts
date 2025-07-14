@@ -535,23 +535,13 @@ export class AuthController {
       properties: {
         oldPassword: {
           type: 'string',
-          description: '原密码',
+          description: '原密码（可能是加密的）',
           example: 'oldpass123'
         },
         newPassword: {
           type: 'string',
-          description: '新密码（英文+数字，6-12位）',
+          description: '新密码（英文+数字，6-12位，可能是加密的）',
           example: 'newpass456'
-        },
-        timestamp: {
-          type: 'number',
-          description: '时间戳（加密传输时使用）',
-          example: 1640995200000
-        },
-        signature: {
-          type: 'string',
-          description: '数字签名（加密传输时使用）',
-          example: 'abc123def456'
         },
         _encrypted: {
           type: 'boolean',
@@ -584,17 +574,13 @@ export class AuthController {
   async updatePassword(@Body() body: {
     oldPassword: string;
     newPassword: string;
-    timestamp?: number;
-    signature?: string;
     _encrypted?: boolean;
   }, @Request() req) {
     console.log('收到用户主动修改密码请求:', {
       userId: req.user.id,
       hasOldPassword: !!body.oldPassword,
       hasNewPassword: !!body.newPassword,
-      isEncrypted: body._encrypted,
-      hasTimestamp: !!body.timestamp,
-      hasSignature: !!body.signature
+      isEncrypted: body._encrypted
     });
 
     let actualOldPassword: string;
