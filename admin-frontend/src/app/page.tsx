@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button, Card, Space, Alert, Result } from '@arco-design/web-react';
 import { Grid } from '@arco-design/web-react';
-import { IconUser, IconUserGroup, IconSettings, IconLock } from '@arco-design/web-react/icon';
+import { IconUser, IconUserGroup, IconSettings } from '@arco-design/web-react/icon';
 import { useRouter } from 'next/navigation';
 import { usePermission } from './context/permission';
 import { useAuth } from './context/auth';

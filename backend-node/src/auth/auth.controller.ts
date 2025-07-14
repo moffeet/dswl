@@ -402,12 +402,18 @@ export class AuthController {
   @ApiOperation({
     summary: '首次登录修改密码',
     description: `
-🔑 **首次登录修改密码接口**
+🔑 **首次登录修改密码接口（强制修改）**
 
 ## 📋 功能说明
-- 用于首次登录用户修改密码
+- 专门用于首次登录用户强制修改密码
+- 不需要验证原密码（因为是强制修改）
 - 密码必须包含英文和数字，长度6-12位
 - 修改成功后可正常登录
+
+## 🎯 使用场景
+- 新用户首次登录
+- 管理员重置密码后的首次登录
+- 系统强制要求修改密码的场景
 
 ## 🔒 密码规则
 - 必须包含英文字母
@@ -415,10 +421,10 @@ export class AuthController {
 - 长度6-12位
 - 不能与用户名相同
 
-## 🔄 首次登录判断
-- 系统通过账号和密码是否相同来判断是否为首次登录
-- 新用户默认密码与用户名相同
-- 首次登录必须修改密码
+## ⚠️ 安全说明
+- 此接口不验证原密码
+- 仅用于首次登录强制修改场景
+- 如需主动修改密码，请使用 /auth/update-password 接口
     `
   })
   @ApiBody({
@@ -457,7 +463,7 @@ export class AuthController {
     signature?: string;
     _encrypted?: boolean;
   }) {
-    console.log('收到修改密码请求:', {
+    console.log('收到首次登录修改密码请求:', {
       userId: body.userId,
       hasPassword: !!body.newPassword,
       isEncrypted: body._encrypted,
@@ -490,7 +496,140 @@ export class AuthController {
     }
 
     await this.authService.changePassword(body.userId, actualPassword);
-    console.log('密码修改成功');
+    console.log('首次登录密码修改成功');
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '密码修改成功',
+      data: null
+    };
+  }
+
+  @ApiOperation({
+    summary: '用户主动修改密码',
+    description: `
+🔑 **用户主动修改密码接口**
+
+## 📋 功能说明
+- 用于已登录用户主动修改密码
+- 需要验证原密码确保安全性
+- 密码必须包含英文和数字，长度6-12位
+- 新密码不能与原密码相同
+
+## 🔒 安全验证
+- 必须提供正确的原密码
+- 验证JWT token有效性
+- 新密码格式验证
+- 防止密码重复使用
+
+## 🔄 使用场景
+- 用户在个人设置中修改密码
+- 定期更换密码的安全需求
+- 怀疑密码泄露时的主动更换
+    `
+  })
+  @ApiBody({
+    description: '用户主动修改密码请求参数',
+    schema: {
+      type: 'object',
+      required: ['oldPassword', 'newPassword'],
+      properties: {
+        oldPassword: {
+          type: 'string',
+          description: '原密码',
+          example: 'oldpass123'
+        },
+        newPassword: {
+          type: 'string',
+          description: '新密码（英文+数字，6-12位）',
+          example: 'newpass456'
+        },
+        timestamp: {
+          type: 'number',
+          description: '时间戳（加密传输时使用）',
+          example: 1640995200000
+        },
+        signature: {
+          type: 'string',
+          description: '数字签名（加密传输时使用）',
+          example: 'abc123def456'
+        },
+        _encrypted: {
+          type: 'boolean',
+          description: '是否为加密数据',
+          example: true
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '✅ 修改成功',
+    example: {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '密码修改成功',
+      data: null
+    }
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.UNAUTHORIZED,
+    description: '❌ 原密码错误或未登录',
+    example: {
+      code: HTTP_STATUS_CODES.UNAUTHORIZED,
+      message: '原密码错误',
+      data: null
+    }
+  })
+  @UseGuards(JwtAuthGuard)
+  @Post('update-password')
+  async updatePassword(@Body() body: {
+    oldPassword: string;
+    newPassword: string;
+    timestamp?: number;
+    signature?: string;
+    _encrypted?: boolean;
+  }, @Request() req) {
+    console.log('收到用户主动修改密码请求:', {
+      userId: req.user.id,
+      hasOldPassword: !!body.oldPassword,
+      hasNewPassword: !!body.newPassword,
+      isEncrypted: body._encrypted,
+      hasTimestamp: !!body.timestamp,
+      hasSignature: !!body.signature
+    });
+
+    let actualOldPassword: string;
+    let actualNewPassword: string;
+
+    // 🔒 安全改进：检查是否为加密数据
+    if (body._encrypted && body.oldPassword && body.newPassword) {
+      this.logger.log('检测到加密密码数据，开始解密处理');
+
+      // 导入解密工具
+      const { decryptPassword } = await import('./utils/crypto.util');
+
+      try {
+        // 解密原密码
+        const decryptedOldData = decryptPassword(body.oldPassword);
+        actualOldPassword = decryptedOldData.password;
+
+        // 解密新密码
+        const decryptedNewData = decryptPassword(body.newPassword);
+        actualNewPassword = decryptedNewData.password;
+
+        this.logger.log('密码解密成功');
+      } catch (error) {
+        this.logger.error('密码解密失败', error.stack);
+        throw new UnauthorizedException('密码解密失败');
+      }
+    } else {
+      // 兼容明文密码（向后兼容）
+      console.log('使用明文密码修改');
+      actualOldPassword = body.oldPassword;
+      actualNewPassword = body.newPassword;
+    }
+
+    await this.authService.updatePassword(req.user.id, actualOldPassword, actualNewPassword);
+    console.log('用户主动密码修改成功');
     return {
       code: RESPONSE_CODES.SUCCESS,
       message: '密码修改成功',
