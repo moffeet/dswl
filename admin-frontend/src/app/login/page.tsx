@@ -194,8 +194,7 @@ export default function LoginPage() {
 
       const requestData = {
         oldPassword: encryptedOldPassword, // 使用加密后的原密码
-        newPassword: encryptedNewPassword, // 使用加密后的新密码
-        _encrypted: true
+        newPassword: encryptedNewPassword// 使用加密后的新密码
       };
 
       console.log('=== 首次登录修改密码加密传输 ===');
@@ -203,8 +202,7 @@ export default function LoginPage() {
       console.log('新密码长度:', values.newPassword?.length || 0);
       console.log('加密后数据:', {
         hasOldPassword: !!requestData.oldPassword,
-        hasNewPassword: !!requestData.newPassword,
-        isEncrypted: requestData._encrypted
+        hasNewPassword: !!requestData.newPassword
       });
 
       // 使用正确的API地址，手动设置Authorization header

@@ -78,8 +78,7 @@ export default function UpdatePasswordPage() {
         oldPassword: secureOldData.password, // 使用加密后的原密码
         newPassword: secureNewData.password, // 使用加密后的新密码
         timestamp: secureNewData.timestamp,
-        signature: secureNewData.signature,
-        _encrypted: true
+        signature: secureNewData.signature
       };
 
       console.log('=== 用户主动修改密码加密传输 ===');
@@ -89,8 +88,7 @@ export default function UpdatePasswordPage() {
         hasOldPassword: !!requestData.oldPassword,
         hasNewPassword: !!requestData.newPassword,
         hasTimestamp: !!requestData.timestamp,
-        hasSignature: !!requestData.signature,
-        isEncrypted: requestData._encrypted
+        hasSignature: !!requestData.signature
       });
 
       // 获取token

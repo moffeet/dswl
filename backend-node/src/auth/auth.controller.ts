@@ -70,8 +70,7 @@ export class AuthController {
         description: '使用加密密码登录，生产环境推荐',
         value: {
           username: 'admin',
-          password: 'U2FsdGVkX1/8K7gWn5W2mQ8tP3X9vK2lN4F6hB8cD1E=',
-          _encrypted: true
+          password: 'U2FsdGVkX1/8K7gWn5W2mQ8tP3X9vK2lN4F6hB8cD1E='
         }
       }
     }
@@ -403,7 +402,7 @@ export class AuthController {
 
 
   @ApiOperation({
-    summary: '修改密码（统一接口）',
+    summary: '修改密码',
     description: `
 🔑 **统一密码修改接口**
 
@@ -447,11 +446,6 @@ export class AuthController {
           type: 'string',
           description: '新密码（英文+数字，6-12位，可能是加密的）',
           example: 'newpass456'
-        },
-        _encrypted: {
-          type: 'boolean',
-          description: '是否为加密数据',
-          example: true
         }
       }
     }

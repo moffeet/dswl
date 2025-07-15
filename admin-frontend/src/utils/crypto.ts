@@ -80,7 +80,6 @@ export function createSecureLoginData(username: string, password: string) {
     username,
     password: encryptedPassword, // 加密后的密码
     timestamp,
-    signature,
-    _encrypted: true // 标识这是加密数据
+    signature
   };
 } 

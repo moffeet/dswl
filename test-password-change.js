@@ -53,8 +53,7 @@ function createSecureLoginData(username, password) {
     username,
     password: encryptedPassword, // 加密后的密码
     timestamp,
-    signature,
-    _encrypted: true // 标识这是加密数据
+    signature
   };
 }
 
@@ -73,16 +72,14 @@ async function testPasswordChange() {
     userId: testUserId,
     newPassword: secureData.password,
     timestamp: secureData.timestamp,
-    signature: secureData.signature,
-    _encrypted: true
+    signature: secureData.signature
   };
   
   console.log('加密后的请求数据:', {
     userId: requestData.userId,
     passwordLength: requestData.newPassword.length,
     hasTimestamp: !!requestData.timestamp,
-    hasSignature: !!requestData.signature,
-    isEncrypted: requestData._encrypted
+    hasSignature: !!requestData.signature
   });
   
   try {
