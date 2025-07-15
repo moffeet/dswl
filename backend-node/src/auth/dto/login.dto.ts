@@ -84,39 +84,7 @@ fetch('/api/auth/login', {
   @IsString({ message: '签名必须是字符串' })
   signature?: string;
 
-  @ApiPropertyOptional({
-    description: `加密标识 - 标识当前请求是否使用加密模式
 
-🔐 **使用说明**：
-- true：使用加密传输（不再需要 timestamp 和 signature）
-- false/undefined：明文传输（兼容模式）
-
-📦 **完整加密请求示例**：
-\`\`\`json
-{
-  "username": "admin",
-  "password": "U2FsdGVkX1/8K7gWn5W2mQ8tP3X9vK2lN4F6hB8cD1E=",
-  "_encrypted": true,
-  "captchaId": "abc123def456",
-  "captchaCode": "A1B2"
-}
-\`\`\`
-
-📦 **明文请求示例**：
-\`\`\`json
-{
-  "username": "admin",
-  "password": "123456",
-  "captchaId": "abc123def456",
-  "captchaCode": "A1B2"
-}
-\`\`\``,
-    example: true,
-    type: 'boolean'
-  })
-  @IsOptional()
-  @IsBoolean({ message: '加密标识必须是布尔值' })
-  _encrypted?: boolean;
 
   @ApiProperty({
     description: `验证码ID - 从验证码接口获取的唯一标识

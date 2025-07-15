@@ -479,44 +479,39 @@ export class AuthController {
   async updatePassword(@Body() body: {
     oldPassword: string;
     newPassword: string;
-    _encrypted?: boolean;
   }, @Request() req) {
     console.log('收到用户主动修改密码请求:', {
       userId: req.user.id,
       hasOldPassword: !!body.oldPassword,
-      hasNewPassword: !!body.newPassword,
-      isEncrypted: body._encrypted
+      hasNewPassword: !!body.newPassword
     });
 
     let actualOldPassword: string;
     let actualNewPassword: string;
 
-    // 🔒 安全改进：检查是否为加密数据
-    if (body._encrypted && body.oldPassword && body.newPassword) {
-      this.logger.log('检测到加密密码数据，开始解密处理');
+    // 🔒 安全要求：密码必须加密传输
+    if (!body.oldPassword || !body.newPassword) {
+      throw new UnauthorizedException('缺少必要的密码参数');
+    }
 
-      // 导入解密工具
-      const { decryptPassword } = await import('./utils/crypto.util');
+    this.logger.log('开始解密密码数据');
 
-      try {
-        // 解密原密码
-        const decryptedOldData = decryptPassword(body.oldPassword);
-        actualOldPassword = decryptedOldData.password;
+    // 导入解密工具
+    const { decryptPassword } = await import('./utils/crypto.util');
 
-        // 解密新密码
-        const decryptedNewData = decryptPassword(body.newPassword);
-        actualNewPassword = decryptedNewData.password;
+    try {
+      // 解密原密码
+      const decryptedOldData = decryptPassword(body.oldPassword);
+      actualOldPassword = decryptedOldData.password;
 
-        this.logger.log('密码解密成功');
-      } catch (error) {
-        this.logger.error('密码解密失败', error.stack);
-        throw new UnauthorizedException('密码解密失败');
-      }
-    } else {
-      // 兼容明文密码（向后兼容）
-      console.log('使用明文密码修改');
-      actualOldPassword = body.oldPassword;
-      actualNewPassword = body.newPassword;
+      // 解密新密码
+      const decryptedNewData = decryptPassword(body.newPassword);
+      actualNewPassword = decryptedNewData.password;
+
+      this.logger.log('密码解密成功');
+    } catch (error) {
+      this.logger.error('密码解密失败', error.stack);
+      throw new UnauthorizedException('密码解密失败');
     }
 
     await this.authService.updatePassword(req.user.id, actualOldPassword, actualNewPassword);

@@ -31,26 +31,24 @@ export class AuthService {
 
     let actualPassword: string;
 
-    // 🔒 安全改进：检查是否为加密数据（去掉签名验证）
-    if (loginDto._encrypted && loginDto.password) {
-      this.logger.log('检测到加密登录数据，开始解密处理（无签名验证）');
+    // 🔒 安全要求：密码必须加密传输
+    if (!loginDto.password) {
+      throw new UnauthorizedException('缺少密码参数');
+    }
 
-      // 导入解密工具
-      const { decryptPassword } = await import('./utils/crypto.util');
+    this.logger.log('开始解密登录密码');
 
-      try {
-        // 解密密码（不再验证签名和时间戳）
-        const decryptedData = decryptPassword(loginDto.password);
-        actualPassword = decryptedData.password;
-        this.logger.log('密码解密成功');
-      } catch (error) {
-        this.logger.error('密码解密失败', error.stack);
-        throw new UnauthorizedException('密码解密失败');
-      }
-    } else {
-      // 兼容明文密码（向后兼容）
-      console.log('使用明文密码登录');
-      actualPassword = loginDto.password;
+    // 导入解密工具
+    const { decryptPassword } = await import('./utils/crypto.util');
+
+    try {
+      // 解密密码
+      const decryptedData = decryptPassword(loginDto.password);
+      actualPassword = decryptedData.password;
+      this.logger.log('密码解密成功');
+    } catch (error) {
+      this.logger.error('密码解密失败', error.stack);
+      throw new UnauthorizedException('密码解密失败');
     }
     
     const user = await this.validateUser(loginDto.username, actualPassword);

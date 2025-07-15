@@ -106,8 +106,7 @@ export default function Navigation({}: NavigationProps) {
 
       const requestData = {
         oldPassword: secureOldData.password, // 使用加密后的原密码
-        newPassword: secureNewData.password, // 使用加密后的新密码
-        _encrypted: true
+        newPassword: secureNewData.password  // 使用加密后的新密码
       };
 
       console.log('🔧 准备发送请求:');

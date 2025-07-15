@@ -103,19 +103,17 @@ export default function LoginPage() {
         username: values.username,
         password: encryptedPassword,
         captchaId: captchaData.id,
-        captchaCode: values.captchaCode,
-        _encrypted: true
+        captchaCode: values.captchaCode
       };
-      
-      console.log('=== 密码加密传输（简化版） ===');
+
+      console.log('=== 密码加密传输 ===');
       console.log('原始密码长度:', values.password.length);
       console.log('加密后数据:', {
         username: loginData.username,
         passwordLength: loginData.password.length,
-        isEncrypted: loginData._encrypted,
         hasCaptcha: !!loginData.captchaId
       });
-      console.log('发送加密登录数据，密码已加密处理（无签名验证）');
+      console.log('发送加密登录数据，密码已加密处理');
 
       const result = await api.post(endpoint, loginData);
 
