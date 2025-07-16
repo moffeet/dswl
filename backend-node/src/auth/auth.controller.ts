@@ -439,12 +439,12 @@ export class AuthController {
       properties: {
         oldPassword: {
           type: 'string',
-          description: '原密码（可能是加密的）',
+          description: '原密码',
           example: 'oldpass123'
         },
         newPassword: {
           type: 'string',
-          description: '新密码（英文+数字，6-12位，可能是加密的）',
+          description: '新密码（英文+数字，6-12位）',
           example: 'newpass456'
         }
       }

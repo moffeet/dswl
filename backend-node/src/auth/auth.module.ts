@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { AdminGuard } from './guards/admin.guard';
 import { UsersModule } from '../users/users.module';
 import { WxUsersModule } from '../wx-users/wx-users.module';
 import { CaslAbilityFactory } from './casl/casl-ability.factory';
@@ -28,11 +29,11 @@ import { Permission } from '../permissions/entities/permission.entity';
       },
     }),
     TypeOrmModule.forFeature([User, Role, Permission]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     WxUsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService],
-  exports: [AuthService, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService],
+  providers: [AuthService, JwtStrategy, AdminGuard, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService],
+  exports: [AuthService, AdminGuard, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService],
 })
 export class AuthModule {} 

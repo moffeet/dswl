@@ -23,6 +23,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from '../common/dto/pagination.dto';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
+import { AdminOnly } from '../auth/decorators/admin-only.decorator';
 import { ResponseUtil } from '../common/utils/response.util';
 import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 
@@ -220,8 +222,14 @@ export class UsersController {
   }
 
   @Post(':id/reset-password')
-  @ApiOperation({ summary: '重置用户密码' })
+  @UseGuards(AdminGuard)
+  @AdminOnly()
+  @ApiOperation({
+    summary: '重置用户密码（仅管理员）',
+    description: '只有超级管理员才能重置用户密码。密码将被重置为用户名，用户下次登录时需要修改密码。'
+  })
   @ApiResponse({ status: HTTP_STATUS_CODES.OK, description: '重置成功' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.FORBIDDEN, description: '权限不足，只有超级管理员才能执行此操作' })
   async resetPassword(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.resetPassword(id);
     // 移除密码字段
