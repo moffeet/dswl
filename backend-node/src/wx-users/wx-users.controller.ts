@@ -23,12 +23,13 @@ import { WxUsersService } from './wx-users.service';
 import { CreateWxUserDto } from './dto/create-wx-user.dto';
 import { UpdateWxUserDto } from './dto/update-wx-user.dto';
 import { WxUserQueryDto } from './dto/wx-user-query.dto';
-import { WxLoginDto, WxLoginResponseDto } from './dto/wx-login.dto';
+import { WxLoginDto, WxLoginResponseDto, WxPhoneLoginDto } from './dto/wx-login.dto';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { ResponseUtil } from '../common/utils/response.util';
+import { WechatApiService } from './services/wechat-api.service';
 
 @ApiTags('📱 小程序用户管理')
 @Controller('wx-users')
@@ -38,6 +39,7 @@ export class WxUsersController {
   constructor(
     private readonly wxUsersService: WxUsersService,
     private readonly jwtService: JwtService,
+    private readonly wechatApiService: WechatApiService,
   ) {}
 
   @Public()
@@ -95,6 +97,107 @@ export class WxUsersController {
       }
 
       // 4. 生成JWT token
+      const payload = {
+        sub: user.id,
+        username: user.name,
+        phone: user.phone,
+        role: user.role,
+        userType: 'wx-user'
+      };
+
+      const accessToken = this.jwtService.sign(payload);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '登录成功',
+        data: {
+          accessToken,
+          user: {
+            id: user.id,
+            name: user.name,
+            phone: user.phone,
+            role: user.role,
+            wechatId: user.wechatId
+          }
+        }
+      };
+
+    } catch (error) {
+      return {
+        code: HTTP_STATUS_CODES.BAD_REQUEST,
+        message: error.message || '登录失败',
+        data: null
+      };
+    }
+  }
+
+  @Public()
+  @Post('login-with-phone')
+  @ApiOperation({
+    summary: '微信授权手机号登录',
+    description: '通过微信授权获取手机号进行登录，自动创建或绑定用户账户'
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '登录成功',
+    type: WxLoginResponseDto
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '登录失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.UNAUTHORIZED, description: 'MAC地址验证失败' })
+  async loginWithPhone(@Body() loginDto: WxPhoneLoginDto) {
+    try {
+      // 1. 通过jsCode获取openid
+      const sessionInfo = await this.wechatApiService.getSessionInfo(loginDto.jsCode);
+      if (!sessionInfo.openid) {
+        return {
+          code: HTTP_STATUS_CODES.BAD_REQUEST,
+          message: '获取微信用户信息失败',
+          data: null
+        };
+      }
+
+      // 2. 通过code获取手机号
+      const phoneNumber = await this.wechatApiService.getPhoneNumber(loginDto.code);
+
+      // 3. 根据手机号查找用户
+      let user = await this.wxUsersService.findByPhone(phoneNumber);
+
+      if (!user) {
+        return {
+          code: HTTP_STATUS_CODES.NOT_FOUND,
+          message: '用户不存在，请联系管理员创建账户',
+          data: null
+        };
+      }
+
+      // 4. 更新用户的微信ID（如果还没有绑定）
+      if (!user.wechatId) {
+        await this.wxUsersService.updateWechatInfo(user.id, sessionInfo.openid, loginDto.macAddress);
+        user = await this.wxUsersService.findOne(user.id); // 重新获取更新后的用户信息
+      } else {
+        // 如果已经绑定了微信ID，验证是否匹配
+        if (user.wechatId !== sessionInfo.openid) {
+          return {
+            code: HTTP_STATUS_CODES.BAD_REQUEST,
+            message: '微信账号不匹配，请使用正确的微信账号登录',
+            data: null
+          };
+        }
+      }
+
+      // 5. 验证MAC地址
+      if (loginDto.macAddress) {
+        const macValid = await this.wxUsersService.validateMacAddress(user.id, loginDto.macAddress);
+        if (!macValid) {
+          return {
+            code: HTTP_STATUS_CODES.UNAUTHORIZED,
+            message: 'MAC地址验证失败，请使用注册设备登录',
+            data: null
+          };
+        }
+      }
+
+      // 6. 生成JWT token
       const payload = {
         sub: user.id,
         username: user.name,

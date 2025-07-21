@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { WxUsersService } from './wx-users.service';
 import { WxUsersController } from './wx-users.controller';
 import { WxUser } from './entities/wx-user.entity';
+import { WechatApiService } from './services/wechat-api.service';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { WxUser } from './entities/wx-user.entity';
     }),
   ],
   controllers: [WxUsersController],
-  providers: [WxUsersService],
-  exports: [WxUsersService],
+  providers: [WxUsersService, WechatApiService],
+  exports: [WxUsersService, WechatApiService],
 })
 export class WxUsersModule {}

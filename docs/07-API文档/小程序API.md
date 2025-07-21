@@ -18,9 +18,9 @@
 
 ## 👤 用户认证接口
 
-### 小程序用户登录
-**接口地址**: `POST /api/wx-users/login`  
-**权限要求**: 无需认证  
+### 小程序用户登录（原始方式）
+**接口地址**: `POST /api/wx-users/login`
+**权限要求**: 无需认证
 **功能描述**: 小程序用户通过微信openid和手机号进行登录
 
 #### 请求参数
@@ -48,6 +48,61 @@
     }
   }
 }
+```
+
+### 微信授权手机号登录（推荐）
+**接口地址**: `POST /api/wx-users/login-with-phone`
+**权限要求**: 无需认证
+**功能描述**: 通过微信授权获取手机号进行登录，自动创建或绑定用户账户
+
+#### 请求参数
+```json
+{
+  "code": "0c1234567890abcdef",
+  "jsCode": "0a1234567890abcdef",
+  "macAddress": "AA:BB:CC:DD:EE:FF"
+}
+```
+
+#### 参数说明
+- `code`: 手机号授权code（通过button open-type="getPhoneNumber"获取）
+- `jsCode`: 微信登录code（通过wx.login()获取）
+- `macAddress`: 设备MAC地址（可选，用于设备绑定）
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 1,
+      "name": "张三",
+      "phone": "13800138001",
+      "role": "司机",
+      "wechatId": "wx_openid_123456"
+    }
+  }
+}
+```
+
+#### 错误响应
+```json
+{
+  "code": 404,
+  "message": "用户不存在，请联系管理员创建账户",
+  "data": null
+}
+```
+
+#### 流程说明
+1. 小程序调用`wx.login()`获取jsCode
+2. 用户点击授权按钮获取手机号code
+3. 后端通过jsCode调用微信API获取openid
+4. 后端通过code调用微信API获取手机号
+5. 根据手机号查找用户并绑定微信信息
+6. 生成JWT token返回给小程序
 ```
 
 #### 错误响应

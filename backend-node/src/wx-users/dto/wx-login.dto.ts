@@ -30,6 +30,36 @@ export class WxLoginDto {
   macAddress?: string;
 }
 
+// 微信授权登录DTO
+export class WxPhoneLoginDto {
+  @ApiProperty({
+    description: '手机号授权code',
+    example: '0c1234567890abcdef',
+    required: true
+  })
+  @IsNotEmpty({ message: '手机号授权code不能为空' })
+  @IsString({ message: '手机号授权code必须是字符串' })
+  code: string;
+
+  @ApiProperty({
+    description: '微信登录code',
+    example: '0a1234567890abcdef',
+    required: true
+  })
+  @IsNotEmpty({ message: '微信登录code不能为空' })
+  @IsString({ message: '微信登录code必须是字符串' })
+  jsCode: string;
+
+  @ApiProperty({
+    description: '设备MAC地址',
+    example: '00:11:22:33:44:55',
+    required: false
+  })
+  @IsOptional()
+  @IsString({ message: 'MAC地址必须是字符串' })
+  macAddress?: string;
+}
+
 export class WxLoginResponseDto {
   @ApiProperty({ description: '访问令牌' })
   accessToken?: string;
