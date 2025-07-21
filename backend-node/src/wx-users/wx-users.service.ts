@@ -5,9 +5,12 @@ import { WxUser } from './entities/wx-user.entity';
 import { CreateWxUserDto } from './dto/create-wx-user.dto';
 import { UpdateWxUserDto } from './dto/update-wx-user.dto';
 import { WxUserQueryDto } from './dto/wx-user-query.dto';
+import { CustomLogger } from '../config/logger.config';
 
 @Injectable()
 export class WxUsersService {
+  private readonly logger = new CustomLogger('WxUsersService');
+
   constructor(
     @InjectRepository(WxUser)
     private wxUserRepository: Repository<WxUser>,
@@ -109,9 +112,17 @@ export class WxUsersService {
    * 通过手机号查找用户
    */
   async findByPhone(phone: string): Promise<WxUser | null> {
+    this.logger.log(`🔍 查找手机号用户 - 手机号: ${phone}`);
     const wxUser = await this.wxUserRepository.findOne({
       where: { phone, isDeleted: 0 }
     });
+
+    if (wxUser) {
+      this.logger.log(`✅ 找到用户 - ID: ${wxUser.id}, 姓名: ${wxUser.name}, 角色: ${wxUser.role}`);
+    } else {
+      this.logger.log(`❌ 未找到用户 - 手机号: ${phone}`);
+    }
+
     return wxUser;
   }
 
@@ -133,15 +144,24 @@ export class WxUsersService {
    * 验证MAC地址
    */
   async validateMacAddress(userId: number, macAddress: string): Promise<boolean> {
+    this.logger.log(`🔒 验证MAC地址 - 用户ID: ${userId}, 请求MAC: ${macAddress}`);
     const user = await this.findOne(userId);
 
     // 如果数据库中没有MAC地址，允许登录并更新
     if (!user.macAddress) {
+      this.logger.log(`📝 用户无MAC地址记录，更新并允许登录 - 用户ID: ${userId}, MAC: ${macAddress}`);
       await this.wxUserRepository.update(userId, { macAddress });
       return true;
     }
 
     // 如果MAC地址不匹配，拒绝登录
-    return user.macAddress === macAddress;
+    const isValid = user.macAddress === macAddress;
+    if (isValid) {
+      this.logger.log(`✅ MAC地址验证通过 - 用户ID: ${userId}`);
+    } else {
+      this.logger.error(`❌ MAC地址不匹配 - 用户ID: ${userId}, 数据库MAC: ${user.macAddress}, 请求MAC: ${macAddress}`);
+    }
+
+    return isValid;
   }
 }
