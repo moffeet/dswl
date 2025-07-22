@@ -24,6 +24,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { RequireSignature } from '../auth/decorators/require-signature.decorator';
 import { SignatureGuard } from '../auth/guards/signature.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
@@ -33,10 +35,13 @@ import { CustomersService } from '../customers/customers.service';
 import { ReceiptsService } from '../receipts/receipts.service';
 import { WxUsersService } from '../wx-users/wx-users.service';
 import { SignatureService } from '../auth/signature.service';
+import { JwtService } from '@nestjs/jwt';
+import { WechatApiService } from '../wx-users/services/wechat-api.service';
 
 // 导入DTO
 import { UploadReceiptDto } from '../receipts/dto/upload-receipt.dto';
 import { WxUpdateCustomerDto } from '../customers/dto/wx-update-customer.dto';
+import { SimpleLoginDto, SimpleLoginResponseDto } from './dto/simple-login.dto';
 
 @ApiTags('📱 小程序接口')
 @Controller('miniprogram')
@@ -49,9 +54,111 @@ export class MiniprogramController {
     private readonly receiptsService: ReceiptsService,
     private readonly wxUsersService: WxUsersService,
     private readonly signatureService: SignatureService,
+    private readonly jwtService: JwtService,
+    private readonly wechatApiService: WechatApiService,
   ) {}
 
+  // ==================== 登录接口 ====================
 
+  @Public()
+  @Post('login')
+  @ApiOperation({
+    summary: '小程序用户登录',
+    description: `
+🔐 **超简化小程序登录接口**
+
+## 📋 功能说明
+- 只需要手机号授权code，无需微信登录code
+- 通过手机号查找用户并生成JWT Token
+- 无需签名验证，公开接口
+
+## 📝 前端调用示例
+\`\`\`javascript
+// 1. 获取手机号授权
+wx.getPhoneNumber({
+  success: function(res) {
+    // 2. 直接登录
+    wx.request({
+      url: '/api/miniprogram/login',
+      method: 'POST',
+      data: {
+        code: res.code  // 只需要这一个参数！
+      }
+    });
+  }
+});
+\`\`\`
+    `
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '登录成功',
+    type: SimpleLoginResponseDto
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '登录失败' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
+  async login(@Body() loginDto: SimpleLoginDto) {
+    this.logger.log(`🔐 小程序用户登录请求 - code: ${loginDto.code}`);
+
+    try {
+      // 1. 通过code获取手机号
+      this.logger.log(`📞 获取微信手机号 - code: ${loginDto.code}`);
+      const phoneNumber = await this.wechatApiService.getPhoneNumber(loginDto.code);
+      this.logger.log(`✅ 获取手机号成功 - 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}`);
+
+      // 2. 根据手机号查找用户
+      this.logger.log(`👤 查找手机号用户 - 手机号: ${phoneNumber}`);
+      const user = await this.wxUsersService.findByPhone(phoneNumber);
+
+      if (!user) {
+        this.logger.warn(`❌ 用户不存在 - 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}`);
+        return {
+          code: HTTP_STATUS_CODES.NOT_FOUND,
+          message: '用户不存在，请联系管理员创建账户',
+          data: null
+        };
+      }
+
+      this.logger.log(`✅ 找到用户 - ID: ${user.id}, 姓名: ${user.name}, 角色: ${user.role}`);
+
+      // 3. 生成JWT token
+      this.logger.log(`🎫 生成JWT token - 用户ID: ${user.id}, 姓名: ${user.name}`);
+      const payload = {
+        sub: user.id,
+        username: user.name,
+        phone: user.phone,
+        role: user.role,
+        userType: 'wx-user'
+      };
+
+      const accessToken = this.jwtService.sign(payload);
+      this.logger.log(`✅ JWT token生成成功 - 用户ID: ${user.id}`);
+
+      this.logger.log(`🎉 登录成功 - 用户ID: ${user.id}, 姓名: ${user.name}, 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}, 角色: ${user.role}`);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '登录成功',
+        data: {
+          accessToken,
+          user: {
+            id: user.id,
+            name: user.name,
+            phone: user.phone,
+            role: user.role
+          }
+        }
+      };
+
+    } catch (error) {
+      this.logger.error(`💥 登录异常 - code: ${loginDto.code}, 错误: ${error.message}`, error.stack);
+      return {
+        code: HTTP_STATUS_CODES.BAD_REQUEST,
+        message: error.message || '登录失败',
+        data: null
+      };
+    }
+  }
 
   // ==================== 司机页面 ====================
 

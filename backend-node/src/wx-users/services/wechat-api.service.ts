@@ -30,7 +30,6 @@ interface WechatPhoneResponse {
 
 interface WechatSessionResponse {
   openid?: string;
-  session_key?: string;
   unionid?: string;
   errcode?: number;
   errmsg?: string;
@@ -53,7 +52,7 @@ export class WechatApiService {
   }
 
   /**
-   * 通过jsCode获取openid和session_key
+   * 通过jsCode获取openid
    */
   async getSessionInfo(jsCode: string): Promise<WechatSessionResponse> {
     const url = 'https://api.weixin.qq.com/sns/jscode2session';
@@ -76,7 +75,7 @@ export class WechatApiService {
         );
       }
 
-      this.logger.log(`成功获取session信息, openid: ${response.data.openid}`);
+      this.logger.log(`成功获取openid: ${response.data.openid}`);
       return response.data;
     } catch (error) {
       this.logger.error('调用微信API失败:', error.message);
