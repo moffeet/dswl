@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
+import { WxUsersService } from '../../wx-users/wx-users.service';
 import { BlacklistService } from '../blacklist.service';
 
 export interface JwtPayload {
@@ -16,6 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private configService: ConfigService,
     private usersService: UsersService,
+    private wxUsersService: WxUsersService,
     private blacklistService: BlacklistService,
   ) {
     super({
@@ -40,10 +42,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Token已失效，请重新登录');
     }
 
-    const user = await this.usersService.findOne(payload.sub);
-    if (!user) {
-      throw new UnauthorizedException('用户不存在');
+    // 根据用户类型查找用户
+    let user;
+    if (payload.userType === 'wx-user') {
+      // 小程序用户
+      user = await this.wxUsersService.findOne(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('小程序用户不存在');
+      }
+    } else {
+      // 管理员用户
+      user = await this.usersService.findOne(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('管理员用户不存在');
+      }
     }
+
+    // 将用户类型添加到用户对象中，方便后续使用
+    user.userType = payload.userType || 'admin';
 
     return user;
   }

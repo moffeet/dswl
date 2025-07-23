@@ -45,7 +45,7 @@ import { SimpleLoginDto, SimpleLoginResponseDto } from './dto/simple-login.dto';
 
 @ApiTags('📱 小程序接口')
 @Controller('miniprogram')
-@UseGuards(SignatureGuard)
+@UseGuards(JwtAuthGuard)
 export class MiniprogramController {
   private readonly logger = new CustomLogger('MiniprogramController');
 
@@ -164,7 +164,6 @@ wx.getPhoneNumber({
 
   @Get('customers/search')
   @ChineseTime() // 小程序客户查询时间格式化
-  @RequireSignature()
   @ApiOperation({
     summary: '司机查询客户信息',
     description: `
@@ -173,22 +172,25 @@ wx.getPhoneNumber({
 ## 📋 功能说明
 - 司机通过客户编号查询客户信息
 - 返回客户名、编号、地址、经纬度等信息
-- 需要应用级签名校验
+- 需要JWT Token认证
 
-## 🔒 签名机制
-- 使用小程序内置的应用密钥生成签名
-- 签名参数：userId + customerNumber + timestamp + nonce
-- 签名算法：HMAC-SHA256
+## 🔒 认证机制
+- 使用小程序登录后获得的accessToken
+- 在请求头中添加：Authorization: Bearer <accessToken>
+- 无需签名验证，只需Token认证
 
-## 📝 签名生成示例
+## 📝 前端调用示例
 \`\`\`javascript
-const params = {
-  userId: 1,
-  customerNumber: "C001",
-  timestamp: Date.now().toString(),
-  nonce: generateNonce()
-};
-const signature = HMAC_SHA256(sortedParams, APP_SECRET);
+wx.request({
+  url: '/api/miniprogram/customers/search',
+  method: 'GET',
+  header: {
+    'Authorization': 'Bearer ' + accessToken
+  },
+  data: {
+    customerNumber: 'C001'
+  }
+});
 \`\`\`
     `
   })
@@ -198,29 +200,11 @@ const signature = HMAC_SHA256(sortedParams, APP_SECRET);
     description: '客户编号',
     example: 'C001'
   })
-  @ApiQuery({
-    name: 'wxUserId',
+  @ApiHeader({
+    name: 'Authorization',
     required: true,
-    description: '小程序用户ID',
-    example: 1
-  })
-  @ApiQuery({
-    name: 'timestamp',
-    required: true,
-    description: '时间戳（毫秒）',
-    example: '1704387123456'
-  })
-  @ApiQuery({
-    name: 'nonce',
-    required: true,
-    description: '随机数（防重放攻击）',
-    example: 'abc123def456'
-  })
-  @ApiQuery({
-    name: 'signature',
-    required: true,
-    description: '签名值（使用应用密钥生成的HMAC-SHA256）',
-    example: 'a1b2c3d4e5f6...'
+    description: 'JWT Token认证头',
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   })
   @ApiResponse({
     status: HTTP_STATUS_CODES.OK,
