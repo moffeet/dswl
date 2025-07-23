@@ -22,19 +22,18 @@ import {
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
-import { RequireSignature } from '../auth/decorators/require-signature.decorator';
-import { SignatureGuard } from '../auth/guards/signature.guard';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
-import { ChineseTime, RelativeTime } from '../common/decorators/format-time.decorator';
+import { ChineseTime } from '../common/decorators/format-time.decorator';
 
 // 导入服务
 import { CustomersService } from '../customers/customers.service';
 import { ReceiptsService } from '../receipts/receipts.service';
 import { WxUsersService } from '../wx-users/wx-users.service';
-import { SignatureService } from '../auth/signature.service';
+
 import { JwtService } from '@nestjs/jwt';
 import { WechatApiService } from '../wx-users/services/wechat-api.service';
 
@@ -53,7 +52,6 @@ export class MiniprogramController {
     private readonly customersService: CustomersService,
     private readonly receiptsService: ReceiptsService,
     private readonly wxUsersService: WxUsersService,
-    private readonly signatureService: SignatureService,
     private readonly jwtService: JwtService,
     private readonly wechatApiService: WechatApiService,
   ) {}
@@ -233,9 +231,14 @@ wx.request({
   })
   @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
   @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
-  async searchCustomer(@Query('customerNumber') customerNumber: string) {
+  async searchCustomer(
+    @Query('customerNumber') customerNumber: string,
+    @Req() req: Request
+  ) {
     try {
-      this.logger.log(`小程序司机查询客户 - 客户编号: ${customerNumber}`);
+      // 从JWT认证中获取用户信息
+      const user = req['user'] as any;
+      this.logger.log(`小程序司机查询客户 - 用户ID: ${user?.id}, 客户编号: ${customerNumber}`);
 
       if (!customerNumber) {
         return {
@@ -289,13 +292,12 @@ wx.request({
 
   @Post('receipts/upload')
   @ChineseTime() // 小程序上传签收单时间格式化
-  @RequireSignature()
   @UseInterceptors(FileInterceptor('file', {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
       files: 1,
     },
-    fileFilter: (req, file, callback) => {
+    fileFilter: (_, file, callback) => {
       if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
         return callback(new BadRequestException('只支持图片格式：jpg, jpeg, png, gif'), false);
       }
@@ -304,12 +306,46 @@ wx.request({
   }))
   @ApiOperation({
     summary: '上传签收单',
-    description: '小程序用户上传签收单图片和相关信息。需要签名校验。'
+    description: `
+🔍 **上传签收单接口**
+
+## 📋 功能说明
+- 小程序用户上传签收单图片和相关信息
+- 需要JWT Token认证
+
+## 🔒 认证机制
+- 使用小程序登录后获得的accessToken
+- 在请求头中添加：Authorization: Bearer <accessToken>
+- 无需签名验证，只需Token认证
+
+## 📝 前端调用示例
+\`\`\`javascript
+wx.uploadFile({
+  url: '/api/miniprogram/receipts/upload',
+  filePath: tempFilePath,
+  name: 'file',
+  header: {
+    'Authorization': 'Bearer ' + accessToken
+  },
+  formData: {
+    customerNumber: 'C001',
+    operatorName: '张三',
+    // ... 其他参数
+  }
+});
+\`\`\`
+    `
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: '上传签收单数据',
     type: UploadReceiptDto
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    required: true,
+    description: 'JWT Token认证头',
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   })
   @ApiResponse({
     status: HTTP_STATUS_CODES.OK,
@@ -323,7 +359,9 @@ wx.request({
   ) {
     const startTime = Date.now();
     try {
-      this.logger.log(`开始上传签收单 - 用户: ${uploadDto.wxUserName}, 文件大小: ${file?.size || 0} bytes`);
+      // 从JWT认证中获取用户信息
+      const user = req['user'] as any;
+      this.logger.log(`开始上传签收单 - JWT用户ID: ${user?.id}, 操作用户: ${uploadDto.wxUserName}, 文件大小: ${file?.size || 0} bytes`);
 
       if (!file) {
         throw new BadRequestException('请上传签收单图片');
@@ -386,14 +424,49 @@ wx.request({
 
   @Patch('customers/update')
   @ChineseTime() // 小程序更新客户信息时间格式化
-  @RequireSignature()
   @ApiOperation({
     summary: '修改客户地址',
-    description: '通过客户编号修改客户的门店地址和仓库地址，系统自动获取经纬度信息。需要签名校验。'
+    description: `
+🔍 **修改客户地址接口**
+
+## 📋 功能说明
+- 通过客户编号修改客户的门店地址和仓库地址
+- 系统自动获取经纬度信息
+- 需要JWT Token认证
+
+## 🔒 认证机制
+- 使用小程序登录后获得的accessToken
+- 在请求头中添加：Authorization: Bearer <accessToken>
+- 无需签名验证，只需Token认证
+
+## 📝 前端调用示例
+\`\`\`javascript
+wx.request({
+  url: '/api/miniprogram/customers/update',
+  method: 'PATCH',
+  header: {
+    'Authorization': 'Bearer ' + accessToken,
+    'Content-Type': 'application/json'
+  },
+  data: {
+    customerNumber: 'C001',
+    operatorName: '张三',
+    storeAddress: '新的门店地址',
+    warehouseAddress: '新的仓库地址'
+  }
+});
+\`\`\`
+    `
   })
   @ApiBody({
     description: '客户地址更新数据',
     type: WxUpdateCustomerDto
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    required: true,
+    description: 'JWT Token认证头',
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   })
   @ApiResponse({
     status: HTTP_STATUS_CODES.OK,
@@ -401,9 +474,14 @@ wx.request({
   })
   @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
   @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
-  async updateCustomer(@Body() updateDto: WxUpdateCustomerDto) {
+  async updateCustomer(
+    @Body() updateDto: WxUpdateCustomerDto,
+    @Req() req: Request
+  ) {
     try {
-      this.logger.log(`小程序修改客户 - 操作人: ${updateDto.operatorName}, 客户编号: ${updateDto.customerNumber}`);
+      // 从JWT认证中获取用户信息
+      const user = req['user'] as any;
+      this.logger.log(`小程序修改客户 - JWT用户ID: ${user?.id}, 操作人: ${updateDto.operatorName}, 客户编号: ${updateDto.customerNumber}`);
 
       // 更新客户地址
       const updatedCustomer = await this.customersService.wxUpdateCustomerAddress(
