@@ -5,6 +5,7 @@ export const RESPONSE_CODES = {
   SUCCESS: 200,           // 成功
   PARAM_ERROR: 403,       // 参数错误/权限错误
   SERVER_ERROR: 500,      // 服务器错误
+  USER_NOT_FOUND: 1001,   // 用户不存在
 } as const;
 
 /**
@@ -53,4 +54,5 @@ export const RESPONSE_MESSAGES = {
   ALREADY_EXISTS: '数据已存在',
   PERMISSION_DENIED: '权限不足',
   INVALID_PARAMS: '参数无效',
+  USER_NOT_FOUND: '用户不存在，请联系管理员创建账户',
 } as const;

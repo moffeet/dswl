@@ -25,7 +25,7 @@ import { Request } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
-import { RESPONSE_CODES, HTTP_STATUS_CODES } from '../common/constants/response-codes';
+import { RESPONSE_CODES, HTTP_STATUS_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { CustomLogger } from '../config/logger.config';
 import { ChineseTime } from '../common/decorators/format-time.decorator';
 
@@ -111,8 +111,8 @@ wx.getPhoneNumber({
       if (!user) {
         this.logger.warn(`❌ 用户不存在 - 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}`);
         return {
-          code: HTTP_STATUS_CODES.NOT_FOUND,
-          message: '用户不存在，请联系管理员创建账户',
+          code: RESPONSE_CODES.USER_NOT_FOUND,
+          message: RESPONSE_MESSAGES.USER_NOT_FOUND,
           data: null
         };
       }
