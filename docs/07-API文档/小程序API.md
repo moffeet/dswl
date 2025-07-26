@@ -2,21 +2,113 @@
 
 ## 📋 概述
 
-小程序API是专门为移动端小程序提供的接口服务，包含用户认证、客户搜索、签收单上传等核心功能。所有接口都需要进行签名校验以确保安全性。
+小程序API是专门为移动端小程序提供的接口服务，包含用户认证、客户搜索、签收单上传等核心功能。使用双token机制确保安全性。
 
 ## 🔐 认证机制
 
-### 签名校验
-所有小程序API接口都需要进行HMAC-SHA256签名校验，详细说明请参考 [小程序接口安全](../03-安全认证/小程序接口安全.md)。
+### 双Token认证
+小程序API使用双token认证机制：
+- **Access Token**：有效期2小时，用于日常API调用
+- **Refresh Token**：有效期7天，用于刷新Access Token
+- 无需复杂的签名验证，简化前端实现
 
-### 必需参数
-每个请求都必须包含以下签名参数：
-- `wxUserId`: 小程序用户ID
-- `timestamp`: 时间戳（毫秒）
-- `nonce`: 随机字符串（≥8位）
-- `signature`: 签名值
+### Token使用方式
+
+在请求头中携带Access Token：
+
+```javascript
+// API调用示例
+wx.request({
+  url: '/api/miniprogram/customers/search',
+  method: 'GET',
+  header: {
+    'Authorization': `Bearer ${accessToken}`
+  },
+  data: {
+    customerNumber: 'C001'
+  }
+});
+```
+
+### Token刷新机制
+
+当Access Token过期时，使用Refresh Token获取新的token对：
+
+```javascript
+// Token刷新示例
+wx.request({
+  url: '/api/miniprogram/refresh-token',
+  method: 'POST',
+  data: {
+    refreshToken: refreshToken
+  },
+  success: (res) => {
+    // 更新存储的token
+    wx.setStorageSync('accessToken', res.data.accessToken);
+    wx.setStorageSync('refreshToken', res.data.refreshToken);
+  }
+});
+```
 
 ## 👤 用户认证接口
+
+### 小程序用户登录（推荐）
+**接口地址**: `POST /api/miniprogram/login`
+**权限要求**: 无需认证
+**功能描述**: 小程序用户通过手机号授权登录，返回双token
+
+#### 请求参数
+```json
+{
+  "code": "手机号授权code"
+}
+```
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 7200,
+    "tokenType": "Bearer",
+    "user": {
+      "id": 1,
+      "name": "张三",
+      "phone": "138****0001",
+      "role": "司机"
+    }
+  }
+}
+```
+
+### Token刷新接口
+**接口地址**: `POST /api/miniprogram/refresh-token`
+**权限要求**: 无需认证
+**功能描述**: 使用Refresh Token获取新的Access Token
+
+#### 请求参数
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### 响应示例
+```json
+{
+  "code": 200,
+  "message": "Token刷新成功",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 7200,
+    "tokenType": "Bearer"
+  }
+}
+```
 
 ### 小程序用户登录（原始方式）
 **接口地址**: `POST /api/wx-users/login`

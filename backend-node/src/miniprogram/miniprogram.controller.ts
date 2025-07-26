@@ -36,11 +36,13 @@ import { WxUsersService } from '../wx-users/wx-users.service';
 
 import { JwtService } from '@nestjs/jwt';
 import { WechatApiService } from '../wx-users/services/wechat-api.service';
+import { TokenService } from '../auth/token.service';
 
 // 导入DTO
 import { UploadReceiptDto } from '../receipts/dto/upload-receipt.dto';
 import { WxUpdateCustomerDto } from '../customers/dto/wx-update-customer.dto';
 import { SimpleLoginDto, SimpleLoginResponseDto } from './dto/simple-login.dto';
+import { RefreshTokenDto, TokenResponseDto } from '../auth/dto/token.dto';
 
 @ApiTags('📱 小程序接口')
 @Controller('miniprogram')
@@ -54,6 +56,7 @@ export class MiniprogramController {
     private readonly wxUsersService: WxUsersService,
     private readonly jwtService: JwtService,
     private readonly wechatApiService: WechatApiService,
+    private readonly tokenService: TokenService,
   ) {}
 
   // ==================== 登录接口 ====================
@@ -63,24 +66,36 @@ export class MiniprogramController {
   @ApiOperation({
     summary: '小程序用户登录',
     description: `
-🔐 **超简化小程序登录接口**
+🔐 **小程序双token登录接口**
 
 ## 📋 功能说明
 - 只需要手机号授权code，无需微信登录code
-- 通过手机号查找用户并生成JWT Token
+- 通过手机号查找用户并生成双token（Access Token + Refresh Token）
+- Access Token有效期2小时，Refresh Token有效期7天
 - 无需签名验证，公开接口
+
+## 🔒 安全机制
+- 使用双token机制提高安全性
+- Access Token短期有效（2小时），降低泄露风险
+- Refresh Token长期有效（7天），支持自动续期
+- 手机号授权确保用户身份真实性
 
 ## 📝 前端调用示例
 \`\`\`javascript
 // 1. 获取手机号授权
 wx.getPhoneNumber({
   success: function(res) {
-    // 2. 直接登录
+    // 2. 调用登录接口
     wx.request({
       url: '/api/miniprogram/login',
       method: 'POST',
       data: {
-        code: res.code  // 只需要这一个参数！
+        code: res.code
+      },
+      success: (loginRes) => {
+        // 3. 存储双token
+        wx.setStorageSync('accessToken', loginRes.data.accessToken);
+        wx.setStorageSync('refreshToken', loginRes.data.refreshToken);
       }
     });
   }
@@ -119,18 +134,18 @@ wx.getPhoneNumber({
 
       this.logger.log(`✅ 找到用户 - ID: ${user.id}, 姓名: ${user.name}, 角色: ${user.role}`);
 
-      // 3. 生成JWT token
-      this.logger.log(`🎫 生成JWT token - 用户ID: ${user.id}, 姓名: ${user.name}`);
-      const payload = {
+      // 3. 生成双token
+      this.logger.log(`🎫 生成双token - 用户ID: ${user.id}, 姓名: ${user.name}`);
+      const tokenPayload = {
         sub: user.id,
         username: user.name,
         phone: user.phone,
         role: user.role,
-        userType: 'wx-user'
+        userType: 'wx-user' as const
       };
 
-      const accessToken = this.jwtService.sign(payload);
-      this.logger.log(`✅ JWT token生成成功 - 用户ID: ${user.id}`);
+      const tokens = this.tokenService.generateTokens(tokenPayload);
+      this.logger.log(`✅ 双token生成成功 - 用户ID: ${user.id}`);
 
       this.logger.log(`🎉 登录成功 - 用户ID: ${user.id}, 姓名: ${user.name}, 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}, 角色: ${user.role}`);
 
@@ -138,7 +153,7 @@ wx.getPhoneNumber({
         code: RESPONSE_CODES.SUCCESS,
         message: '登录成功',
         data: {
-          accessToken,
+          ...tokens,
           user: {
             id: user.id,
             name: user.name,
@@ -153,6 +168,64 @@ wx.getPhoneNumber({
       return {
         code: HTTP_STATUS_CODES.BAD_REQUEST,
         message: error.message || '登录失败',
+        data: null
+      };
+    }
+  }
+
+  @Public()
+  @Post('refresh-token')
+  @ApiOperation({
+    summary: '刷新Access Token',
+    description: `
+🔄 **刷新Access Token接口**
+
+## 📋 功能说明
+- 使用Refresh Token获取新的Access Token
+- 旧的Refresh Token会被撤销，返回新的token对
+- 无需重新登录即可延长会话
+
+## 🔒 安全机制
+- Refresh Token一次性使用，用后即废
+- 新的token对包含新的过期时间
+- 自动维护token的安全性
+
+## 📝 前端调用示例
+\`\`\`javascript
+wx.request({
+  url: '/api/miniprogram/refresh-token',
+  method: 'POST',
+  data: {
+    refreshToken: 'your_refresh_token_here'
+  }
+});
+\`\`\`
+    `
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '刷新成功',
+    type: TokenResponseDto
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.UNAUTHORIZED, description: 'Refresh Token无效或已过期' })
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    try {
+      this.logger.log(`🔄 刷新token请求`);
+
+      const tokens = await this.tokenService.refreshAccessToken(refreshTokenDto.refreshToken);
+
+      this.logger.log(`✅ token刷新成功`);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: 'Token刷新成功',
+        data: tokens
+      };
+    } catch (error) {
+      this.logger.error(`💥 token刷新失败: ${error.message}`, error.stack);
+      return {
+        code: HTTP_STATUS_CODES.UNAUTHORIZED,
+        message: error.message || 'Token刷新失败',
         data: null
       };
     }

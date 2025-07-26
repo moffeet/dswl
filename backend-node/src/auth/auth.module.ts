@@ -12,6 +12,7 @@ import { WxUsersModule } from '../wx-users/wx-users.module';
 import { CaslAbilityFactory } from './casl/casl-ability.factory';
 import { BlacklistService } from './blacklist.service';
 import { IpLimitService } from './ip-limit.service';
+import { TokenService } from './token.service';
 import { PermissionCheckService } from './permission-check.service';
 import { CaptchaService } from './captcha.service';
 import { SignatureService } from './signature.service';
@@ -33,7 +34,7 @@ import { Permission } from '../permissions/entities/permission.entity';
     WxUsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AdminGuard, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService],
-  exports: [AuthService, AdminGuard, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService],
+  providers: [AuthService, JwtStrategy, AdminGuard, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService, TokenService],
+  exports: [AuthService, AdminGuard, CaslAbilityFactory, BlacklistService, IpLimitService, PermissionCheckService, CaptchaService, SignatureService, TokenService],
 })
 export class AuthModule {} 
