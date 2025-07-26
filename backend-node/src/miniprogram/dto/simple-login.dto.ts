@@ -12,19 +12,17 @@ export class SimpleLoginDto {
   code: string;
 
   @ApiProperty({
-    description: `设备唯一标识（加密传输）
+    description: `设备唯一标识（支持加密传输）
 
 🔐 **加密说明**：
-- 设备标识需要使用与登录相同的加密方式传输
-- 加密后的数据包含设备ID、时间戳和随机数
-- 支持明文传输（向后兼容）
+- 设备标识支持加密传输，提高安全性
+- 也支持明文传输（向后兼容）
+- 用于设备绑定和身份验证
 
-📱 **前端加密示例**：
+📱 **前端使用示例**：
 \`\`\`javascript
-import { encryptDeviceData } from '@/utils/crypto';
-
-// 加密设备标识
-const encryptedDeviceId = encryptDeviceData('device_test_12345');
+// 明文传输（简单模式）
+const deviceId = 'device_' + Date.now();
 
 // 发送登录请求
 const response = await fetch('/api/miniprogram/login', {
@@ -32,9 +30,7 @@ const response = await fetch('/api/miniprogram/login', {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     code: 'wx_phone_code_123',
-    deviceId: encryptedDeviceId, // 加密后的设备标识
-    timestamp: Date.now(),
-    signature: generateSignature(...)
+    deviceId: deviceId
   })
 });
 \`\`\``,
@@ -55,21 +51,7 @@ const response = await fetch('/api/miniprogram/login', {
   @IsString({ message: '设备标识必须是字符串' })
   deviceId?: string;
 
-  @ApiPropertyOptional({
-    description: '时间戳 - 用于防重放攻击（可选）',
-    example: 1704387123456
-  })
-  @IsOptional()
-  @IsNumber({}, { message: '时间戳必须是数字' })
-  timestamp?: number;
 
-  @ApiPropertyOptional({
-    description: '数字签名 - 用于数据完整性验证（可选）',
-    example: 'abc123def456'
-  })
-  @IsOptional()
-  @IsString({ message: '签名必须是字符串' })
-  signature?: string;
 }
 
 export class SimpleLoginResponseDto {
