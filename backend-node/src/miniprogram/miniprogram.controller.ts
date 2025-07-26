@@ -89,8 +89,10 @@ export class MiniprogramController {
 - **安全提示**：建议前端始终传递设备标识以提高安全性
 
 ## 📝 前端调用示例
+
+### 基础登录（明文设备标识）
 \`\`\`javascript
-// 1. 获取设备标识（示例）
+// 1. 获取设备标识
 const deviceId = wx.getSystemInfoSync().deviceId ||
                  wx.getStorageSync('deviceId') ||
                  'device_' + Date.now();
@@ -103,11 +105,42 @@ wx.getPhoneNumber({
       method: 'POST',
       data: {
         code: res.code,
-        deviceId: deviceId  // 传递设备标识
+        deviceId: deviceId  // 明文设备标识
       },
       success: (loginRes) => {
         if (loginRes.data.code === 200) {
-          // 存储双token
+          wx.setStorageSync('accessToken', loginRes.data.data.accessToken);
+          wx.setStorageSync('refreshToken', loginRes.data.data.refreshToken);
+          wx.setStorageSync('deviceId', deviceId);
+        }
+      }
+    });
+  }
+});
+\`\`\`
+
+### 安全登录（加密设备标识）
+\`\`\`javascript
+// 1. 引入加密工具
+import { createSecureMiniprogramLoginData } from '@/utils/crypto';
+
+// 2. 获取设备标识
+const deviceId = wx.getSystemInfoSync().deviceId ||
+                 wx.getStorageSync('deviceId') ||
+                 'device_' + Date.now();
+
+// 3. 获取手机号授权并登录
+wx.getPhoneNumber({
+  success: function(res) {
+    // 创建加密登录数据
+    const secureLoginData = createSecureMiniprogramLoginData(res.code, deviceId);
+
+    wx.request({
+      url: '/api/miniprogram/login',
+      method: 'POST',
+      data: secureLoginData, // 包含加密的设备标识
+      success: (loginRes) => {
+        if (loginRes.data.code === 200) {
           wx.setStorageSync('accessToken', loginRes.data.data.accessToken);
           wx.setStorageSync('refreshToken', loginRes.data.data.refreshToken);
           wx.setStorageSync('deviceId', deviceId);
@@ -127,7 +160,7 @@ wx.getPhoneNumber({
   @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '登录失败' })
   @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
   async login(@Body() loginDto: SimpleLoginDto) {
-    this.logger.log(`🔐 小程序用户登录请求 - code: ${loginDto.code}, deviceId: ${loginDto.deviceId}`);
+    this.logger.log(`🔐 小程序用户登录请求 - code: ${loginDto.code}, deviceId: ${loginDto.deviceId ? '已提供' : '未提供'}`);
 
     try {
       // 1. 通过code获取手机号
@@ -150,13 +183,42 @@ wx.getPhoneNumber({
 
       this.logger.log(`✅ 找到用户 - ID: ${user.id}, 姓名: ${user.name}, 角色: ${user.role}`);
 
-      // 3. 验证设备标识（如果提供了deviceId）
+      // 3. 解密和验证设备标识（如果提供了deviceId）
+      let actualDeviceId: string | undefined;
       if (loginDto.deviceId) {
-        this.logger.log(`🔒 验证设备标识 - 用户ID: ${user.id}, 设备ID: ${loginDto.deviceId}`);
-        const isDeviceValid = await this.wxUsersService.validateDeviceId(user.id, loginDto.deviceId);
+        this.logger.log(`🔓 开始处理设备标识 - 用户ID: ${user.id}`);
+
+        // 尝试解密设备标识
+        try {
+          // 检测是否为加密数据（Base64编码的长字符串）
+          const isEncrypted = loginDto.deviceId.length > 50 && /^[A-Za-z0-9+/=]+$/.test(loginDto.deviceId);
+
+          if (isEncrypted) {
+            this.logger.log(`🔐 检测到加密设备标识，开始解密`);
+            const { decryptPassword } = await import('../auth/utils/crypto.util');
+            const decryptedData = decryptPassword(loginDto.deviceId);
+            actualDeviceId = decryptedData.password; // 在设备标识加密中，password字段存储的是设备ID
+            this.logger.log(`✅ 设备标识解密成功 - 设备ID: ${actualDeviceId}`);
+          } else {
+            // 明文设备标识（向后兼容）
+            actualDeviceId = loginDto.deviceId;
+            this.logger.log(`📝 使用明文设备标识 - 设备ID: ${actualDeviceId}`);
+          }
+        } catch (error) {
+          this.logger.error(`❌ 设备标识解密失败 - 用户ID: ${user.id}, 错误: ${error.message}`);
+          return {
+            code: HTTP_STATUS_CODES.BAD_REQUEST,
+            message: '设备标识格式错误，请重新登录',
+            data: null
+          };
+        }
+
+        // 验证设备标识
+        this.logger.log(`🔒 验证设备标识 - 用户ID: ${user.id}, 设备ID: ${actualDeviceId}`);
+        const isDeviceValid = await this.wxUsersService.validateDeviceId(user.id, actualDeviceId);
 
         if (!isDeviceValid) {
-          this.logger.error(`❌ 设备验证失败 - 用户ID: ${user.id}, 设备ID: ${loginDto.deviceId}`);
+          this.logger.error(`❌ 设备验证失败 - 用户ID: ${user.id}, 设备ID: ${actualDeviceId}`);
           return {
             code: HTTP_STATUS_CODES.FORBIDDEN,
             message: '设备验证失败，该账号已绑定其他设备，请联系管理员',
@@ -177,13 +239,13 @@ wx.getPhoneNumber({
         phone: user.phone,
         role: user.role,
         userType: 'wx-user' as const,
-        deviceId: loginDto.deviceId // 将设备ID包含在token中
+        deviceId: actualDeviceId // 将解密后的设备ID包含在token中
       };
 
       const tokens = this.tokenService.generateTokens(tokenPayload);
       this.logger.log(`✅ 双token生成成功 - 用户ID: ${user.id}`);
 
-      this.logger.log(`🎉 登录成功 - 用户ID: ${user.id}, 姓名: ${user.name}, 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}, 角色: ${user.role}, 设备: ${loginDto.deviceId || '未提供'}`);
+      this.logger.log(`🎉 登录成功 - 用户ID: ${user.id}, 姓名: ${user.name}, 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}, 角色: ${user.role}, 设备: ${actualDeviceId || '未提供'}`);
 
       return {
         code: RESPONSE_CODES.SUCCESS,
