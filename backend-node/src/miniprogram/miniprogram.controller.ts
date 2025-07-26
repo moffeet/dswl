@@ -66,12 +66,13 @@ export class MiniprogramController {
   @ApiOperation({
     summary: '小程序用户登录',
     description: `
-🔐 **小程序双token登录接口**
+🔐 **小程序双token登录接口（支持设备绑定）**
 
 ## 📋 功能说明
 - 只需要手机号授权code，无需微信登录code
 - 通过手机号查找用户并生成双token（Access Token + Refresh Token）
 - Access Token有效期2小时，Refresh Token有效期7天
+- 支持设备唯一标识绑定，提高账号安全性
 - 无需签名验证，公开接口
 
 ## 🔒 安全机制
@@ -79,23 +80,38 @@ export class MiniprogramController {
 - Access Token短期有效（2小时），降低泄露风险
 - Refresh Token长期有效（7天），支持自动续期
 - 手机号授权确保用户身份真实性
+- **设备绑定验证**：首次登录自动绑定设备，后续登录验证设备标识
+
+## 📱 设备标识说明
+- **deviceId（可选）**：设备唯一标识，可以是MAC地址、设备ID等
+- **首次登录**：如果用户没有绑定设备，会自动绑定当前设备
+- **后续登录**：验证设备标识是否匹配，不匹配则拒绝登录
+- **安全提示**：建议前端始终传递设备标识以提高安全性
 
 ## 📝 前端调用示例
 \`\`\`javascript
-// 1. 获取手机号授权
+// 1. 获取设备标识（示例）
+const deviceId = wx.getSystemInfoSync().deviceId ||
+                 wx.getStorageSync('deviceId') ||
+                 'device_' + Date.now();
+
+// 2. 获取手机号授权并登录
 wx.getPhoneNumber({
   success: function(res) {
-    // 2. 调用登录接口
     wx.request({
       url: '/api/miniprogram/login',
       method: 'POST',
       data: {
-        code: res.code
+        code: res.code,
+        deviceId: deviceId  // 传递设备标识
       },
       success: (loginRes) => {
-        // 3. 存储双token
-        wx.setStorageSync('accessToken', loginRes.data.accessToken);
-        wx.setStorageSync('refreshToken', loginRes.data.refreshToken);
+        if (loginRes.data.code === 200) {
+          // 存储双token
+          wx.setStorageSync('accessToken', loginRes.data.data.accessToken);
+          wx.setStorageSync('refreshToken', loginRes.data.data.refreshToken);
+          wx.setStorageSync('deviceId', deviceId);
+        }
       }
     });
   }
@@ -111,7 +127,7 @@ wx.getPhoneNumber({
   @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '登录失败' })
   @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
   async login(@Body() loginDto: SimpleLoginDto) {
-    this.logger.log(`🔐 小程序用户登录请求 - code: ${loginDto.code}`);
+    this.logger.log(`🔐 小程序用户登录请求 - code: ${loginDto.code}, deviceId: ${loginDto.deviceId}`);
 
     try {
       // 1. 通过code获取手机号
@@ -134,20 +150,40 @@ wx.getPhoneNumber({
 
       this.logger.log(`✅ 找到用户 - ID: ${user.id}, 姓名: ${user.name}, 角色: ${user.role}`);
 
-      // 3. 生成双token
+      // 3. 验证设备标识（如果提供了deviceId）
+      if (loginDto.deviceId) {
+        this.logger.log(`🔒 验证设备标识 - 用户ID: ${user.id}, 设备ID: ${loginDto.deviceId}`);
+        const isDeviceValid = await this.wxUsersService.validateDeviceId(user.id, loginDto.deviceId);
+
+        if (!isDeviceValid) {
+          this.logger.error(`❌ 设备验证失败 - 用户ID: ${user.id}, 设备ID: ${loginDto.deviceId}`);
+          return {
+            code: HTTP_STATUS_CODES.FORBIDDEN,
+            message: '设备验证失败，该账号已绑定其他设备，请联系管理员',
+            data: null
+          };
+        }
+
+        this.logger.log(`✅ 设备验证通过 - 用户ID: ${user.id}`);
+      } else {
+        this.logger.warn(`⚠️ 未提供设备标识 - 用户ID: ${user.id}, 建议前端传递设备标识以提高安全性`);
+      }
+
+      // 4. 生成双token（在token中包含设备信息）
       this.logger.log(`🎫 生成双token - 用户ID: ${user.id}, 姓名: ${user.name}`);
       const tokenPayload = {
         sub: user.id,
         username: user.name,
         phone: user.phone,
         role: user.role,
-        userType: 'wx-user' as const
+        userType: 'wx-user' as const,
+        deviceId: loginDto.deviceId // 将设备ID包含在token中
       };
 
       const tokens = this.tokenService.generateTokens(tokenPayload);
       this.logger.log(`✅ 双token生成成功 - 用户ID: ${user.id}`);
 
-      this.logger.log(`🎉 登录成功 - 用户ID: ${user.id}, 姓名: ${user.name}, 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}, 角色: ${user.role}`);
+      this.logger.log(`🎉 登录成功 - 用户ID: ${user.id}, 姓名: ${user.name}, 手机号: ${phoneNumber?.substring(0, 3)}****${phoneNumber?.substring(7)}, 角色: ${user.role}, 设备: ${loginDto.deviceId || '未提供'}`);
 
       return {
         code: RESPONSE_CODES.SUCCESS,
@@ -238,31 +274,43 @@ wx.request({
   @ApiOperation({
     summary: '司机查询客户信息',
     description: `
-🔍 **司机查询客户信息接口**
+🔍 **司机查询客户信息接口（需要设备验证）**
 
 ## 📋 功能说明
 - 司机通过客户编号查询客户信息
 - 返回客户名、编号、地址、经纬度等信息
-- 需要JWT Token认证
+- 需要JWT Token认证和设备标识验证
 
 ## 🔒 认证机制
-- 使用小程序登录后获得的accessToken
-- 在请求头中添加：Authorization: Bearer <accessToken>
-- 无需签名验证，只需Token认证
+- **Token认证**：使用小程序登录后获得的accessToken
+- **设备验证**：必须在请求头中提供设备标识
+- 设备标识必须与登录时绑定的设备一致
+
+## 📱 请求头要求
+- **Authorization**: Bearer <accessToken>
+- **X-Device-Id**: <设备唯一标识>
 
 ## 📝 前端调用示例
 \`\`\`javascript
+const deviceId = wx.getStorageSync('deviceId'); // 登录时保存的设备ID
+
 wx.request({
   url: '/api/miniprogram/customers/search',
   method: 'GET',
   header: {
-    'Authorization': 'Bearer ' + accessToken
+    'Authorization': 'Bearer ' + accessToken,
+    'X-Device-Id': deviceId  // 必须提供设备标识
   },
   data: {
     customerNumber: 'C001'
   }
 });
 \`\`\`
+
+## ⚠️ 安全提示
+- 如果设备标识不匹配，接口将返回401错误
+- 请确保设备标识与登录时使用的一致
+- 设备标识丢失时需要重新登录
     `
   })
   @ApiQuery({
@@ -276,6 +324,12 @@ wx.request({
     required: true,
     description: 'JWT Token认证头',
     example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  })
+  @ApiHeader({
+    name: 'X-Device-Id',
+    required: true,
+    description: '设备唯一标识，必须与登录时绑定的设备一致',
+    example: 'device_12345678'
   })
   @ApiResponse({
     status: HTTP_STATUS_CODES.OK,
@@ -380,25 +434,34 @@ wx.request({
   @ApiOperation({
     summary: '上传签收单',
     description: `
-🔍 **上传签收单接口**
+📤 **上传签收单接口（需要设备验证）**
 
 ## 📋 功能说明
 - 小程序用户上传签收单图片和相关信息
-- 需要JWT Token认证
+- 需要JWT Token认证和设备标识验证
+- 支持图片格式：jpg, jpeg, png, gif
+- 文件大小限制：10MB
 
 ## 🔒 认证机制
-- 使用小程序登录后获得的accessToken
-- 在请求头中添加：Authorization: Bearer <accessToken>
-- 无需签名验证，只需Token认证
+- **Token认证**：使用小程序登录后获得的accessToken
+- **设备验证**：必须在请求头中提供设备标识
+- 设备标识必须与登录时绑定的设备一致
+
+## 📱 请求头要求
+- **Authorization**: Bearer <accessToken>
+- **X-Device-Id**: <设备唯一标识>
 
 ## 📝 前端调用示例
 \`\`\`javascript
+const deviceId = wx.getStorageSync('deviceId'); // 登录时保存的设备ID
+
 wx.uploadFile({
   url: '/api/miniprogram/receipts/upload',
   filePath: tempFilePath,
   name: 'file',
   header: {
-    'Authorization': 'Bearer ' + accessToken
+    'Authorization': 'Bearer ' + accessToken,
+    'X-Device-Id': deviceId  // 必须提供设备标识
   },
   formData: {
     customerNumber: 'C001',
@@ -407,6 +470,10 @@ wx.uploadFile({
   }
 });
 \`\`\`
+
+## ⚠️ 安全提示
+- 如果设备标识不匹配，接口将返回401错误
+- 请确保设备标识与登录时使用的一致
     `
   })
   @ApiConsumes('multipart/form-data')
@@ -419,6 +486,12 @@ wx.uploadFile({
     required: true,
     description: 'JWT Token认证头',
     example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  })
+  @ApiHeader({
+    name: 'X-Device-Id',
+    required: true,
+    description: '设备唯一标识，必须与登录时绑定的设备一致',
+    example: 'device_12345678'
   })
   @ApiResponse({
     status: HTTP_STATUS_CODES.OK,

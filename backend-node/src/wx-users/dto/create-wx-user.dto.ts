@@ -41,11 +41,11 @@ export class CreateWxUserDto {
   wechatId?: string;
 
   @ApiProperty({
-    description: 'MAC地址',
-    example: '00:11:22:33:44:55',
+    description: '设备唯一标识',
+    example: 'device_12345678',
     required: false
   })
   @IsOptional()
-  @IsString({ message: 'MAC地址必须是字符串' })
-  macAddress?: string;
+  @IsString({ message: '设备标识必须是字符串' })
+  deviceId?: string;
 }

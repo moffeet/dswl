@@ -127,13 +127,13 @@ export class WxUsersService {
   }
 
   /**
-   * 更新用户的微信ID和MAC地址
+   * 更新用户的微信ID和设备标识
    */
-  async updateWechatInfo(id: number, wechatId: string, macAddress?: string): Promise<WxUser> {
+  async updateWechatInfo(id: number, wechatId: string, deviceId?: string): Promise<WxUser> {
     const updateData: any = { wechatId };
 
-    if (macAddress) {
-      updateData.macAddress = macAddress;
+    if (deviceId) {
+      updateData.deviceId = deviceId;
     }
 
     await this.wxUserRepository.update(id, updateData);
@@ -141,27 +141,68 @@ export class WxUsersService {
   }
 
   /**
-   * 验证MAC地址
+   * 验证设备标识
    */
-  async validateMacAddress(userId: number, macAddress: string): Promise<boolean> {
-    this.logger.log(`🔒 验证MAC地址 - 用户ID: ${userId}, 请求MAC: ${macAddress}`);
+  async validateDeviceId(userId: number, deviceId: string): Promise<boolean> {
+    this.logger.log(`🔒 验证设备标识 - 用户ID: ${userId}, 请求设备ID: ${deviceId}`);
     const user = await this.findOne(userId);
 
-    // 如果数据库中没有MAC地址，允许登录并更新
-    if (!user.macAddress) {
-      this.logger.log(`📝 用户无MAC地址记录，更新并允许登录 - 用户ID: ${userId}, MAC: ${macAddress}`);
-      await this.wxUserRepository.update(userId, { macAddress });
+    // 如果数据库中没有设备标识，允许登录并更新
+    if (!user.deviceId) {
+      this.logger.log(`📝 用户无设备标识记录，更新并允许登录 - 用户ID: ${userId}, 设备ID: ${deviceId}`);
+      await this.wxUserRepository.update(userId, { deviceId });
       return true;
     }
 
-    // 如果MAC地址不匹配，拒绝登录
-    const isValid = user.macAddress === macAddress;
+    // 如果设备标识不匹配，拒绝登录
+    const isValid = user.deviceId === deviceId;
     if (isValid) {
-      this.logger.log(`✅ MAC地址验证通过 - 用户ID: ${userId}`);
+      this.logger.log(`✅ 设备标识验证通过 - 用户ID: ${userId}`);
     } else {
-      this.logger.error(`❌ MAC地址不匹配 - 用户ID: ${userId}, 数据库MAC: ${user.macAddress}, 请求MAC: ${macAddress}`);
+      this.logger.error(`❌ 设备标识不匹配 - 用户ID: ${userId}, 数据库设备ID: ${user.deviceId}, 请求设备ID: ${deviceId}`);
     }
 
     return isValid;
+  }
+
+  /**
+   * 重置用户设备绑定
+   * 管理员功能：清除用户的设备绑定信息，用户需要重新登录
+   */
+  async resetDeviceBinding(userId: number): Promise<{
+    userId: number;
+    userName: string;
+    phone: string;
+    resetTime: string;
+    previousDevice?: string;
+  }> {
+    this.logger.log(`🔄 开始重置设备绑定 - 用户ID: ${userId}`);
+
+    const user = await this.findOne(userId);
+    const previousDevice = user.deviceId;
+
+    // 清除设备绑定信息
+    await this.wxUserRepository.update(userId, {
+      deviceId: null,
+      updateBy: null // 可以传入管理员ID
+    });
+
+    this.logger.log(`✅ 设备绑定重置成功 - 用户ID: ${userId}, 姓名: ${user.name}, 原设备: ${previousDevice || '无'}`);
+
+    return {
+      userId: user.id,
+      userName: user.name,
+      phone: user.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'), // 脱敏处理
+      resetTime: new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }),
+      previousDevice
+    };
   }
 }

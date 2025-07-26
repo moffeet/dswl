@@ -51,4 +51,17 @@ export class SignatureService {
     const expectedSignature = this.generateHmacSignature(data, secretKey);
     return signature === expectedSignature;
   }
+
+  /**
+   * 获取用户的签名密钥（保留用于兼容性）
+   * 这里可以根据用户ID从数据库获取，或者使用固定规则生成
+   * @param userId 用户ID
+   * @returns 签名密钥
+   */
+  getUserSignatureKey(userId: number): string {
+    // 这里使用一个基础密钥 + 用户ID的方式生成用户专属密钥
+    // 在生产环境中，建议将密钥存储在数据库中
+    const baseKey = process.env.MINIPROGRAM_SIGNATURE_KEY || 'miniprogram-signature-key-2024';
+    return createHmac('sha256', baseKey).update(`user_${userId}`).digest('hex');
+  }
 }

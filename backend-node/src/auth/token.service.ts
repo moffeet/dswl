@@ -11,16 +11,17 @@ export interface TokenPayload {
   role?: string;
   userType: 'admin' | 'wx-user';
   type?: 'access' | 'refresh';
+  deviceId?: string; // 设备唯一标识
 }
 
 @Injectable()
 export class TokenService {
   private readonly logger = new CustomLogger('TokenService');
 
-  // Access Token 有效期：2小时
+  // Access Token 有效期：2小时（保持短期，确保安全）
   private readonly ACCESS_TOKEN_EXPIRES_IN = '2h';
-  // Refresh Token 有效期：7天
-  private readonly REFRESH_TOKEN_EXPIRES_IN = '7d';
+  // Refresh Token 有效期：30天（用户30天内无需重新登录）
+  private readonly REFRESH_TOKEN_EXPIRES_IN = '30d';
 
   constructor(
     private readonly jwtService: JwtService,
@@ -47,7 +48,8 @@ export class TokenService {
       sub: payload.sub,
       username: payload.username,
       userType: payload.userType,
-      type: 'refresh'
+      type: 'refresh',
+      deviceId: payload.deviceId // 保持设备ID在refresh token中
     };
     const refreshToken = this.jwtService.sign(refreshTokenPayload, {
       expiresIn: this.REFRESH_TOKEN_EXPIRES_IN
@@ -90,7 +92,10 @@ export class TokenService {
       const newTokens = this.generateTokens({
         sub: payload.sub,
         username: payload.username,
-        userType: payload.userType
+        userType: payload.userType,
+        phone: payload.phone,
+        role: payload.role,
+        deviceId: payload.deviceId // 保持设备ID
       });
 
       this.logger.log(`刷新token成功 - 用户ID: ${payload.sub}`);
@@ -150,7 +155,7 @@ export class TokenService {
       accessTokenExpiresIn: this.ACCESS_TOKEN_EXPIRES_IN,
       refreshTokenExpiresIn: this.REFRESH_TOKEN_EXPIRES_IN,
       accessTokenSeconds: 2 * 60 * 60, // 2小时
-      refreshTokenSeconds: 7 * 24 * 60 * 60 // 7天
+      refreshTokenSeconds: 30 * 24 * 60 * 60 // 30天
     };
   }
 }

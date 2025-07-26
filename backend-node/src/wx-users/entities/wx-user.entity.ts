@@ -28,9 +28,9 @@ export class WxUser {
   @Column({ name: 'wechat_id', length: 100, nullable: true, comment: '微信ID' })
   wechatId?: string;
 
-  @ApiProperty({ description: 'MAC地址', required: false })
-  @Column({ name: 'mac_address', length: 50, nullable: true, comment: 'MAC地址' })
-  macAddress?: string;
+  @ApiProperty({ description: '设备唯一标识', required: false })
+  @Column({ name: 'device_id', length: 100, nullable: true, comment: '设备唯一标识' })
+  deviceId?: string;
 
   @ApiProperty({ description: '是否删除', required: false })
   @Column({ name: 'is_deleted', type: 'tinyint', width: 1, default: 0, comment: '是否删除：0-未删除，1-已删除' })

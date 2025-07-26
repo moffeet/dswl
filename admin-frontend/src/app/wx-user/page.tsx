@@ -22,7 +22,8 @@ import {
   IconDelete,
   IconSearch,
   IconRefresh,
-  IconMobile
+  IconMobile,
+  IconUnlock
 } from '@arco-design/web-react/icon';
 import { API_ENDPOINTS } from '@/config/api';
 
@@ -36,7 +37,7 @@ interface WxUser {
   phone: string;
   role: '司机' | '销售';
   wechatId?: string;
-  macAddress?: string;
+  deviceId?: string;
   createTime: string;
   updateTime: string;
 }
@@ -137,6 +138,27 @@ const deleteWxUser = async (id: number): Promise<boolean> => {
   }
 };
 
+const resetDeviceBinding = async (id: number): Promise<{ success: boolean; data?: any }> => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.wxUsers}/${id}/reset-device`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const result = await response.json();
+    return {
+      success: result.code === 200,
+      data: result.data
+    };
+  } catch (error) {
+    console.error('重置设备绑定失败:', error);
+    return { success: false };
+  }
+};
+
 export default function WxUserManage() {
   const [data, setData] = useState<WxUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -226,6 +248,23 @@ export default function WxUserManage() {
     }
   };
 
+  const handleResetDevice = async (id: number, userName: string) => {
+    try {
+      const result = await resetDeviceBinding(id);
+      if (result.success) {
+        Message.success({
+          content: `用户 ${userName} 的设备绑定已重置，用户需要重新登录`,
+          duration: 5000
+        });
+        loadData(); // 刷新列表
+      } else {
+        Message.error('重置设备绑定失败');
+      }
+    } catch (error) {
+      Message.error('重置设备绑定失败');
+    }
+  };
+
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
@@ -281,10 +320,23 @@ export default function WxUserManage() {
       render: (text: string) => text || '-',
     },
     {
-      title: 'MAC地址',
-      dataIndex: 'macAddress',
+      title: '设备状态',
+      dataIndex: 'deviceId',
       width: 180,
-      render: (text: string) => text || '-',
+      render: (deviceId: string) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {deviceId ? (
+            <>
+              <Tag color="green" size="small">已绑定</Tag>
+              <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace' }} title={`设备ID: ${deviceId}`}>
+                {deviceId.length > 12 ? `${deviceId.substring(0, 12)}...` : deviceId}
+              </span>
+            </>
+          ) : (
+            <Tag color="orange" size="small">未绑定</Tag>
+          )}
+        </div>
+      ),
     },
     {
       title: '更新时间',
@@ -294,17 +346,35 @@ export default function WxUserManage() {
     },
     {
       title: '操作',
-      width: 150,
+      width: 200,
       render: (_, record: WxUser) => (
-        <div>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
           <Button
             type="text"
             size="small"
             icon={<IconEdit />}
             onClick={() => handleEdit(record)}
+            style={{ color: '#3b82f6' }}
           >
             编辑
           </Button>
+          <Popconfirm
+            title={`确定要重置用户 ${record.name} 的设备绑定吗？`}
+            content="重置后用户需要重新登录才能使用小程序"
+            onOk={() => handleResetDevice(record.id, record.name)}
+            okText="确认重置"
+            cancelText="取消"
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<IconUnlock />}
+              style={{ color: '#f59e0b' }}
+              title="重置设备绑定"
+            >
+              重置设备
+            </Button>
+          </Popconfirm>
           <Popconfirm
             title="确定要删除这个小程序用户吗？"
             onOk={() => handleDelete(record.id)}

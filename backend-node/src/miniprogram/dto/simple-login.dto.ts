@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class SimpleLoginDto {
   @ApiProperty({
@@ -10,6 +10,15 @@ export class SimpleLoginDto {
   @IsNotEmpty({ message: '手机号授权code不能为空' })
   @IsString({ message: '手机号授权code必须是字符串' })
   code: string;
+
+  @ApiProperty({
+    description: '设备唯一标识（MAC地址或设备ID）',
+    example: 'AA:BB:CC:DD:EE:FF',
+    required: false
+  })
+  @IsOptional()
+  @IsString({ message: '设备标识必须是字符串' })
+  deviceId?: string;
 }
 
 export class SimpleLoginResponseDto {

@@ -185,4 +185,58 @@ export class WxUsersController {
       message: '删除成功'
     };
   }
+
+  @Post(':id/reset-device')
+  @ApiOperation({
+    summary: '重置用户设备绑定',
+    description: `
+🔄 **重置小程序用户设备绑定**
+
+## 📋 功能说明
+- 管理员可以重置用户的设备绑定信息
+- 用于解决用户换手机无法登录的问题
+- 重置后用户需要重新登录进行设备绑定
+
+## 🎯 使用场景
+- 用户更换了手机设备
+- 用户设备丢失或损坏
+- 设备标识发生变化
+- 用户无法正常登录小程序
+
+## ⚠️ 注意事项
+- 重置后用户当前的登录状态会失效
+- 用户需要重新登录才能使用小程序
+- 建议在重置前通知用户
+    `
+  })
+  @ApiParam({ name: 'id', description: '用户ID', example: 1 })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '重置成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '设备绑定重置成功，用户需要重新登录' },
+        data: {
+          type: 'object',
+          properties: {
+            userId: { type: 'number', example: 1 },
+            userName: { type: 'string', example: '张三' },
+            phone: { type: 'string', example: '138****8001' },
+            resetTime: { type: 'string', example: '2024-01-15 14:30:25' }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '用户不存在' })
+  async resetDeviceBinding(@Param('id', ParseIntPipe) id: number) {
+    const result = await this.wxUsersService.resetDeviceBinding(id);
+    return {
+      code: RESPONSE_CODES.SUCCESS,
+      message: '设备绑定重置成功，用户需要重新登录',
+      data: result
+    };
+  }
 }

@@ -109,7 +109,7 @@ CREATE TABLE t_wx_users (
     phone VARCHAR(20) NOT NULL UNIQUE COMMENT '手机号（唯一）',
     role ENUM('司机', '销售') NOT NULL COMMENT '角色：司机/销售',
     wechat_id VARCHAR(100) DEFAULT NULL COMMENT '微信ID',
-    mac_address VARCHAR(50) DEFAULT NULL COMMENT 'MAC地址',
+    device_id VARCHAR(100) DEFAULT NULL COMMENT '设备唯一标识',
 
     is_deleted TINYINT(1) DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
     create_by BIGINT COMMENT '创建人ID',
@@ -239,12 +239,12 @@ INSERT INTO t_customers (customerNumber, customerName, storeAddress, warehouseAd
 ('C005', '惠州电子厂', '惠州市惠城区工业园东区', '惠州市惠城区工业园西区', 114.4129, 23.0793, 114.4139, 23.0803, '系统管理员');
 
 -- 插入小程序用户测试数据
-INSERT INTO t_wx_users (name, phone, role, wechat_id, mac_address, create_by) VALUES
-('张三', '13800138001', '司机', 'wx_zhangsan', '00:11:22:33:44:55', 1),
-('李四', '13800138002', '销售', 'wx_lisi', '00:11:22:33:44:56', 1),
-('王五', '13800138003', '司机', 'wx_wangwu', '00:11:22:33:44:57', 1),
-('赵六', '13800138004', '销售', 'wx_zhaoliu', '00:11:22:33:44:58', 1),
-('钱七', '13800138005', '司机', 'wx_qianqi', '00:11:22:33:44:59', 1);
+INSERT INTO t_wx_users (name, phone, role, wechat_id, device_id, create_by) VALUES
+('张三', '13800138001', '司机', 'wx_zhangsan', 'device_zhangsan_001', 1),
+('李四', '13800138002', '销售', 'wx_lisi', 'device_lisi_002', 1),
+('王五', '13800138003', '司机', 'wx_wangwu', 'device_wangwu_003', 1),
+('赵六', '13800138004', '销售', 'wx_zhaoliu', 'device_zhaoliu_004', 1),
+('钱七', '13800138005', '司机', 'wx_qianqi', 'device_qianqi_005', 1);
 
 -- 插入签收单测试数据
 INSERT INTO t_receipts (wx_user_id, wx_user_name, customer_id, customer_name, customer_address, upload_location, upload_longitude, upload_latitude, image_path, image_url, upload_time) VALUES

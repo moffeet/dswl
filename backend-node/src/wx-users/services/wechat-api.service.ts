@@ -124,10 +124,22 @@ export class WechatApiService {
    * 通过code获取用户手机号
    */
   async getPhoneNumber(code: string): Promise<string> {
+    // 检查是否启用mock模式
+    const useMock = process.env.USE_WECHAT_MOCK === 'true';
+
+    if (useMock) {
+      this.logger.log(`🧪 使用微信Mock模式获取手机号 - code: ${code}`);
+
+      // Mock模式：返回测试手机号
+      const mockPhoneNumber = '13800138001'; // 使用数据库中存在的手机号
+      this.logger.log(`✅ Mock模式返回手机号: ${mockPhoneNumber}`);
+      return mockPhoneNumber;
+    }
+
     try {
       // 1. 先获取access_token
       const accessToken = await this.getAccessToken();
-      
+
       // 2. 调用获取手机号接口
       const url = `https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${accessToken}`;
       const data = { code };
