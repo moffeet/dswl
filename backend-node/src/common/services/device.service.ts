@@ -135,7 +135,7 @@ export class DeviceService {
     if (!macAddress) return '';
 
     // 移除所有分隔符
-    const cleanMac = macAddress.replace(/[:-\.]/g, '').toUpperCase();
+    const cleanMac = macAddress.replace(/[:.\-]/g, '').toUpperCase();
     
     // 如果长度不是12，返回原值
     if (cleanMac.length !== 12) return macAddress;
