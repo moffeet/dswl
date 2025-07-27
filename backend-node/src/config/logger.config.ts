@@ -46,12 +46,9 @@ const winstonLogger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: logFormat,
   transports: [
-    // 控制台输出（始终显示时间戳）
+    // 控制台输出（始终显示时间戳，不使用颜色）
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        logFormat
-      )
+      format: logFormat
     }),
 
     // 按周归档 - 所有日志
