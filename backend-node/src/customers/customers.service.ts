@@ -463,6 +463,54 @@ export class CustomersService {
   }
 
   /**
+   * 获取所有客户的地址和经纬度信息
+   * @returns 包含地址和经纬度的客户列表
+   */
+  async getAllCustomerAddresses(): Promise<{
+    id: number;
+    customerNumber: string;
+    customerName: string;
+    storeAddress?: string;
+    warehouseAddress?: string;
+    storeLongitude?: number;
+    storeLatitude?: number;
+    warehouseLongitude?: number;
+    warehouseLatitude?: number;
+  }[]> {
+    this.logger.log('获取所有客户地址和经纬度信息');
+
+    const customers = await this.customerRepository.find({
+      where: { isDeleted: 0 }, // 只查询未删除的客户
+      select: [
+        'id',
+        'customerNumber',
+        'customerName',
+        'storeAddress',
+        'warehouseAddress',
+        'storeLongitude',
+        'storeLatitude',
+        'warehouseLongitude',
+        'warehouseLatitude'
+      ],
+      order: { customerNumber: 'ASC' } // 按客户编号排序
+    });
+
+    this.logger.log(`获取到 ${customers.length} 个客户的地址信息`);
+
+    return customers.map(customer => ({
+      id: customer.id,
+      customerNumber: customer.customerNumber,
+      customerName: customer.customerName,
+      storeAddress: customer.storeAddress,
+      warehouseAddress: customer.warehouseAddress,
+      storeLongitude: customer.storeLongitude,
+      storeLatitude: customer.storeLatitude,
+      warehouseLongitude: customer.warehouseLongitude,
+      warehouseLatitude: customer.warehouseLatitude
+    }));
+  }
+
+  /**
    * 小程序销售更新客户地址信息
    * @param operatorName 操作人姓名
    * @param customerNumber 客户编号

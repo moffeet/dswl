@@ -335,6 +335,93 @@ export class CustomersController {
     }
   }
 
+  @ApiOperation({
+    summary: '获取所有客户地址和经纬度',
+    description: '获取所有客户的地址和经纬度信息，用于地图显示或导航功能'
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '获取成功' },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number', example: 1, description: '客户ID' },
+              customerNumber: { type: 'string', example: 'C001', description: '客户编号' },
+              customerName: { type: 'string', example: '深圳科技有限公司', description: '客户名称' },
+              storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座', description: '门店地址' },
+              warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座', description: '仓库地址' },
+              storeLongitude: { type: 'number', example: 113.9547, description: '门店经度' },
+              storeLatitude: { type: 'number', example: 22.5431, description: '门店纬度' },
+              warehouseLongitude: { type: 'number', example: 113.9557, description: '仓库经度' },
+              warehouseLatitude: { type: 'number', example: 22.5441, description: '仓库纬度' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '获取失败' })
+  @Get('addresses')
+  async getAllCustomerAddresses() {
+    try {
+      this.logger.log('获取所有客户地址和经纬度信息');
+
+      const addresses = await this.customersService.getAllCustomerAddresses();
+
+      this.logger.log(`成功获取 ${addresses.length} 个客户的地址信息`);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '获取成功',
+        data: addresses,
+      };
+    } catch (error) {
+      this.logger.error(`获取客户地址信息失败: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: '获取失败',
+        data: null,
+        error: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({
+    summary: '获取客户详情',
+    description: '根据客户ID获取客户的详细信息'
+  })
+  @ApiParam({ name: 'id', description: '客户ID', example: 1 })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '获取成功' },
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'number', example: 1, description: '客户ID' },
+            customerNumber: { type: 'string', example: 'C001', description: '客户编号' },
+            customerName: { type: 'string', example: '深圳科技有限公司', description: '客户名称' },
+            storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座', description: '门店地址' },
+            warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座', description: '仓库地址' },
+            updateBy: { type: 'string', example: '管理员', description: '更新人' },
+            createTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '创建时间' },
+            updateTime: { type: 'string', example: '2025-06-27T06:16:28.000Z', description: '更新时间' }
+          }
+        }
+      }
+    }
+  })
   @ApiResponse({ status: HTTP_STATUS_CODES.NOT_FOUND, description: '客户不存在' })
   @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '获取失败' })
   @Get(':id')
@@ -616,6 +703,8 @@ export class CustomersController {
       };
     }
   }
+
+
 
   @ApiOperation({
     summary: '地理编码',
