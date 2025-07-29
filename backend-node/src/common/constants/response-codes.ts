@@ -3,7 +3,10 @@
  */
 export const RESPONSE_CODES = {
   SUCCESS: 200,           // 成功
-  PARAM_ERROR: 403,       // 参数错误/权限错误
+  BAD_REQUEST: 400,       // 请求参数错误
+  UNAUTHORIZED: 401,      // 未授权/Token无效
+  FORBIDDEN: 403,         // 禁止访问/权限不足
+  NOT_FOUND: 404,         // 资源不存在
   SERVER_ERROR: 500,      // 服务器错误
   USER_NOT_FOUND: 1001,   // 用户不存在
 } as const;

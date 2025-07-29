@@ -580,7 +580,7 @@ wx.request({
 
       if (!customerNumber) {
         return {
-          code: RESPONSE_CODES.PARAM_ERROR,
+          code: RESPONSE_CODES.BAD_REQUEST,
           message: '客户编号不能为空',
           data: null
         };
@@ -590,7 +590,7 @@ wx.request({
 
       if (!customer) {
         return {
-          code: 404,
+          code: RESPONSE_CODES.NOT_FOUND,
           message: '客户不存在',
           data: null
         };
@@ -767,7 +767,7 @@ wx.uploadFile({
       }
       
       return {
-        code: error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 400 ? RESPONSE_CODES.BAD_REQUEST :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
@@ -875,8 +875,8 @@ wx.request({
     } catch (error) {
       this.logger.error(`小程序修改客户失败: ${error.message}`, error.stack);
       return {
-        code: error.status === 404 ? 404 :
-              error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 404 ? RESPONSE_CODES.NOT_FOUND :
+              error.status === 400 ? RESPONSE_CODES.BAD_REQUEST :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null

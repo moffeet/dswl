@@ -710,7 +710,7 @@ export class AuthController {
       const environment = process.env.NODE_ENV || 'development';
       if (environment === 'production') {
         return {
-          code: RESPONSE_CODES.PARAM_ERROR,
+          code: RESPONSE_CODES.FORBIDDEN,
           message: '生产环境禁止获取用户签名密钥',
           data: null
         };
@@ -720,7 +720,7 @@ export class AuthController {
       const user = await this.wxUsersService.findOne(userId);
       if (!user) {
         return {
-          code: RESPONSE_CODES.PARAM_ERROR,
+          code: RESPONSE_CODES.NOT_FOUND,
           message: '用户不存在',
           data: null
         };

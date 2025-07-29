@@ -60,7 +60,7 @@ export class ApiResponseUtil {
    */
   static paramError(message: string = RESPONSE_MESSAGES.PARAM_ERROR) {
     return {
-      code: RESPONSE_CODES.PARAM_ERROR,
+      code: RESPONSE_CODES.BAD_REQUEST,
       message,
       data: null
     };

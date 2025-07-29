@@ -122,7 +122,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     return {
       httpStatus: HttpStatus.BAD_REQUEST,
-      code: RESPONSE_CODES.PARAM_ERROR,
+      code: RESPONSE_CODES.BAD_REQUEST,
       message,
       details,
       isBusinessError: true,
@@ -313,7 +313,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     return {
       httpStatus: HttpStatus.BAD_REQUEST,
-      code: RESPONSE_CODES.PARAM_ERROR,
+      code: RESPONSE_CODES.BAD_REQUEST,
       message,
       isBusinessError: true,
     };
@@ -432,21 +432,27 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   /**
    * 映射HTTP状态码到业务响应码
+   * 让HTTP状态码和响应体code保持一致，方便前端处理
    */
   private mapHttpStatusToCode(status: number): number {
     switch (status) {
       case HttpStatus.BAD_REQUEST:
+        return RESPONSE_CODES.BAD_REQUEST;
       case HttpStatus.UNAUTHORIZED:
+        return RESPONSE_CODES.UNAUTHORIZED;
       case HttpStatus.FORBIDDEN:
+        return RESPONSE_CODES.FORBIDDEN;
       case HttpStatus.NOT_FOUND:
+        return RESPONSE_CODES.NOT_FOUND;
       case HttpStatus.CONFLICT:
-        return RESPONSE_CODES.PARAM_ERROR;
+        return RESPONSE_CODES.BAD_REQUEST; // 冲突归类为请求错误
       case HttpStatus.INTERNAL_SERVER_ERROR:
       case HttpStatus.BAD_GATEWAY:
       case HttpStatus.SERVICE_UNAVAILABLE:
         return RESPONSE_CODES.SERVER_ERROR;
       default:
-        return status >= 500 ? RESPONSE_CODES.SERVER_ERROR : RESPONSE_CODES.PARAM_ERROR;
+        // 5xx错误归类为服务器错误，4xx错误归类为请求错误
+        return status >= 500 ? RESPONSE_CODES.SERVER_ERROR : RESPONSE_CODES.BAD_REQUEST;
     }
   }
 

@@ -131,7 +131,7 @@ export class ReceiptsController {
       }
       
       return {
-        code: error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 400 ? RESPONSE_CODES.BAD_REQUEST :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
@@ -167,7 +167,7 @@ export class ReceiptsController {
     } catch (error) {
       this.logger.error(`创建签收单失败: ${error.message}`, error.stack);
       return {
-        code: error.status === 400 ? RESPONSE_CODES.PARAM_ERROR : RESPONSE_CODES.SERVER_ERROR,
+        code: error.status === 400 ? RESPONSE_CODES.BAD_REQUEST : RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
       };
@@ -287,8 +287,8 @@ export class ReceiptsController {
     } catch (error) {
       this.logger.error(`获取签收单详情失败: ${error.message}`, error.stack);
       return {
-        code: error.status === 404 ? RESPONSE_CODES.PARAM_ERROR :
-              error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 404 ? RESPONSE_CODES.NOT_FOUND :
+              error.status === 400 ? RESPONSE_CODES.BAD_REQUEST :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
@@ -332,8 +332,8 @@ export class ReceiptsController {
     } catch (error) {
       this.logger.error(`更新签收单失败: ${error.message}`, error.stack);
       return {
-        code: error.status === 404 ? RESPONSE_CODES.PARAM_ERROR :
-              error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 404 ? RESPONSE_CODES.NOT_FOUND :
+              error.status === 400 ? RESPONSE_CODES.BAD_REQUEST :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
@@ -369,8 +369,8 @@ export class ReceiptsController {
     } catch (error) {
       this.logger.error(`删除签收单失败: ${error.message}`, error.stack);
       return {
-        code: error.status === 404 ? RESPONSE_CODES.PARAM_ERROR :
-              error.status === 400 ? RESPONSE_CODES.PARAM_ERROR :
+        code: error.status === 404 ? RESPONSE_CODES.NOT_FOUND :
+              error.status === 400 ? RESPONSE_CODES.BAD_REQUEST :
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
@@ -414,7 +414,7 @@ export class ReceiptsController {
     } catch (error) {
       this.logger.error(`批量删除签收单失败: ${error.message}`, error.stack);
       return {
-        code: error.status === 400 ? RESPONSE_CODES.PARAM_ERROR : RESPONSE_CODES.SERVER_ERROR,
+        code: error.status === 400 ? RESPONSE_CODES.BAD_REQUEST : RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
       };
