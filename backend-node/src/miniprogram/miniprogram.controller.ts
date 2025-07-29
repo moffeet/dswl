@@ -26,6 +26,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { RESPONSE_CODES, HTTP_STATUS_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
+import { ResponseUtil } from '../common/utils/response.util';
 import { CustomLogger } from '../config/logger.config';
 import { ChineseTime } from '../common/decorators/format-time.decorator';
 
@@ -43,6 +44,7 @@ import { UploadReceiptDto } from '../receipts/dto/upload-receipt.dto';
 import { WxUpdateCustomerDto } from '../customers/dto/wx-update-customer.dto';
 import { SimpleLoginDto, SimpleLoginResponseDto } from './dto/simple-login.dto';
 import { RefreshTokenDto, TokenResponseDto } from '../auth/dto/token.dto';
+import { SearchCustomerDto, CustomerListQueryDto } from '../customers/dto/search-customer.dto';
 
 @ApiTags('📱 小程序接口')
 @Controller('miniprogram')
@@ -330,6 +332,153 @@ wx.request({
   }
 
   // ==================== 司机页面 ====================
+
+  @Get('customers')
+  @ChineseTime() // 小程序客户列表时间格式化
+  @ApiOperation({
+    summary: '司机获取客户列表',
+    description: `
+🔍 **司机获取客户列表接口（支持模糊查询）**
+
+## 📋 功能说明
+- 司机获取客户列表，支持分页和模糊查询
+- 支持按客户编号、客户名称进行模糊搜索
+- 返回客户名、编号、地址、经纬度等信息
+- 需要JWT Token认证
+
+## 🔒 认证机制
+- **Token认证**：使用小程序登录后获得的accessToken
+- 在请求头中添加：Authorization: Bearer <accessToken>
+
+## 📝 查询参数
+- **customerNumber**: 客户编号（可选，支持模糊匹配）
+- **customerName**: 客户名称（可选，支持模糊匹配）
+- **page**: 页码，从1开始（可选，默认1）
+- **limit**: 每页数量，范围1-100（可选，默认10）
+
+## 📱 前端调用示例
+\`\`\`javascript
+// 获取全部客户列表
+wx.request({
+  url: '/api/miniprogram/customers',
+  method: 'GET',
+  header: {
+    'Authorization': 'Bearer ' + accessToken
+  },
+  data: {
+    page: 1,
+    limit: 20
+  }
+});
+
+// 模糊查询客户
+wx.request({
+  url: '/api/miniprogram/customers',
+  method: 'GET',
+  header: {
+    'Authorization': 'Bearer ' + accessToken
+  },
+  data: {
+    customerName: '科技',  // 按名称模糊查询
+    customerNumber: 'C00', // 按编号模糊查询
+    page: 1,
+    limit: 10
+  }
+});
+\`\`\`
+    `
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'number', example: 200 },
+        message: { type: 'string', example: '获取成功' },
+        data: {
+          type: 'object',
+          properties: {
+            list: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'number', example: 1 },
+                  customerNumber: { type: 'string', example: 'C001' },
+                  customerName: { type: 'string', example: '深圳科技有限公司' },
+                  storeAddress: { type: 'string', example: '深圳市南山区科技园南区A座' },
+                  warehouseAddress: { type: 'string', example: '深圳市南山区科技园南区B座' },
+                  storeLongitude: { type: 'number', example: 113.9547 },
+                  storeLatitude: { type: 'number', example: 22.5431 },
+                  warehouseLongitude: { type: 'number', example: 113.9557 },
+                  warehouseLatitude: { type: 'number', example: 22.5441 },
+                  updateBy: { type: 'string', example: '管理员' },
+                  updatedAt: { type: 'string', example: '2025-07-29 16:30:00' }
+                }
+              }
+            },
+            total: { type: 'number', example: 100 },
+            page: { type: 'number', example: 1 },
+            limit: { type: 'number', example: 10 },
+            totalPages: { type: 'number', example: 10 }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '参数错误' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '获取失败' })
+  async getCustomerList(
+    @Query() query: CustomerListQueryDto,
+    @Req() req: Request
+  ) {
+    try {
+      // 从JWT认证中获取用户信息
+      const user = req['user'] as any;
+      this.logger.log(`小程序获取客户列表 - 用户ID: ${user?.id}, 参数: ${JSON.stringify(query)}`);
+
+      // 检查是否有搜索条件
+      const hasSearchParams = query.customerNumber || query.customerName;
+
+      let result;
+      if (hasSearchParams) {
+        // 有搜索条件，使用搜索功能
+        const searchDto: SearchCustomerDto = {
+          customerNumber: query.customerNumber,
+          customerName: query.customerName,
+          page: query.page || 1,
+          limit: query.limit || 10,
+        };
+
+        this.logger.log(`小程序客户搜索 - 用户ID: ${user?.id}, 搜索参数: ${JSON.stringify(searchDto)}`);
+        result = await this.customersService.search(searchDto, user);
+      } else {
+        // 没有搜索条件，使用普通分页
+        const page = query.page || 1;
+        const limit = query.limit || 10;
+
+        this.logger.log(`小程序客户列表 - 用户ID: ${user?.id}, 页码: ${page}, 每页: ${limit}`);
+        result = await this.customersService.findAll(page, limit, user);
+      }
+
+      return ResponseUtil.page(
+        result.data,
+        result.total,
+        result.page,
+        result.limit,
+        hasSearchParams ? RESPONSE_MESSAGES.SEARCH_SUCCESS : RESPONSE_MESSAGES.GET_SUCCESS
+      );
+    } catch (error) {
+      this.logger.error(`小程序获取客户列表失败: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: '获取客户列表失败',
+        data: null,
+        error: error.message,
+      };
+    }
+  }
 
   @Get('customers/search')
   @ChineseTime() // 小程序客户查询时间格式化
