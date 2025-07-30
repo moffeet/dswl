@@ -77,18 +77,27 @@ export class CustomersService {
     // 只查询未删除的客户
     queryBuilder.where('customer.isDeleted = :isDeleted', { isDeleted: 0 });
 
-    // 搜索条件：客户编号
-    if (searchDto.customerNumber) {
-      queryBuilder.andWhere('customer.customerNumber LIKE :customerNumber', {
-        customerNumber: `%${searchDto.customerNumber}%`,
-      });
-    }
+    // 优先使用通用关键词搜索
+    if (searchDto.keyword) {
+      queryBuilder.andWhere(
+        '(customer.customerNumber LIKE :keyword OR customer.customerName LIKE :keyword)',
+        { keyword: `%${searchDto.keyword}%` }
+      );
+    } else {
+      // 兼容原有的分别搜索方式
+      // 搜索条件：客户编号
+      if (searchDto.customerNumber) {
+        queryBuilder.andWhere('customer.customerNumber LIKE :customerNumber', {
+          customerNumber: `%${searchDto.customerNumber}%`,
+        });
+      }
 
-    // 搜索条件：客户名称
-    if (searchDto.customerName) {
-      queryBuilder.andWhere('customer.customerName LIKE :customerName', {
-        customerName: `%${searchDto.customerName}%`,
-      });
+      // 搜索条件：客户名称
+      if (searchDto.customerName) {
+        queryBuilder.andWhere('customer.customerName LIKE :customerName', {
+          customerName: `%${searchDto.customerName}%`,
+        });
+      }
     }
 
     // 默认按更新时间倒序排列

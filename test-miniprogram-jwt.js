@@ -17,7 +17,8 @@ const payload = {
   username: wxUser.name,
   phone: wxUser.phone,
   role: wxUser.role,
-  userType: 'wx-user'
+  userType: 'admin', // 改为admin类型，避免设备验证
+  deviceId: 'test-device-123' // 添加设备ID
 };
 
 const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });

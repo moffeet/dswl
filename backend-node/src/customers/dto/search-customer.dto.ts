@@ -9,7 +9,16 @@ import { Transform } from 'class-transformer';
  */
 export class SearchCustomerDto {
   @ApiProperty({
-    description: '客户编号，支持模糊匹配',
+    description: '通用搜索关键词，同时搜索客户编号和客户名称',
+    example: 'C001 或 科技',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
+  @ApiProperty({
+    description: '客户编号，支持模糊匹配（保留兼容性）',
     example: 'C001',
     required: false
   })
@@ -18,7 +27,7 @@ export class SearchCustomerDto {
   customerNumber?: string;
 
   @ApiProperty({
-    description: '客户名称，支持模糊匹配',
+    description: '客户名称，支持模糊匹配（保留兼容性）',
     example: '科技',
     required: false
   })
@@ -152,7 +161,16 @@ export class CustomerSearchResultDto {
  */
 export class CustomerListQueryDto {
   @ApiProperty({
-    description: '客户编号，支持模糊匹配',
+    description: '通用搜索关键词，同时搜索客户编号和客户名称',
+    example: 'C001 或 科技',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
+  @ApiProperty({
+    description: '客户编号，支持模糊匹配（保留兼容性）',
     example: 'C001',
     required: false
   })
@@ -161,7 +179,7 @@ export class CustomerListQueryDto {
   customerNumber?: string;
 
   @ApiProperty({
-    description: '客户名称，支持模糊匹配',
+    description: '客户名称，支持模糊匹配（保留兼容性）',
     example: '科技',
     required: false
   })

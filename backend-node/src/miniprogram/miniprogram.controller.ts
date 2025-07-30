@@ -351,10 +351,15 @@ wx.request({
 - 在请求头中添加：Authorization: Bearer <accessToken>
 
 ## 📝 查询参数
-- **customerNumber**: 客户编号（可选，支持模糊匹配）
-- **customerName**: 客户名称（可选，支持模糊匹配）
+- **keyword**: 通用搜索关键词（可选，同时搜索客户编号和客户名称）
+- **customerNumber**: 客户编号（可选，支持模糊匹配，兼容旧版）
+- **customerName**: 客户名称（可选，支持模糊匹配，兼容旧版）
 - **page**: 页码，从1开始（可选，默认1）
 - **limit**: 每页数量，范围1-100（可选，默认10）
+
+## 🔍 搜索功能
+- **智能搜索**：使用 keyword 参数，一个关键词同时搜索客户编号和客户名称
+- **优先级**：如果提供了 keyword，则优先使用智能搜索，忽略其他搜索参数
 
 ## 📱 前端调用示例
 \`\`\`javascript
@@ -371,7 +376,21 @@ wx.request({
   }
 });
 
-// 模糊查询客户
+// 智能搜索客户（推荐）
+wx.request({
+  url: '/api/miniprogram/customers',
+  method: 'GET',
+  header: {
+    'Authorization': 'Bearer ' + accessToken
+  },
+  data: {
+    keyword: 'C001',  // 智能搜索，同时匹配编号和名称
+    page: 1,
+    limit: 10
+  }
+});
+
+// 传统搜索方式（兼容）
 wx.request({
   url: '/api/miniprogram/customers',
   method: 'GET',
@@ -439,12 +458,13 @@ wx.request({
       this.logger.log(`小程序获取客户列表 - 用户ID: ${user?.id}, 参数: ${JSON.stringify(query)}`);
 
       // 检查是否有搜索条件
-      const hasSearchParams = query.customerNumber || query.customerName;
+      const hasSearchParams = query.keyword || query.customerNumber || query.customerName;
 
       let result;
       if (hasSearchParams) {
         // 有搜索条件，使用搜索功能
         const searchDto: SearchCustomerDto = {
+          keyword: query.keyword,
           customerNumber: query.customerNumber,
           customerName: query.customerName,
           page: query.page || 1,

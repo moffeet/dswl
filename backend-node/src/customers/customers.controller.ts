@@ -75,11 +75,12 @@ export class CustomersController {
       const currentUser = req.user; // 从JWT中获取当前用户信息
 
       // 检查是否有搜索条件
-      const hasSearchParams = query.customerNumber || query.customerName;
+      const hasSearchParams = query.keyword || query.customerNumber || query.customerName;
 
       if (hasSearchParams) {
         // 有搜索条件，使用搜索功能
         const searchDto: SearchCustomerDto = {
+          keyword: query.keyword,
           customerNumber: query.customerNumber,
           customerName: query.customerName,
           page: query.page || 1,
