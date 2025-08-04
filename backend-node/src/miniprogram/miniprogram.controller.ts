@@ -46,6 +46,7 @@ import { WxUpdateCustomerDto } from '../customers/dto/wx-update-customer.dto';
 import { SimpleLoginDto, SimpleLoginResponseDto } from './dto/simple-login.dto';
 import { RefreshTokenDto, TokenResponseDto } from '../auth/dto/token.dto';
 import { SearchCustomerDto, CustomerListQueryDto } from '../customers/dto/search-customer.dto';
+import { GeocodeRequestDto, ReverseGeocodeRequestDto } from '../customers/dto/sync-customer.dto';
 
 @ApiTags('📱 小程序接口')
 @Controller('miniprogram')
@@ -905,6 +906,223 @@ wx.request({
               RESPONSE_CODES.SERVER_ERROR,
         message: error.message,
         data: null
+      };
+    }
+  }
+
+  // ==================== 地理编码接口 ====================
+
+  @Post('geocode')
+  @DevBypass() // 开发环境可跳过认证
+  @ChineseTime() // 小程序地理编码时间格式化
+  @ApiOperation({
+    summary: '地理编码',
+    description: `
+📍 **地理编码接口（需要设备验证）**
+
+将地址转换为经纬度坐标，用于地图定位和导航功能。
+
+**功能特点：**
+- 🔍 支持中文地址解析
+- 📍 返回精确的经纬度坐标
+- 🏢 提供省市区详细信息
+- 🚀 基于高德地图API
+
+**使用场景：**
+- 客户地址定位
+- 导航路线规划
+- 地图标点显示
+
+**请求示例：**
+\`\`\`json
+{
+  "address": "深圳市南山区科技园南区"
+}
+\`\`\`
+
+**响应示例：**
+\`\`\`json
+{
+  "code": 200,
+  "message": "地理编码成功",
+  "data": {
+    "address": "深圳市南山区科技园南区",
+    "longitude": 113.9547,
+    "latitude": 22.5431,
+    "province": "广东省",
+    "city": "深圳市",
+    "district": "南山区"
+  }
+}
+\`\`\`
+    `
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '地理编码成功',
+    schema: {
+      example: {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '地理编码成功',
+        data: {
+          address: '深圳市南山区科技园南区',
+          longitude: 113.9547,
+          latitude: 22.5431,
+          province: '广东省',
+          city: '深圳市',
+          district: '南山区'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '地址格式不正确' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '编码失败' })
+  @ApiBody({
+    description: '地理编码请求参数',
+    type: GeocodeRequestDto,
+    examples: {
+      example1: {
+        summary: '深圳地址示例',
+        value: {
+          address: '深圳市南山区科技园南区'
+        }
+      },
+      example2: {
+        summary: '广州地址示例',
+        value: {
+          address: '广州市天河区珠江新城'
+        }
+      }
+    }
+  })
+  async geocodeAddress(@Body() geocodeDto: GeocodeRequestDto) {
+    try {
+      this.logger.log(`小程序地理编码 - 地址: ${geocodeDto.address}`);
+
+      const result = await this.customersService.geocodeAddress(geocodeDto);
+
+      this.logger.log(`小程序地理编码成功 - 地址: ${geocodeDto.address}, 坐标: ${result.longitude}, ${result.latitude}`);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '地理编码成功',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`小程序地理编码失败 - 地址: ${geocodeDto.address}, 错误: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: error.message || '地理编码失败',
+        data: null,
+      };
+    }
+  }
+
+  @Post('reverse-geocode')
+  @DevBypass() // 开发环境可跳过认证
+  @ChineseTime() // 小程序逆地理编码时间格式化
+  @ApiOperation({
+    summary: '逆地理编码',
+    description: `
+📍 **逆地理编码接口（需要设备验证）**
+
+将经纬度坐标转换为地址信息，用于位置识别和地址回填功能。
+
+**功能特点：**
+- 🎯 精确的坐标解析
+- 📍 返回详细地址信息
+- 🏢 提供省市区详细信息
+- 🚀 基于高德地图API
+
+**使用场景：**
+- GPS定位地址识别
+- 地图点击获取地址
+- 位置信息回填
+
+**请求示例：**
+\`\`\`json
+{
+  "longitude": 113.9547,
+  "latitude": 22.5431
+}
+\`\`\`
+
+**响应示例：**
+\`\`\`json
+{
+  "code": 200,
+  "message": "逆地理编码成功",
+  "data": {
+    "address": "深圳市南山区科技园南区",
+    "longitude": 113.9547,
+    "latitude": 22.5431,
+    "province": "广东省",
+    "city": "深圳市",
+    "district": "南山区"
+  }
+}
+\`\`\`
+    `
+  })
+  @ApiResponse({
+    status: HTTP_STATUS_CODES.OK,
+    description: '逆地理编码成功',
+    schema: {
+      example: {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '逆地理编码成功',
+        data: {
+          address: '深圳市南山区科技园南区',
+          longitude: 113.9547,
+          latitude: 22.5431,
+          province: '广东省',
+          city: '深圳市',
+          district: '南山区'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: HTTP_STATUS_CODES.BAD_REQUEST, description: '坐标格式不正确' })
+  @ApiResponse({ status: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, description: '编码失败' })
+  @ApiBody({
+    description: '逆地理编码请求参数',
+    type: ReverseGeocodeRequestDto,
+    examples: {
+      example1: {
+        summary: '深圳坐标示例',
+        value: {
+          longitude: 113.9547,
+          latitude: 22.5431
+        }
+      },
+      example2: {
+        summary: '广州坐标示例',
+        value: {
+          longitude: 113.2644,
+          latitude: 23.1291
+        }
+      }
+    }
+  })
+  async reverseGeocodeLocation(@Body() reverseGeocodeDto: ReverseGeocodeRequestDto) {
+    try {
+      this.logger.log(`小程序逆地理编码 - 坐标: ${reverseGeocodeDto.longitude}, ${reverseGeocodeDto.latitude}`);
+
+      const result = await this.customersService.reverseGeocodeLocation(reverseGeocodeDto);
+
+      this.logger.log(`小程序逆地理编码成功 - 坐标: ${reverseGeocodeDto.longitude}, ${reverseGeocodeDto.latitude}, 地址: ${result.address}`);
+
+      return {
+        code: RESPONSE_CODES.SUCCESS,
+        message: '逆地理编码成功',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`小程序逆地理编码失败 - 坐标: ${reverseGeocodeDto.longitude}, ${reverseGeocodeDto.latitude}, 错误: ${error.message}`, error.stack);
+      return {
+        code: RESPONSE_CODES.SERVER_ERROR,
+        message: error.message || '逆地理编码失败',
+        data: null,
       };
     }
   }
