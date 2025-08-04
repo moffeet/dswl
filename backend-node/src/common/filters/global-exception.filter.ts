@@ -98,26 +98,44 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     details?: any;
     isBusinessError: boolean;
   } {
+    console.log('🔍 [调试] 验证错误响应格式:', JSON.stringify(response, null, 2));
+
     let message = '参数验证失败';
     let details = undefined;
 
     // 处理class-validator的错误格式
     if (Array.isArray(response.message)) {
+      console.log('🔍 [调试] 检测到数组格式的验证错误');
       const validationErrors = response.message;
-      const formattedErrors = this.formatValidationErrors(validationErrors);
 
-      if (formattedErrors.length > 0) {
-        // 使用第一个错误作为主要错误消息
-        message = formattedErrors[0].message;
+      // 检查是否是简单的字符串数组（NestJS ValidationPipe的默认格式）
+      if (validationErrors.length > 0 && typeof validationErrors[0] === 'string') {
+        console.log('🔍 [调试] 简单字符串数组格式的验证错误');
+        message = validationErrors[0]; // 使用第一个错误作为主要消息
         details = {
-          field: formattedErrors[0].field,
-          value: formattedErrors[0].value,
-          errors: formattedErrors.map(err => err.message),
-          validationRules: formattedErrors[0].rules,
+          errors: validationErrors,
+          errorCount: validationErrors.length,
+          allErrors: validationErrors.join('; ')
         };
+      } else {
+        // 处理复杂对象格式的验证错误
+        const formattedErrors = this.formatValidationErrors(validationErrors);
+        if (formattedErrors.length > 0) {
+          message = formattedErrors[0].message;
+          details = {
+            field: formattedErrors[0].field,
+            value: formattedErrors[0].value,
+            errors: formattedErrors.map(err => err.message),
+            validationRules: formattedErrors[0].rules,
+          };
+        }
       }
+      console.log('🔍 [调试] 格式化后的验证错误详情:', JSON.stringify(details, null, 2));
     } else if (typeof response.message === 'string') {
+      console.log('🔍 [调试] 检测到字符串格式的验证错误:', response.message);
       message = response.message;
+    } else {
+      console.log('🔍 [调试] 未知的验证错误格式');
     }
 
     return {
@@ -393,7 +411,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
 
     // 开发环境返回更多调试信息
-    if (process.env.NODE_ENV === 'development') {
+    // 使用更宽松的环境判断，确保开发环境能显示详细信息
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+
+    if (isDevelopment) {
+      console.log(`🔍 [调试] 环境: ${process.env.NODE_ENV}, 返回详细错误信息`);
       return {
         ...baseResponse,
         traceId,

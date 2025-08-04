@@ -25,6 +25,7 @@ import { Request } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
+import { DevBypass } from '../auth/decorators/dev-bypass.decorator';
 import { RESPONSE_CODES, HTTP_STATUS_CODES, RESPONSE_MESSAGES } from '../common/constants/response-codes';
 import { ResponseUtil } from '../common/utils/response.util';
 import { CustomLogger } from '../config/logger.config';
@@ -334,6 +335,7 @@ wx.request({
   // ==================== 司机页面 ====================
 
   @Get('customers')
+  @DevBypass() // 开发环境可跳过认证
   @ChineseTime() // 小程序客户列表时间格式化
   @ApiOperation({
     summary: '司机获取客户列表',
@@ -501,6 +503,7 @@ wx.request({
   }
 
   @Get('customers/search')
+  @DevBypass() // 开发环境可跳过认证
   @ChineseTime() // 小程序客户查询时间格式化
   @ApiOperation({
     summary: '司机查询客户信息',
@@ -649,6 +652,7 @@ wx.request({
   // ==================== 打卡/签收单上传 ====================
 
   @Post('receipts/upload')
+  @DevBypass() // 开发环境可跳过认证
   @ChineseTime() // 小程序上传签收单时间格式化
   @UseInterceptors(FileInterceptor('file', {
     limits: {
@@ -800,6 +804,7 @@ wx.uploadFile({
   // ==================== 销售页面 ====================
 
   @Patch('customers/update')
+  @DevBypass() // 开发环境可跳过认证
   @ChineseTime() // 小程序更新客户信息时间格式化
   @ApiOperation({
     summary: '修改客户地址',
