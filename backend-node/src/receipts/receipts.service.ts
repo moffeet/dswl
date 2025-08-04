@@ -10,6 +10,7 @@ import { ReceiptQueryDto } from './dto/receipt-query.dto';
 import { UploadReceiptDto } from './dto/upload-receipt.dto';
 import { CustomLogger } from '../config/logger.config';
 import { UploadConfig } from '../config/upload.config';
+import { ImageCompressionService } from '../common/services/image-compression.service';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -24,6 +25,7 @@ export class ReceiptsService {
     private wxUserRepository: Repository<WxUser>,
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
+    private readonly imageCompressionService: ImageCompressionService,
   ) {}
 
   /**
@@ -97,8 +99,26 @@ export class ReceiptsService {
         throw new BadRequestException('服务器存储配置错误，请联系管理员');
       }
 
-      // 生成唯一文件名
-      const fileName = UploadConfig.generateUniqueFileName(file.originalname, 'receipt');
+      // 图片压缩处理
+      let finalBuffer = file.buffer;
+      const originalSizeKB = (file.buffer.length / 1024).toFixed(2);
+
+      // 检查是否需要压缩（超过500KB或者总是压缩签收单图片）
+      if (this.imageCompressionService.shouldCompress(file.buffer.length, 300 * 1024)) {
+        this.logger.log(`开始压缩签收单图片 - 原大小: ${originalSizeKB}KB`);
+        finalBuffer = await this.imageCompressionService.compressReceiptImage(file.buffer, file.originalname);
+        const compressedSizeKB = (finalBuffer.length / 1024).toFixed(2);
+        this.logger.log(`签收单图片压缩完成 - 压缩后大小: ${compressedSizeKB}KB`);
+      } else {
+        this.logger.log(`图片大小适中，无需压缩 - 大小: ${originalSizeKB}KB`);
+      }
+
+      // 生成唯一文件名（确保使用.jpg扩展名，因为压缩后都是JPEG格式）
+      const originalExt = path.extname(file.originalname);
+      const baseFileName = UploadConfig.generateUniqueFileName(file.originalname, 'receipt');
+      // 如果压缩了图片，强制使用.jpg扩展名
+      const fileName = finalBuffer !== file.buffer ?
+        baseFileName.replace(originalExt, '.jpg') : baseFileName;
       const fullFilePath = path.join(actualUploadDir, fileName);
 
       // 存储相对路径用于数据库
@@ -107,22 +127,22 @@ export class ReceiptsService {
       // 保存文件 - 添加重试机制
       let retryCount = 0;
       const maxRetries = 3;
-      
+
       while (retryCount < maxRetries) {
         try {
           this.logger.log(`尝试保存文件 (第${retryCount + 1}次): ${fullFilePath}`);
-          
-          // 使用同步写入避免异步问题
-          fs.writeFileSync(fullFilePath, file.buffer);
+
+          // 使用压缩后的buffer保存文件
+          fs.writeFileSync(fullFilePath, finalBuffer);
           
           // 验证文件是否成功写入
           if (!fs.existsSync(fullFilePath)) {
             throw new Error('文件写入后验证失败');
           }
-          
+
           const fileStats = fs.statSync(fullFilePath);
-          if (fileStats.size !== file.buffer.length) {
-            throw new Error(`文件大小不匹配: 期望 ${file.buffer.length}, 实际 ${fileStats.size}`);
+          if (fileStats.size !== finalBuffer.length) {
+            throw new Error(`文件大小不匹配: 期望 ${finalBuffer.length}, 实际 ${fileStats.size}`);
           }
           
           this.logger.log(`文件保存成功: ${fullFilePath}, 大小: ${fileStats.size}`);
@@ -156,7 +176,7 @@ export class ReceiptsService {
 
       // 创建签收单记录
       const createDto: CreateReceiptDto = {
-        wxUserId: null, // 不再关联具体用户ID
+        wxUserId: uploadDto.wxUserId, // 使用传入的用户ID
         wxUserName: uploadDto.wxUserName,
         customerId: uploadDto.customerId,
         customerName: uploadDto.customerName,
