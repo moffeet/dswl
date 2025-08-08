@@ -52,9 +52,9 @@ export class CustomerSyncService {
 
       for (const externalCustomer of externalCustomers) {
         try {
-          // 根据客户编号查找现有客户
+          // 根据客户编号查找现有客户（仅未删除）
           const existingCustomer = await this.customerRepository.findOne({
-            where: { customerNumber: externalCustomer.customerNumber }
+            where: { customerNumber: externalCustomer.customerNumber, isDeleted: 0 as any }
           });
 
           if (existingCustomer) {
@@ -74,10 +74,32 @@ export class CustomerSyncService {
               this.logger.log(`跳过客户: ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber}) - 无需更新`);
             }
           } else {
-            // 创建新客户
-            await this.createCustomerFromExternal(externalCustomer, syncTime, updateBy);
-            createdCount++;
-            this.logger.log(`创建新客户: ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber})`);
+            // 未找到未删除的客户，检查是否存在已软删除的客户
+            const deletedCustomer = await this.customerRepository.findOne({
+              where: { customerNumber: externalCustomer.customerNumber, isDeleted: 1 as any }
+            });
+
+            if (deletedCustomer) {
+              // 不使用软删除数据：直接物理删除旧记录，再创建新客户
+              try {
+                await this.customerRepository.delete(deletedCustomer.id);
+                this.logger.log(`清理软删除客户(物理删除): ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber})`);
+              } catch (e: any) {
+                this.logger.error(`物理删除软删除客户失败 编号:${externalCustomer.customerNumber} 错误:${e?.message || e}`);
+                // 物理删除失败则跳过以避免唯一键冲突
+                skippedCount++;
+                continue;
+              }
+
+              await this.createCustomerFromExternal(externalCustomer, syncTime, updateBy);
+              createdCount++;
+              this.logger.log(`创建新客户: ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber})`);
+            } else {
+              // 创建新客户
+              await this.createCustomerFromExternal(externalCustomer, syncTime, updateBy);
+              createdCount++;
+              this.logger.log(`创建新客户: ${externalCustomer.customerName} (编号: ${externalCustomer.customerNumber})`);
+            }
           }
           
           syncedCount++;
@@ -295,8 +317,8 @@ export class CustomerSyncService {
       // 获取外部系统数据（真实接口）
       const externalCustomers = await this.fetchExternalCustomersFromApi();
 
-      // 获取当前系统客户数量
-      const currentCustomerCount = await this.customerRepository.count();
+      // 获取当前系统客户数量（仅未删除）
+      const currentCustomerCount = await this.customerRepository.count({ where: { isDeleted: 0 as any } });
 
       // 获取最后同步时间（查找最近一次同步的客户）
       const lastSyncCustomer = await this.customerRepository
