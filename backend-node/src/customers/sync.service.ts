@@ -5,6 +5,7 @@ import { Customer } from './entities/customer.entity';
 import { AmapService } from './services/amap.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import axios from 'axios';
 
 /**
  * 客户数据同步服务
@@ -39,8 +40,8 @@ export class CustomerSyncService {
     this.logger.log('开始从外部系统同步客户数据...');
     
     try {
-      // 读取模拟的外部系统数据
-      const externalData = this.loadExternalSystemData();
+      // 优先从真实外部系统拉取
+      const externalCustomers = await this.fetchExternalCustomersFromApi();
       
       let syncedCount = 0;
       let createdCount = 0;
@@ -49,7 +50,7 @@ export class CustomerSyncService {
       
       const syncTime = new Date();
 
-      for (const externalCustomer of externalData.customers) {
+      for (const externalCustomer of externalCustomers) {
         try {
           // 根据客户编号查找现有客户
           const existingCustomer = await this.customerRepository.findOne({
@@ -110,6 +111,73 @@ export class CustomerSyncService {
         skippedCount: 0,
         lastSyncTime: new Date()
       };
+    }
+  }
+
+  /**
+   * 从真实外部接口获取客户数据，并转换为内部统一结构
+   * 外部接口：http://nhstl123.gicp.net:84/api/values/?bmc=kh&id=0&database=gzds
+   * 返回结构：{"Table":[{"bh":"客户编号(10位)","mc":"客户名称"}, ...]}
+   */
+  private async fetchExternalCustomersFromApi(): Promise<Array<{ customerNumber: string; customerName: string; storeAddress?: string }>> {
+    const BASE_URL = 'http://nhstl123.gicp.net:84/api/values/';
+    const COMMON_PARAMS = { bmc: 'kh', database: 'gzds' } as const;
+
+    // 并发请求 id=0..9（10位可选前缀），合并去重
+    const requests = Array.from({ length: 10 }, (_, n) => n).map(async (digit) => {
+      const url = `${BASE_URL}`;
+      const params = { ...COMMON_PARAMS, id: String(digit) } as any;
+      try {
+        const res = await axios.get(url, { params, timeout: 15000 });
+        const raw = typeof res.data === 'string' ? this.safeJsonParse(res.data) : res.data;
+        const table = raw?.Table;
+        if (!Array.isArray(table)) {
+          this.logger.warn(`外部接口返回结构异常（非数组Table），digit=${digit}`);
+          return [] as any[];
+        }
+        return table as Array<{ bh?: string; mc?: string; [k: string]: any }>;
+      } catch (err: any) {
+        this.logger.error(`请求外部客户接口失败 digit=${digit}: ${err?.message || err}`);
+        return [] as any[];
+      }
+    });
+
+    const tables = await Promise.all(requests);
+    const mergedMap = new Map<string, { bh: string; mc: string }>();
+    for (const list of tables) {
+      for (const row of list) {
+        const number = (row?.bh || '').trim();
+        const name = (row?.mc || '').trim();
+        if (!number || !name) continue;
+        if (!mergedMap.has(number)) {
+          mergedMap.set(number, { bh: number, mc: name });
+        }
+      }
+    }
+
+    // 转换为内部统一结构
+    const customers = Array.from(mergedMap.values()).map((row) => ({
+      customerNumber: row.bh,
+      customerName: row.mc,
+      // 外部接口未提供地址信息，保留为空
+      storeAddress: undefined,
+    }));
+
+    this.logger.log(`外部接口拉取客户完成，共 ${customers.length} 条`);
+    return customers;
+  }
+
+  private safeJsonParse(text: string): any {
+    try {
+      return JSON.parse(text);
+    } catch {
+      // 某些服务可能返回已反转义的结构，再尝试一次解码
+      try {
+        const unescaped = text.replace(/^"|"$/g, '').replace(/\\"/g, '"');
+        return JSON.parse(unescaped);
+      } catch {
+        return null;
+      }
     }
   }
 
@@ -224,8 +292,8 @@ export class CustomerSyncService {
    */
   async getSyncMetadata(): Promise<any> {
     try {
-      // 获取外部系统数据
-      const externalData = this.loadExternalSystemData();
+      // 获取外部系统数据（真实接口）
+      const externalCustomers = await this.fetchExternalCustomersFromApi();
 
       // 获取当前系统客户数量
       const currentCustomerCount = await this.customerRepository.count();
@@ -238,11 +306,11 @@ export class CustomerSyncService {
         .getOne();
 
       return {
-        dataSource: externalData.syncMetadata?.dataSource || '外部ERP系统',
+        dataSource: '外部ERP系统',
         currentCustomerCount: currentCustomerCount,
-        externalCustomerCount: externalData.customers?.length || 0,
+        externalCustomerCount: externalCustomers.length || 0,
         lastSyncTime: lastSyncCustomer?.lastSyncTime || null,
-        syncVersion: externalData.syncMetadata?.syncVersion || 'v1.2.0'
+        syncVersion: 'v2.0.0'
       };
     } catch (error) {
       this.logger.error(`获取同步元数据失败: ${error.message}`);
@@ -251,7 +319,7 @@ export class CustomerSyncService {
         currentCustomerCount: 0,
         externalCustomerCount: 0,
         lastSyncTime: null,
-        syncVersion: 'v1.2.0'
+        syncVersion: 'v2.0.0'
       };
     }
   }
